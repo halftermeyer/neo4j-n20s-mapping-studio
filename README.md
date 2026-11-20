@@ -16,6 +16,12 @@ Design rules:
 - **Locked.** A lock file records what the mapping was checked against, so a new version of the LPG ontology produces a precise drift report.
 - **Pure core.** `check()` reads no files, so the same code runs in a browser (a mapping studio) and in the CLI.
 
+## Requirements
+
+- Node 22+.
+- For anything that touches RDF (projection, recipes, endpoints, oracle): n20s-server from [neo4j-n20s](https://github.com/halftermeyer/neo4j-n20s), **commit `f460c1f` or later** (temporal values in XSD form, column-valued IRIs, query results as terms), on Java 21: `mvn -pl n20s-server -am package`, then `PORT=7474 java -jar n20s-server/target/n20s-server-*.jar`.
+- A Neo4j source: Aura, Neo4j, or Relate for local work. Following the database needs Neo4j Enterprise 5.13+ or Aura with change data capture in FULL mode.
+
 ## Quick start
 
 ```bash
@@ -507,7 +513,7 @@ Every node kind, relationship type and property is counted as **decided** (`mapp
 - Two relationships of the same type between the same pair of nodes share one qualified resource when the qualified subject uses only start and end values.
 - `kind: iri` without a value table takes the value as the IRI: n20s uses a whole-placeholder value as is when it is an absolute IRI, and percent-encodes any other value (a relative IRI then, which is not what you want: check the data).
 - The oracle decodes `node:` columns only for subjects with one placeholder.
-- n20s-server needs Java 21, and a build with column-valued IRIs and `terms` in query results (n20s-plugin, 2026-11-20): the SPARQL endpoint asks for terms, so literals keep their datatype and language.
+- n20s-server needs Java 21 and neo4j-n20s `f460c1f` or later (see Requirements): the SPARQL endpoint asks for terms, so literals keep their datatype and language.
 - Rows reach n20s-server as JSON, so temporal values are sent as XSD strings with an explicit datatype (source.js). Inside Neo4j, the n20s plugin writes Neo4j temporal values in their XSD form itself.
 
 ## Library use
