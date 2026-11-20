@@ -1,7 +1,7 @@
 // Design tab: the conversation with the AI that writes the specification of
 // the mapping. The AI proposes spec items; the person accepts, rejects (with a
 // reason the AI then sees) or edits each one. Only accepted items count.
-import { fill, h, api, toast } from './dom.js';
+import { fill, h, api, toast, tid } from './dom.js';
 
 const KIND_TEXT = {
   purpose: 'Purpose', include: 'In scope', exclude: 'Out of scope', principle: 'Principles', note: 'Notes on elements', question: 'Competency questions', target: 'Target ontologies',
@@ -14,6 +14,7 @@ let busy = false;
 let editing = null;     // { pid } or { id } while an item is edited
 let draft = '';
 let scopeFilter = 'all';
+let proposedCount = null;  // calls of the last "Propose the mapping from this spec", for the demo recorder
 
 export async function showDesign(container) {
   root = container;
@@ -38,7 +39,7 @@ const describe = (i) => [i.element ? h('b', { class: 'mono' }, i.element) : null
 function render() {
   if (!data) return;
   fill(root,
-    h('aside', { class: 'dspec' }, specView()),
+    h('aside', { class: 'dspec', 'data-testid': 'design-spec' }, specView()),
     h('section', { class: 'dchat' }, chatView()),
     h('aside', { class: 'fpanel' }, scopeView()));
 }
@@ -151,11 +152,11 @@ function proposalCard(p) {
         h('button', { class: 'mini', onclick: () => { editing = { pid: p.pid }; render(); } }, 'Edit')));
 }
 
-const passesSel = h('select', { title: 'Several passes tell how stable each proposal is: the review uses it' }, [1, 3].map((n) => h('option', { value: n }, `${n} pass${n > 1 ? 'es' : ''}`)));
+const passesSel = h('select', { 'data-testid': 'design-passes', title: 'Several passes tell how stable each proposal is: the review uses it' }, [1, 3].map((n) => h('option', { value: n }, `${n} pass${n > 1 ? 'es' : ''}`)));
 
 function chatView() {
   const pending = data.chat.flatMap((m) => (m.proposals ?? []).filter((p) => !decisionOf(p.pid) && !p.problems?.length));
-  const input = h('textarea', { rows: 3, placeholder: data.chat.length ? 'Answer, correct, ask…' : 'What is this mapping for? Who will use the RDF, for which questions? What must never be asserted?', oninput: (e) => { draft = e.target.value; } }, draft);
+  const input = h('textarea', { rows: 3, 'data-testid': 'design-input', placeholder: data.chat.length ? 'Answer, correct, ask…' : 'What is this mapping for? Who will use the RDF, for which questions? What must never be asserted?', oninput: (e) => { draft = e.target.value; } }, draft);
   const send = async () => {
     if (!draft.trim() || busy) return;
     busy = true;
@@ -170,13 +171,14 @@ function chatView() {
   return [
     h('div', { class: 'dchat-head' }, h('b', {}, 'Design conversation'), ` · ${data.lpg.name ?? data.lpg.id}`,
       data.lpg.described === 0 ? h('span', { class: 'warnline' }, ' · no descriptions in the LPG ontology: tell the AI what the elements mean') : '',
-      pending.length ? h('span', {}, ' · ', h('button', { class: 'mini good', onclick: async () => { for (const p of pending) await api('/api/design/decide', { pid: p.pid, action: 'accept' }).then((x) => { data = x; }).catch((err) => toast(err.message, true)); render(); } }, `Accept the ${pending.length} pending`)) : null,
+      pending.length ? h('span', {}, ' · ', h('button', { class: 'mini good', 'data-testid': 'design-accept-pending', onclick: async () => { for (const p of pending) await api('/api/design/decide', { pid: p.pid, action: 'accept' }).then((x) => { data = x; }).catch((err) => toast(err.message, true)); render(); } }, `Accept the ${pending.length} pending`)) : null,
       h('div', { class: 'row', style: 'gap:6px;margin-top:6px;flex-wrap:wrap' },
         passesSel,
-        h('button', { class: 'primary', disabled: busy || !data.can.model || !data.spec.items?.some((i) => i.status === 'accepted'), title: 'Out of scope elements are left out with their reason; the model proposes the others, guided by the purpose, the principles and the notes', onclick: async () => {
+        h('button', { class: 'primary', 'data-testid': 'design-propose', disabled: busy || !data.can.model || !data.spec.items?.some((i) => i.status === 'accepted'), title: 'Out of scope elements are left out with their reason; the model proposes the others, guided by the purpose, the principles and the notes', onclick: async () => {
           busy = true; render();
           try {
             const r = await api('/api/design/propose', { passes: Number(passesSel.value) });
+            proposedCount = r.calls;
             toast(`${r.calls} calls; ${r.outOfScope} elements left out as out of scope${r.dropped.length ? `; dropped: ${r.dropped.join(', ')}` : ''}. Review in the Mapping tab.`);
             data = await api('/api/design');
           } catch (err) { toast(err.message, true); }
@@ -186,17 +188,19 @@ function chatView() {
           busy = true; render();
           try { data = await api('/api/design/check', {}); toast(data.check.findings.length ? `${data.check.findings.length} departures from the spec` : 'The mapping follows the spec'); } catch (err) { toast(err.message, true); }
           busy = false; render();
-        } }, 'Check the mapping against the spec'))),
+        } }, 'Check the mapping against the spec'),
+        proposedCount !== null ? h('span', { class: 'chip accepted', 'data-testid': 'design-proposed' }, `proposed (${proposedCount} calls): review it in the Mapping tab`) : null)),
     h('div', { class: 'dchat-log' },
-      data.chat.length ? data.chat.map((m) => h('div', { class: `dmsg ${m.role}` },
+      data.chat.length ? data.chat.map((m, i) => h('div', { class: `dmsg ${m.role}`, 'data-testid': `design-msg-${i + 1}` },
         h('div', { class: 'dwho' }, m.role === 'user' ? 'You' : `AI${m.model ? ` · ${m.model}` : ''}`),
         h('div', { class: 'dtext' }, m.text),
         (m.proposals ?? []).length ? h('div', { class: 'dprops' }, m.proposals.map(proposalCard)) : null))
         : h('div', { class: 'dempty' }, 'The AI asks what the mapping is for, proposes the purpose, the scope, principles, notes on elements, the questions the RDF must answer and the target ontologies. You accept, reject or edit each proposal: only what you accept goes into the specification.'),
       busy ? h('div', { class: 'dmsg assistant' }, h('div', { class: 'dwho' }, 'AI'), h('div', { class: 'dtext', style: 'color:#888' }, 'Thinking…')) : null),
     h('div', { class: 'dinput' }, input,
-      h('div', { class: 'row', style: 'justify-content:space-between' }, h('span', { style: 'color:#888;font-size:11px' }, data.can.model ? '⌘/Ctrl + Enter to send' : 'No model: start the studio with GEMINI_API_KEY (--dotenv); you can still write the spec by hand.'),
-        h('button', { class: 'primary', disabled: busy || !data.can.model, onclick: send }, busy ? 'Sending…' : 'Send'))),
+      h('div', { class: 'row', style: 'justify-content:space-between' }, h('span', { style: 'color:#888;font-size:11px' }, data.can.model ? '⌘/Ctrl + Enter to send' : 'No model: choose one in the Connections tab; you can still write the spec by hand.'),
+        h('button', { class: 'primary', disabled: busy || !data.can.model, onclick: send, 'data-testid': 'design-send' }, busy ? 'Sending…' : 'Send'))),
+
   ];
 }
 

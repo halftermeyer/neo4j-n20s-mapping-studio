@@ -1,0 +1,35 @@
+# 2. A question as an API, answered on demand: the Cypher scope reads only the
+# member and the people around them, the SPARQL query answers in FOAF terms.
+# Served as /query/friends?member=ana; every call reads the database as it is.
+format: n20s-recipe/0.1
+id: friends
+title: Who a member knows (on demand)
+mapping: ../people-foaf.mapping.yaml
+params:
+  member:
+    default: ana
+    description: the member id
+api:
+  name: friends
+  result: friends
+  description: The people a member knows, either way, read from the database on each call.
+steps:
+  - id: around
+    type: scope
+    title: The member and the people around them, nothing else
+    cypher: |
+      MATCH p = (:Member {id: $member})-[:KNOWS]-(:Member)
+      RETURN p
+
+  - id: friends
+    type: query
+    title: Their names, pages and birthdays, in FOAF
+    sparql: |
+      SELECT ?name ?homepage ?birthday WHERE {
+        VALUES ?me { {{n:0|$member}} }
+        { ?me foaf:knows ?f } UNION { ?f foaf:knows ?me }
+        ?f foaf:name ?name .
+        OPTIONAL { ?f foaf:homepage ?homepage }
+        OPTIONAL { ?f foaf:birthday ?birthday }
+      }
+      ORDER BY ?name

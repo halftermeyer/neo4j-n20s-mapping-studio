@@ -1,0 +1,601 @@
+{
+ "format": "n20s-propose-recording/0.1",
+ "provider": "gemini",
+ "model": "gemini-2.5-flash",
+ "calls": [
+  {
+   "key": "84494553fe2c762389cc88ea49a3e304a08fdec7fb086b1122e28a965c98a06f",
+   "element": "design",
+   "json": {
+    "reply": "Understood. You want to share your member directory with partner organizations using FOAF, and Member.email must never be published.",
+    "proposals": [
+     {
+      "kind": "purpose",
+      "text": "Publish the community's member directory as RDF to be consumed by partner organizations."
+     },
+     {
+      "kind": "exclude",
+      "element": "Member.email",
+      "reason": "Emails are private and must never be shared outside the database."
+     },
+     {
+      "kind": "target",
+      "target": "foaf",
+      "text": "The primary target ontology for publishing member information, as requested by partner organizations."
+     },
+     {
+      "kind": "include",
+      "element": "Member",
+      "text": "Members are the core entities of the directory."
+     },
+     {
+      "kind": "include",
+      "element": "Group",
+      "text": "Groups are essential for understanding member affiliations."
+     },
+     {
+      "kind": "include",
+      "element": "KNOWS",
+      "text": "The 'knows' relationships are a key part of the directory's social graph."
+     },
+     {
+      "kind": "include",
+      "element": "MEMBER_OF",
+      "text": "Group memberships are essential for understanding member affiliations."
+     }
+    ]
+   },
+   "usage": {
+    "input": 1316,
+    "output": 324,
+    "thinking": 141,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "23b19341023c2880be984636fe107da796da7f8a8a224ef3b424842fb24f4adf",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1468,
+    "output": 401,
+    "thinking": 795,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "69066c5917498a72ce2d8b368c904bb7f930b1e8e5affd8db7cf2b6d422bd908",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Person"
+    ],
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1778,
+    "output": 262,
+    "thinking": 336,
+    "cached": 1575
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "e2490c2e61da57db159b4acabb52e5ea2e7a93218eba2f239964465fbac39f6d",
+   "element": "nodes/n:1",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Group"
+    ],
+    "rationale": "The 'Group' node kind directly corresponds to 'foaf:Group' in the target ontology, representing an interest group within the community.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:7",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property of a Group can be mapped to 'foaf:name' as a human-readable name.",
+      "confidence": 1
+     },
+     {
+      "id": "p:8",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property, being a URL to the group's public page, maps directly to 'foaf:homepage' with the value treated as an IRI.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1376,
+    "output": 200,
+    "thinking": 354,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "162b09b6e91393db3fbaaff6d39b47cd373b6a060aebfb7e93b9ee462c08399b",
+   "element": "relationships/r:0",
+   "json": {
+    "decision": "map",
+    "predicate": "foaf:knows",
+    "direction": "forward",
+    "rationale": "The foaf:knows predicate directly expresses that one person knows another, matching the relationship's meaning and the mapped node kinds.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 1308,
+    "output": 60,
+    "thinking": 375,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "bd32a9bf628dd6cc970b43caeac7a37341a783e3c053f73a15af48c6220b1a0a",
+   "element": "relationships/r:1",
+   "json": {
+    "decision": "map",
+    "predicate": "foaf:member",
+    "direction": "reverse",
+    "rationale": "The foaf:member property indicates a member of a group, which aligns with the 'MEMBER_OF' relationship. The direction is reversed because the target property goes from the group to the member.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 1316,
+    "output": 73,
+    "thinking": 521,
+    "cached": 1142
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "23b19341023c2880be984636fe107da796da7f8a8a224ef3b424842fb24f4adf",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1468,
+    "output": 401,
+    "thinking": 795,
+    "cached": 1428
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "69066c5917498a72ce2d8b368c904bb7f930b1e8e5affd8db7cf2b6d422bd908",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Person"
+    ],
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1778,
+    "output": 262,
+    "thinking": 336,
+    "cached": 1575
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "e2490c2e61da57db159b4acabb52e5ea2e7a93218eba2f239964465fbac39f6d",
+   "element": "nodes/n:1",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Group"
+    ],
+    "rationale": "The 'Group' node kind directly corresponds to 'foaf:Group' in the target ontology, representing an interest group within the community.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:7",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property of a Group can be mapped to 'foaf:name' as a human-readable name.",
+      "confidence": 1
+     },
+     {
+      "id": "p:8",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property, being a URL to the group's public page, maps directly to 'foaf:homepage' with the value treated as an IRI.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1376,
+    "output": 200,
+    "thinking": 354,
+    "cached": 925
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "162b09b6e91393db3fbaaff6d39b47cd373b6a060aebfb7e93b9ee462c08399b",
+   "element": "relationships/r:0",
+   "json": {
+    "decision": "ignore",
+    "reason": "The foaf:knows predicate implies a reciprocated interaction, which is not asserted by the source's unilateral 'says they know' relationship.",
+    "rationale": "The source describes a unilateral 'knows' relationship, while foaf:knows explicitly indicates 'some level of reciprocated interaction'. This makes the target term's meaning stronger than what the source asserts.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 1308,
+    "output": 93,
+    "thinking": 598,
+    "cached": 1139
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "7a0eee0c00c52b4f9d43a6abdd117868a901c953e1acb11eec5e33d05314f6e3",
+   "element": "relationships/r:1",
+   "json": {
+    "decision": "map",
+    "predicate": "foaf:member",
+    "direction": "reverse",
+    "rationale": "The foaf:member property links a foaf:Group to its foaf:Agent members, which aligns with the MEMBER_OF relationship when reversed.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 1312,
+    "output": 61,
+    "thinking": 413,
+    "cached": 1140
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "23b19341023c2880be984636fe107da796da7f8a8a224ef3b424842fb24f4adf",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1468,
+    "output": 401,
+    "thinking": 795,
+    "cached": 1428
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "69066c5917498a72ce2d8b368c904bb7f930b1e8e5affd8db7cf2b6d422bd908",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Person"
+    ],
+    "rationale": "The 'Member' node represents a person in the community, which directly corresponds to 'foaf:Person'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property describes the full name of the member, which maps directly to 'foaf:name'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:2",
+      "decision": "map",
+      "predicate": "foaf:nick",
+      "datatype": "xsd:string",
+      "rationale": "The 'nick' property describes the nickname used by the member, which maps directly to 'foaf:nick'.",
+      "confidence": 1
+     },
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property provides a URL to the member's public page, which maps directly to 'foaf:homepage' and its value is an IRI.",
+      "confidence": 1
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "foaf:birthday",
+      "datatype": "xsd:string",
+      "rationale": "The 'birthday' property stores the birthday in MM-DD format, which maps directly to 'foaf:birthday'.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1778,
+    "output": 262,
+    "thinking": 349,
+    "cached": 1575
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "e2490c2e61da57db159b4acabb52e5ea2e7a93218eba2f239964465fbac39f6d",
+   "element": "nodes/n:1",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "foaf:Group"
+    ],
+    "rationale": "The 'Group' node kind directly corresponds to 'foaf:Group' in the target ontology, representing an interest group within the community.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:7",
+      "decision": "map",
+      "predicate": "foaf:name",
+      "datatype": "xsd:string",
+      "rationale": "The 'name' property of a Group can be mapped to 'foaf:name' as a human-readable name.",
+      "confidence": 1
+     },
+     {
+      "id": "p:8",
+      "decision": "map",
+      "predicate": "foaf:homepage",
+      "valueIsIri": true,
+      "rationale": "The 'homepage' property, being a URL to the group's public page, maps directly to 'foaf:homepage' with the value treated as an IRI.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 1376,
+    "output": 200,
+    "thinking": 354,
+    "cached": 925
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "162b09b6e91393db3fbaaff6d39b47cd373b6a060aebfb7e93b9ee462c08399b",
+   "element": "relationships/r:0",
+   "json": {
+    "decision": "map",
+    "predicate": "foaf:knows",
+    "direction": "forward",
+    "rationale": "The foaf:knows predicate directly expresses that one person knows another, matching the relationship's meaning and the mapped node kinds.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 1308,
+    "output": 60,
+    "thinking": 375,
+    "cached": 1139
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "bd32a9bf628dd6cc970b43caeac7a37341a783e3c053f73a15af48c6220b1a0a",
+   "element": "relationships/r:1",
+   "json": {
+    "decision": "map",
+    "predicate": "foaf:member",
+    "direction": "reverse",
+    "rationale": "The MEMBER_OF relationship indicates that a Member belongs to a Group, which directly corresponds to the foaf:member property when the direction is reversed.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 1316,
+    "output": 62,
+    "thinking": 231,
+    "cached": 1142
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "6163075bf4f36666402ccb7967add7a76f3e99463af5220549bb650810291176",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "ignore",
+    "reason": "PROV-O does not provide a suitable predicate for structural containment between general entities (prov:Entity).",
+    "rationale": "The relationship describes a structural containment of a ColumnVersion within a DatasetVersion, but DatasetVersion is not a prov:Collection, and no other PROV-O predicate directly expresses this 'has part' or 'contains' relationship for general entities.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9465,
+    "output": 94,
+    "thinking": 575,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  }
+ ]
+}

@@ -1,0 +1,348 @@
+{
+  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json",
+  "version": "1",
+  "id": "Data lineage LPG (PROV-inspired)",
+  "name": "Data lineage LPG (PROV-inspired)",
+  "description": "Labeled property graph ontology for data lineage, inspired by the W3C PROV-O vocabulary. It is not a PROV-O serialization and does not promise a round trip to RDF: references to PROV terms point to the closest concept, not to an equivalence. Logical objects (Dataset, Column, Job) are stable over time; versions (DatasetVersion, ColumnVersion, JobVersion) are immutable and carry the lineage, so questions can be asked as of a point in time. Run-level facts (USED, WAS_GENERATED_BY) record what a run read and wrote. They do not mean that every output depends on every input. Asserted derivations (WAS_DERIVED_FROM, COLUMN_DERIVED_FROM) come from a named source such as OpenLineage column lineage, a SQL parser or a dbt manifest. Potential dependencies computed from run inputs and outputs are stored separately as DEPENDS_ON. Time: generatedAt is when a version was produced, publishedAt when it was exposed to consumers, validFrom and validTo when it is the version consumers should see. Point-in-time queries use validFrom and validTo, not generatedAt alone. Invalidation never deletes history. Cross-level consistency rules described on relationships, such as a column version belonging to a version of the column's own dataset, are enforced by ingestion; the format cannot express them. KEY and existence constraints require Neo4j Enterprise Edition or Aura.",
+  "nodes": {
+    "n:0": {
+      "labels": { "identifier": "Entity" },
+      "properties": {
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:0": { "type": "UNIQUE", "properties": ["p:0"], "name": "id_Entity_uniq" },
+        "c:1": { "type": "EXISTS", "properties": ["p:0"], "name": "id_Entity_propertyExistence" }
+      },
+      "extensions": { "display": { "x": 62.21851701441392, "y": 194.20420321682252 } },
+      "description": "Base label for everything that has lineage: datasets, columns, jobs and their versions. Abstract by convention (not a field of the format): every Entity node also carries a more specific label. Holds the id uniqueness constraint shared by all subtypes."
+    },
+    "n:1": {
+      "labels": { "identifier": "Activity" },
+      "properties": {
+        "p:1": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all activities." }
+      },
+      "constraints": {
+        "c:2": { "type": "UNIQUE", "properties": ["p:1"], "name": "id_Activity_uniq" },
+        "c:3": { "type": "EXISTS", "properties": ["p:1"], "name": "id_Activity_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -112.10546131396046, "y": -364.29425019403413 } },
+      "description": "Base label for things that happen over time and read or write entities. Abstract by convention: every Activity node also carries a more specific label, such as Run."
+    },
+    "n:2": {
+      "labels": { "identifier": "Agent" },
+      "properties": {
+        "p:2": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all agents." },
+        "p:3": { "type": "STRING", "name": "name", "description": "Display name of the agent." }
+      },
+      "constraints": {
+        "c:4": { "type": "UNIQUE", "properties": ["p:2"], "name": "id_Agent_uniq" },
+        "c:5": { "type": "EXISTS", "properties": ["p:2"], "name": "id_Agent_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -88.64781763350624, "y": 213.22899928506078 } },
+      "description": "Base label for people, software and organizations that are responsible for runs or own assets. Abstract by convention: every Agent node also carries a more specific label."
+    },
+    "n:3": {
+      "labels": { "identifier": "Dataset", "implied": ["Entity"] },
+      "properties": {
+        "p:4": { "type": "STRING", "name": "id", "description": "Stable identifier, for example ds:snowflake://acme/stg.orders. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:5": { "type": "STRING", "name": "namespace", "description": "Namespace of the data source, for example snowflake://acme or postgres://db1:5432. Required: covered by the KEY constraint on namespace and name." },
+        "p:6": { "type": "STRING", "name": "name", "description": "Name of the dataset within its namespace, for example stg.orders. Required: covered by the KEY constraint on namespace and name." },
+        "p:7": { "type": "STRING", "name": "system", "description": "System that hosts the dataset, for example snowflake." },
+        "p:8": { "type": "STRING", "name": "kind", "description": "Kind of asset." },
+        "p:9": { "type": "ZONED DATETIME", "name": "retiredAt", "description": "When the dataset was logically retired. Retirement does not delete its versions or lineage." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:6": { "type": "KEY", "properties": ["p:5", "p:6"], "name": "namespace_name_Dataset_key" }
+      },
+      "extensions": { "display": { "x": 63.63146387287573, "y": -77.68746890667545 } },
+      "description": "The logical asset, stable over time: a table, topic, file, model or dashboard. Identified by namespace and name, as in OpenLineage. Lineage attaches to its versions, not to it directly."
+    },
+    "n:4": {
+      "labels": { "identifier": "DatasetVersion", "implied": ["Entity"] },
+      "properties": {
+        "p:10": { "type": "STRING", "name": "id", "description": "Stable identifier, for example dsv:snowflake://acme/stg.orders@17. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:11": { "type": "STRING", "name": "version", "description": "Version as reported by the source system: a number, snapshot id, commit id or hash. Opaque; do not order versions by this value." },
+        "p:12": { "type": "ZONED DATETIME", "name": "generatedAt", "description": "When the producing run finished writing this version." },
+        "p:13": { "type": "ZONED DATETIME", "name": "publishedAt", "description": "When this version was exposed to consumers. Absent if it was never published or if publication is not tracked." },
+        "p:14": { "type": "ZONED DATETIME", "name": "validFrom", "description": "Start of the period in which this is the version consumers should see. Set by ingestion; it may differ from generatedAt, for example for backfills or delayed publication." },
+        "p:15": { "type": "ZONED DATETIME", "name": "validTo", "description": "End of that period, exclusive. Absent while the version is current." },
+        "p:16": { "type": "ZONED DATETIME", "name": "invalidatedAt", "description": "When this version was declared invalid, for example after a backfill or a deletion request. The version and its lineage are kept." },
+        "p:17": { "type": "STRING", "name": "schemaHash", "description": "Hash of the schema of this version." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:7": { "type": "EXISTS", "properties": ["p:11"], "name": "version_DatasetVersion_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -95.15718441727793, "y": -72.15557181251727 } },
+      "description": "An immutable snapshot of a dataset, produced by at most one run. Runs use and generate dataset versions, which is what makes point-in-time lineage possible. Source versions that no tracked run produced have no generation."
+    },
+    "n:5": {
+      "labels": { "identifier": "Column", "implied": ["Entity"] },
+      "properties": {
+        "p:18": { "type": "STRING", "name": "id", "description": "Stable identifier, for example col:snowflake://acme/stg.orders.price. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:19": { "type": "STRING", "name": "name", "description": "Column name." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:8": { "type": "EXISTS", "properties": ["p:19"], "name": "name_Column_propertyExistence" }
+      },
+      "extensions": { "display": { "x": 118.6455392397121, "y": -222.355243324297 } },
+      "description": "A logical column of a dataset, stable across versions. Its versions carry the column-level lineage."
+    },
+    "n:6": {
+      "labels": { "identifier": "ColumnVersion", "implied": ["Entity"] },
+      "properties": {
+        "p:20": { "type": "STRING", "name": "id", "description": "Stable identifier, for example colv:snowflake://acme/stg.orders@17.price. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:21": { "type": "STRING", "name": "name", "description": "Column name in this dataset version." },
+        "p:22": { "type": "STRING", "name": "dataType", "description": "Data type as reported by the source system, for example NUMBER(10,2)." },
+        "p:23": { "type": "INTEGER", "name": "ordinal", "description": "Position of the column in the dataset version." },
+        "p:24": { "type": "BOOLEAN", "name": "nullable", "description": "Whether the column accepts null values in this version." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:9": { "type": "EXISTS", "properties": ["p:21"], "name": "name_ColumnVersion_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -35.93858207377564, "y": -212.54701253833608 } },
+      "description": "A column as it exists in one dataset version: name and type at that point in time. Column-level lineage connects column versions, so an assertion always belongs to the run that produced the dataset version."
+    },
+    "n:7": {
+      "labels": { "identifier": "Job", "implied": ["Entity"] },
+      "properties": {
+        "p:25": { "type": "STRING", "name": "id", "description": "Stable identifier, for example job:airflow://prod/stg_orders. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:26": { "type": "STRING", "name": "namespace", "description": "Namespace of the scheduler or project, for example airflow://prod. Required: covered by the KEY constraint on namespace and name." },
+        "p:27": { "type": "STRING", "name": "name", "description": "Name of the job within its namespace. Required: covered by the KEY constraint on namespace and name." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:10": { "type": "KEY", "properties": ["p:26", "p:27"], "name": "namespace_name_Job_key" }
+      },
+      "extensions": { "display": { "x": -271.79443455372063, "y": 144.66776324748207 } },
+      "description": "The logical job, stable over time: a dbt model, Airflow task or Spark job. Identified by namespace and name, as in OpenLineage."
+    },
+    "n:8": {
+      "labels": { "identifier": "JobVersion", "implied": ["Entity"] },
+      "properties": {
+        "p:28": { "type": "STRING", "name": "id", "description": "Stable identifier, for example jobv:airflow://prod/stg_orders@git:ab12. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
+        "p:29": { "type": "STRING", "name": "codeRef", "description": "Code reference, for example git:ab12." },
+        "p:30": { "type": "STRING", "name": "definitionHash", "description": "Hash of the effective definition, such as compiled SQL plus pinned dependencies and configuration. Two runs with the same hash ran the same definition." },
+        "p:31": { "type": "STRING", "name": "artifactRef", "description": "Reference to the built artifact, for example a container image digest or a dbt manifest." },
+        "p:32": { "type": "STRING", "name": "configRef", "description": "Reference to the configuration version that is part of the definition." },
+        "p:0": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all entities." }
+      },
+      "constraints": {
+        "c:11": { "type": "EXISTS", "properties": ["p:29"], "name": "codeRef_JobVersion_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -282.55539466775065, "y": -1.9938838261194778 } },
+      "description": "An immutable definition of a job: code plus the dependencies and configuration that change what it does. Execution parameters belong to the run, not here. Plays the role of a PROV plan."
+    },
+    "n:9": {
+      "labels": { "identifier": "Run", "implied": ["Activity"] },
+      "properties": {
+        "p:33": { "type": "STRING", "name": "id", "description": "Stable identifier, for example run:<OpenLineage runId>. Existence and uniqueness are enforced by the Activity id constraints; the node must carry the Activity label explicitly." },
+        "p:34": { "type": "ZONED DATETIME", "name": "startedAt", "description": "When the run started." },
+        "p:35": { "type": "ZONED DATETIME", "name": "endedAt", "description": "When the run reached a terminal status." },
+        "p:36": { "type": "STRING", "name": "status", "description": "Normalized status, not an OpenLineage event type. RUNNING: not finished. SUCCESS: finished and all outputs valid. FAILED or ABORTED: finished without valid outputs. PARTIAL: finished with an error, but some outputs were committed and are valid; which ones is recorded on each generated dataset version through validFrom and invalidatedAt. SUCCESS, FAILED, ABORTED and PARTIAL are terminal." },
+        "p:37": { "type": "STRING", "name": "lastEventType", "description": "Type of the latest event applied, as sent by OpenLineage." },
+        "p:38": { "type": "ZONED DATETIME", "name": "lastEventTime", "description": "eventTime of the latest event applied. Ingestion ignores events older than this value and events that would leave a terminal status." },
+        "p:39": { "type": "ZONED DATETIME", "name": "observedAt", "description": "When ingestion last updated this run." },
+        "p:40": { "type": "STRING", "name": "parameters", "description": "Effective execution parameters as sanitized JSON, for example the logical date or partition. Never store secrets; use parametersRef for sensitive values." },
+        "p:41": { "type": "STRING", "name": "parametersRef", "description": "Reference to the full parameters in a secure store." },
+        "p:1": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all activities." }
+      },
+      "constraints": {
+        "c:12": { "type": "EXISTS", "properties": ["p:36"], "name": "status_Run_propertyExistence" }
+      },
+      "extensions": { "display": { "x": -140.70116017112298, "y": 65.45391511679833 } },
+      "description": "One execution of a job. Uses input dataset versions and generates output dataset versions. Ingestion folds all events of a run into this node and never moves it from a terminal status back to RUNNING."
+    },
+    "n:10": {
+      "labels": { "identifier": "Person", "implied": ["Agent"] },
+      "properties": {
+        "p:42": { "type": "STRING", "name": "id", "description": "Stable identifier, for example agent:alice. Existence and uniqueness are enforced by the Agent id constraints; the node must carry the Agent label explicitly." },
+        "p:43": { "type": "STRING", "name": "name", "description": "Display name." },
+        "p:2": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all agents." },
+        "p:3": { "type": "STRING", "name": "name", "description": "Display name of the agent." }
+      },
+      "extensions": { "display": { "x": 152.4327619103287, "y": 327.8998460648639 } },
+      "description": "A person responsible for an asset or a run, such as an owner or steward."
+    },
+    "n:11": {
+      "labels": { "identifier": "SoftwareAgent", "implied": ["Agent"] },
+      "properties": {
+        "p:44": { "type": "STRING", "name": "id", "description": "Stable identifier, for example agent:dbt. Existence and uniqueness are enforced by the Agent id constraints; the node must carry the Agent label explicitly." },
+        "p:45": { "type": "STRING", "name": "name", "description": "Display name." },
+        "p:2": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all agents." },
+        "p:3": { "type": "STRING", "name": "name", "description": "Display name of the agent." }
+      },
+      "extensions": { "display": { "x": 297.17798187137515, "y": 106.26617126118893 } },
+      "description": "A piece of software that executes runs, such as an orchestrator or BI server."
+    },
+    "n:12": {
+      "labels": { "identifier": "Organization", "implied": ["Agent"] },
+      "properties": {
+        "p:46": { "type": "STRING", "name": "id", "description": "Stable identifier, for example agent:data-platform. Existence and uniqueness are enforced by the Agent id constraints; the node must carry the Agent label explicitly." },
+        "p:47": { "type": "STRING", "name": "name", "description": "Display name." },
+        "p:2": { "type": "STRING", "name": "id", "description": "Stable identifier, unique across all agents." },
+        "p:3": { "type": "STRING", "name": "name", "description": "Display name of the agent." }
+      },
+      "extensions": { "display": { "x": 312.82239732042984, "y": -110.99689800034888 } },
+      "description": "A team or organization on whose behalf agents act."
+    }
+  },
+  "relationships": {
+    "r:0": {
+      "type": "USED",
+      "from": { "node": "n:9" },
+      "to": { "node": "n:4" },
+      "properties": {
+        "p:48": { "type": "STRING", "name": "role", "description": "Role of the input in the run, for example input or lookup." }
+      },
+      "description": "A run read a dataset version. A run-level fact: it does not say which outputs depend on it."
+    },
+    "r:1": {
+      "type": "WAS_GENERATED_BY",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:9" },
+      "properties": {
+        "p:49": { "type": "STRING", "name": "role", "description": "Role of the output in the run, for example output." }
+      },
+      "description": "A dataset version was written by a run. Each version has at most one generation; source versions have none."
+    },
+    "r:2": {
+      "type": "DEPENDS_ON",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:4" },
+      "properties": {
+        "p:50": { "type": "STRING", "name": "runId", "description": "Id of the run the dependency was computed from." },
+        "p:51": { "type": "ZONED DATETIME", "name": "computedAt", "description": "When the dependency was computed." }
+      },
+      "constraints": {
+        "c:13": { "type": "EXISTS", "properties": ["p:50"], "name": "runId_DEPENDS_ON_propertyExistence" }
+      },
+      "description": "Potential dependency between dataset versions, computed from a run's inputs and outputs (every output of the run to every input). An over-approximation used to speed up traversals, not a proven derivation. Rebuild it from USED and WAS_GENERATED_BY; never edit it by hand."
+    },
+    "r:3": {
+      "type": "WAS_DERIVED_FROM",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:4" },
+      "properties": {
+        "p:52": { "type": "STRING", "name": "runId", "description": "Id of the run that generated the target-side version. Context for filtering, not a referential integrity guarantee: ingestion must check that this run generated the dataset version of the derived side." },
+        "p:53": { "type": "STRING", "name": "jobVersionId", "description": "Id of the job version of that run." },
+        "p:54": { "type": "STRING", "name": "source", "description": "Where the assertion comes from." },
+        "p:55": { "type": "STRING", "name": "evidenceRef", "description": "Reference to the evidence, for example an event id, a manifest path or a parsed query hash." },
+        "p:56": { "type": "STRING", "name": "transformationType", "description": "Kind of dependency, as in the OpenLineage column lineage facet. DIRECT: the value is computed from the source. INDIRECT: the source affects the result, for example through a filter, join or grouping." },
+        "p:57": { "type": "STRING", "name": "transformationSubtype", "description": "Finer kind, for example IDENTITY, TRANSFORMATION, AGGREGATION, FILTER or JOIN." },
+        "p:58": { "type": "STRING", "name": "expression", "description": "Transformation applied, for example price * qty. Descriptive only." },
+        "p:59": { "type": "ZONED DATETIME", "name": "assertedAt", "description": "When the assertion was recorded." }
+      },
+      "constraints": {
+        "c:14": { "type": "EXISTS", "properties": ["p:52"], "name": "runId_WAS_DERIVED_FROM_propertyExistence" },
+        "c:15": { "type": "EXISTS", "properties": ["p:54"], "name": "source_WAS_DERIVED_FROM_propertyExistence" }
+      },
+      "description": "Asserted dataset-level derivation: a named source states that the derived version was computed from the source version. Unlike DEPENDS_ON, it is evidence."
+    },
+    "r:4": {
+      "type": "COLUMN_DERIVED_FROM",
+      "from": { "node": "n:6" },
+      "to": { "node": "n:6" },
+      "properties": {
+        "p:60": { "type": "STRING", "name": "runId", "description": "Id of the run that generated the target-side version. Context for filtering, not a referential integrity guarantee: ingestion must check that this run generated the dataset version of the derived side." },
+        "p:61": { "type": "STRING", "name": "jobVersionId", "description": "Id of the job version of that run." },
+        "p:62": { "type": "STRING", "name": "source", "description": "Where the assertion comes from." },
+        "p:63": { "type": "STRING", "name": "evidenceRef", "description": "Reference to the evidence, for example an event id, a manifest path or a parsed query hash." },
+        "p:64": { "type": "STRING", "name": "transformationType", "description": "Kind of dependency, as in the OpenLineage column lineage facet. DIRECT: the value is computed from the source. INDIRECT: the source affects the result, for example through a filter, join or grouping." },
+        "p:65": { "type": "STRING", "name": "transformationSubtype", "description": "Finer kind, for example IDENTITY, TRANSFORMATION, AGGREGATION, FILTER or JOIN." },
+        "p:66": { "type": "STRING", "name": "expression", "description": "Transformation applied, for example price * qty. Descriptive only." },
+        "p:67": { "type": "ZONED DATETIME", "name": "assertedAt", "description": "When the assertion was recorded." }
+      },
+      "constraints": {
+        "c:16": { "type": "EXISTS", "properties": ["p:60"], "name": "runId_COLUMN_DERIVED_FROM_propertyExistence" },
+        "c:17": { "type": "EXISTS", "properties": ["p:62"], "name": "source_COLUMN_DERIVED_FROM_propertyExistence" }
+      },
+      "description": "Asserted column-level derivation between column versions. The derived column version belongs to a dataset version generated by the run in runId, so assertions from different runs or job versions never mix. The source column version must belong to a dataset version that run used."
+    },
+    "r:5": {
+      "type": "VERSION_OF_DATASET",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:3" },
+      "description": "A dataset version is a snapshot of exactly one logical dataset."
+    },
+    "r:6": {
+      "type": "HAS_COLUMN",
+      "from": { "node": "n:3" },
+      "to": { "node": "n:5" },
+      "description": "A logical dataset has a logical column. Each column belongs to exactly one dataset."
+    },
+    "r:7": {
+      "type": "HAS_COLUMN_VERSION",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:6" },
+      "description": "A dataset version contains a column version. Each column version belongs to exactly one dataset version."
+    },
+    "r:8": {
+      "type": "VERSION_OF_COLUMN",
+      "from": { "node": "n:6" },
+      "to": { "node": "n:5" },
+      "description": "A column version is a version of exactly one logical column. Ingestion must ensure that the column belongs to the dataset of the column version's dataset version."
+    },
+    "r:9": {
+      "type": "VERSION_OF_JOB",
+      "from": { "node": "n:8" },
+      "to": { "node": "n:7" },
+      "description": "A job version is a definition of exactly one logical job."
+    },
+    "r:10": {
+      "type": "RUN_OF",
+      "from": { "node": "n:9" },
+      "to": { "node": "n:7" },
+      "description": "A run executes exactly one logical job. Always known from the event, even when the code version is not."
+    },
+    "r:11": {
+      "type": "HAD_PLAN",
+      "from": { "node": "n:9" },
+      "to": { "node": "n:8" },
+      "description": "The job version a run executed, when known. An LPG shortcut: in PROV-O the plan is attached to the association between an activity and an agent, not to the activity. Ingestion must ensure that the job version is a version of the run's job."
+    },
+    "r:12": {
+      "type": "WAS_INFORMED_BY",
+      "from": { "node": "n:9" },
+      "to": { "node": "n:9" },
+      "description": "A run used something that another run generated, or was triggered by it."
+    },
+    "r:13": {
+      "type": "WAS_ASSOCIATED_WITH",
+      "from": { "node": "n:9" },
+      "to": { "node": "n:2" },
+      "properties": {
+        "p:68": { "type": "STRING", "name": "role", "description": "Role of the agent in the run, for example executor or triggeredBy." }
+      },
+      "description": "An agent was responsible for a run."
+    },
+    "r:14": {
+      "type": "WAS_ATTRIBUTED_TO",
+      "from": { "node": "n:0" },
+      "to": { "node": "n:2" },
+      "properties": {
+        "p:69": { "type": "STRING", "name": "role", "description": "Role of the agent for the entity, for example owner or steward." }
+      },
+      "description": "An entity is attributed to an agent, for example a dataset to its owner or steward."
+    },
+    "r:15": {
+      "type": "ACTED_ON_BEHALF_OF",
+      "from": { "node": "n:2" },
+      "to": { "node": "n:2" },
+      "description": "An agent acted on behalf of another agent, for example an orchestrator on behalf of a team."
+    },
+    "r:16": {
+      "type": "WAS_INVALIDATED_BY",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:9" },
+      "properties": {
+        "p:70": { "type": "STRING", "name": "reason", "description": "Why the version was invalidated, for example backfill or deletion request." }
+      },
+      "description": "A dataset version became invalid because of a run, for example a backfill or a deletion job. Set together with invalidatedAt; the version and its lineage are kept."
+    }
+  }
+}

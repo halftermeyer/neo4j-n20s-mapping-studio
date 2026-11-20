@@ -1,0 +1,28 @@
+# The demo project: one Neo4j database, two domains, two RDF vocabularies.
+# Act 1: the member directory, published as FOAF.
+# Act 2: data lineage, published as W3C PROV-O.
+format: n20s-project/0.1
+name: Community and data lineage
+
+sources:
+  people: { file: people/aura-export.json, origin: aura }
+  lineage: { file: lineage/aura-export.json, origin: aura }
+
+targets:
+  foaf: { file: targets/foaf.ttl, namespace: "http://xmlns.com/foaf/0.1/", prefix: foaf }
+  prov: { file: targets/prov.nq, namespace: "http://www.w3.org/ns/prov#", prefix: prov }
+
+mappings:
+  people-foaf:
+    source: people
+    targets: [foaf]
+    file: people/people-foaf.mapping.yaml
+    recipes: people/recipes
+    spec: people/people-foaf.spec.yaml
+  lineage-prov:
+    source: lineage
+    targets: [prov]
+    file: lineage/lineage-prov.mapping.yaml
+    recipes: lineage/recipes
+    spec: lineage/lineage-prov.spec.yaml
+    oracle: lineage/oracle.yaml

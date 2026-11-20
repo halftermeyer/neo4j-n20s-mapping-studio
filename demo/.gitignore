@@ -1,0 +1,7 @@
+.work/
+.run/
+video/raw/
+video/audio/
+video/scenes.json
+dist/
+video/

@@ -21,7 +21,7 @@
 import { indexLpg } from './lpg.js';
 
 export const SPEC_FORMAT = 'n20s-spec/0.1';
-export const DESIGN_PROMPT_VERSION = 'design/1';
+export const DESIGN_PROMPT_VERSION = 'design/2';
 export const ITEM_KINDS = ['purpose', 'include', 'exclude', 'principle', 'note', 'question', 'target'];
 const NEEDS = { purpose: ['text'], include: ['element'], exclude: ['element', 'reason'], principle: ['text'], note: ['element', 'text'], question: ['text'], target: ['target'] };
 
@@ -51,9 +51,8 @@ export function itemProblems(item, { names, targets = [] }) {
   if (!ITEM_KINDS.includes(item?.kind)) return [`unknown kind ${item?.kind}`];
   for (const f of NEEDS[item.kind]) if (!String(item[f] ?? '').trim()) out.push(`${item.kind} needs ${f}`);
   if (item.element && !names.has(item.element)) out.push(`${item.element} is not an element of the LPG ontology`);
-  if (item.kind === 'include' || item.kind === 'exclude') {
-    if (item.element && names.get(item.element)?.property) out.push('scope is decided for node kinds and relationship types; a property goes in a note');
-  }
+  // A property can be left out (it is never published); scope is otherwise decided for node kinds and relationship types.
+  if (item.kind === 'include' && item.element && names.get(item.element)?.property) out.push('scope is decided for node kinds and relationship types; a property goes in a note, or is excluded');
   if (item.kind === 'target' && item.target && !targets.some((t) => t.id === item.target)) out.push(`${item.target} is not a known target`);
   return out;
 }
@@ -84,12 +83,12 @@ Talk with the person: find out what the mapping is for, who will consume the RDF
 
 When something is clear enough, propose spec items in "proposals":
 - purpose: what the mapping is for, in one or two sentences.
-- include / exclude: a node label or relationship type in or out of scope, with the reason (exclude needs one).
+- include / exclude: a node label or relationship type in or out of scope, with the reason (exclude needs one). A property (Label.property) can be excluded too, when it must never be published; properties are never "included" one by one (they come with their element).
 - principle: a rule the mapping follows (for instance: never assert a derivation no source asserts).
 - note: what one element means or how to map it, for the person who reviews and for the model that will propose the mapping.
 - question: a competency question the RDF must answer (a question of the business, such as "who owns the datasets a broken run fed?"); these become tests. Questions to the person go in "reply", never here.
 - target: a target ontology to use (by its id in the list), and why.
-Name elements exactly as listed (a label, a relationship type, Label.property or TYPE.property). Do not propose again what the person rejected unless they ask. Do not repeat accepted items. Keep "reply" short: what you understood, then your questions. Write "reply" and the texts of your proposals in the language the person writes in.`;
+Name elements exactly as listed (a label, a relationship type, Label.property or TYPE.property). Do not propose again what the person rejected unless they ask. Do not repeat accepted items. Propose what the person said and what follows directly from it: a few items per turn, not a note for every element. Keep "reply" short: what you understood, then your questions. Write "reply" and the texts of your proposals in the language the person writes in.`;
 
 /** The request for one turn of the conversation. */
 export function designRequest({ lpgDoc, spec, chat, message, targets = [] }) {
@@ -211,7 +210,12 @@ export function specFindings(spec, mapping, lpgDoc, { targets = [] } = {}) {
   }
   for (const i of (spec?.items ?? []).filter((x) => x.status === 'accepted' && ['include', 'exclude'].includes(x.kind))) {
     const e = names.get(i.element);
-    if (!e || e.property) continue;
+    if (!e) continue;
+    if (e.property) {
+      const pe = mapping[e.section]?.[e.id]?.properties?.[e.property];
+      if (i.kind === 'exclude' && pe && !pe.ignore && pe.meta?.status !== 'rejected') out.push({ code: 'spec.out-of-scope-mapped', path: `${e.section}/${e.id}/properties/${e.property}`, element: i.element, message: `${i.element} is out of scope in the spec (${i.reason}), but mapped.` });
+      continue;
+    }
     const entry = mapping[e.section]?.[e.id];
     if (!entry || entry.meta?.status === 'rejected') continue;
     if (i.kind === 'exclude' && !entry.ignore) out.push({ code: 'spec.out-of-scope-mapped', path: `${e.section}/${e.id}`, element: i.element, message: `${i.element} is out of scope in the spec (${i.reason}), but mapped.` });

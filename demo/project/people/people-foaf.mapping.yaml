@@ -1,0 +1,19 @@
+# Created from n20s-project.yaml: people to foaf.
+format: n20s-mapping/0.1
+id: people-foaf
+name: Member directory to FOAF
+lpgOntology:
+  id: Member directory
+  version: "1"
+  location: aura-export.json
+targets:
+  - namespace: http://xmlns.com/foaf/0.1/
+    location: ../targets/foaf.ttl
+strategy: template
+prefixes:
+  foaf: http://xmlns.com/foaf/0.1/
+  xsd: http://www.w3.org/2001/XMLSchema#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  dir: https://people.example.org/id/
+nodes: {}
+relationships: {}

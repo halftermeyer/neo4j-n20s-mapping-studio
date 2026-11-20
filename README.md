@@ -286,7 +286,7 @@ Before proposing a mapping, an AI and a person write its specification together 
 | Item | Says |
 |---|---|
 | `purpose` | What the mapping is for. |
-| `include` / `exclude` | A node label or relationship type in or out of scope, with the reason. |
+| `include` / `exclude` | A node label or relationship type in or out of scope, with the reason. A property (`Member.email`) can be excluded: it is left out without asking the model, and mapping it anyway is a departure. |
 | `principle` | A rule the mapping follows: "never assert a derivation no source asserts". |
 | `note` | What an element (or `Label.property`) means or how to map it. |
 | `question` | A competency question the RDF must answer. |
@@ -296,11 +296,21 @@ Elements are named as people see them (labels, types, `Label.property`) and chec
 
 What the spec drives:
 
-- **`propose`** (CLI, or *Propose the mapping from this spec*): elements out of scope are left out with their reason, accepted, without asking the model; the purpose, the principles and the notes on an element go into its prompt (`propose/3`).
+- **`propose`** (CLI, or *Propose the mapping from this spec*): elements out of scope are left out with their reason, accepted, without asking the model; the purpose, the principles and the notes on an element go into its prompt (`propose/4`: a node kind with no class is sent back for repair; URL values become IRIs with `valueIsIri`).
 - **Departures** from the spec lead the review queue: an element out of scope that is mapped, one in scope that is left out, a target the spec chose that the mapping does not have (*Add it to the mapping* adds it to the project, fetched, and to the mapping); *Check against the spec* asks the model where the decisions contradict a principle, the purpose or a note.
 - **Competency questions become recipes.** *Draft a recipe* asks the model for a lazy recipe (Cypher scope, SPARQL, decode) and, next to it, a Cypher query answering the question directly on the LPG. The draft is checked (recipe structure, placeholders, decode columns, and the direction of every relationship pattern against the LPG ontology), repaired once, run, and compared with the direct answer: when they disagree, one more repair with the differences. It is saved as a draft whose header says whether it was cross-checked, linked from the question, and added to the bench. Agreement is evidence, not proof: the same model wrote both queries.
 
 With a spec on the lineage example (Gemini 2.5 Flash), out-of-scope elements cut the calls from 30 to 11; the check found the mapping lacked PROV and DCMI Terms, which the spec had chosen; drafted recipes for two questions agreed with their direct Cypher answers once relationship directions were checked.
+
+## Connections
+
+The **Connections** tab of the studio sets what the studio talks to, while it runs:
+
+- **Neo4j**: URL, user, password, database. *Connect* opens the database and counts its nodes before using it. An empty password keeps the one known for the same server.
+- **AI model**: provider (Gemini, Anthropic, OpenAI or compatible, with its address), API key, model. *List the models* checks the key without spending tokens and offers the provider's models; *Use and try* also asks the model one tiny question and shows the time and tokens.
+- **n20s-server**: its URL, checked with `/version`.
+
+Passwords and keys stay in the studio's process: the page gets back only whether one is set and where it came from (environment, command line, set here). *Save to the env file* writes them to the `--dotenv` file (default `.env`), owner-readable only, keeping its other lines (`N20S_SOURCE`, `N20S_SOURCE_USER`, `N20S_SOURCE_PASSWORD`, `N20S_SOURCE_DATABASE`, `N20S_AI_PROVIDER`, `N20S_AI_MODEL`, `N20S_AI_BASE_URL`, the provider's key variable, `N20S_URL`); it is refused when git would commit that file (tracked, or not ignored). Nothing goes to a mapping, project, plan or recipe file. The studio's API answers only to the page: host names other than 127.0.0.1 and localhost are refused, and posts must be JSON.
 
 ## AI proposals
 
@@ -327,7 +337,7 @@ Each answer is validated against the schema and the rules it cannot say (every p
 
 The result is then checked. An element with check errors gets one repair call that shows the findings; if errors remain, the element goes back to undecided and is listed as dropped. Warnings are kept for the reviewer.
 
-The provider sits behind `complete({system, user, schema}) → {json, usage}` (`src/providers.js`): Gemini (`GEMINI_API_KEY`), a recording wrapper, a replay of a recording (tests, offline re-runs), and a function. A client uses its own provider by implementing that method.
+The provider sits behind `complete({system, user, schema}) → {json, usage}` (`src/providers.js`): Gemini (`GEMINI_API_KEY`), Anthropic (`ANTHROPIC_API_KEY`; the answer is the input of a forced tool), any OpenAI-compatible API (`OPENAI_API_KEY`, `N20S_AI_BASE_URL` for Mistral, OpenRouter, Ollama, vLLM…: a JSON schema response, or `json_object` with the schema in the prompt when the server does not know it), a recording wrapper, a replay of a recording (tests, offline re-runs), and a function. `N20S_AI_PROVIDER` chooses (else the first key set, Gemini first), `N20S_AI_MODEL` the model; `--provider` and `--model` on the command line. A client uses its own provider by implementing that method. Only Gemini has been evaluated (eval/).
 
 Gemini compiles the response schema into a grammar and refuses large ones ("too many states"). The answer therefore lists properties as an array (one copy of the item schema with the term enums, not one per property) and has no numeric bounds.
 
@@ -344,8 +354,10 @@ A local page (127.0.0.1, default port 4321) to review proposals. The mapping fil
 
 - **Graph.** The LPG ontology as drawn in the modeling tool (`extensions.display`, nodes that sit too close pushed apart), node kinds and relationship types colored by status: accepted, proposed and safe, to review, rejected, left out, undecided. Dashed lines are implied labels. Wheel to zoom, drag to pan; `#relationships/r:0` in the URL selects an element.
 - **Queue.** Elements ranked by risk: check errors, domain, range and kind warnings (a doubtful meaning), other warnings, decisions that differ between passes, low confidence, mapped relationships (asserting what the source does not is the costly mistake), undecided properties. **Safe** means proposed, identical in every pass, confidence ≥ 0.95 and no check finding; **Accept safe** accepts them all. Without a variants file nothing is safe.
-- **Panel.** The LPG description, the decision in sentences, a before/after drawing for relationships (the LPG edge, the triples, the qualified resource), the rationale, check findings, the properties with their own decisions, and the other passes. **Accept** (with the proposed properties), **Reject** with a comment, **Edit** (terms restricted to the target catalog; saved as accepted, `proposedBy: {kind: human}`), **Ask the model** / **Reject and ask again**: the rejected proposal and the comment go into the prompt (`GEMINI_API_KEY` needed).
-- **Oracle.** Projects the accepted entries (or the proposals too) and runs the oracle; a failure lists the rows missing or extra in RDF (`--oracle`, a source and n20s-server needed).
+- **Panel.** The LPG description, the decision in sentences, a before/after drawing for relationships (the LPG edge, the triples, the qualified resource), the rationale, check findings, the properties with their own decisions, and the other passes. **Accept** (with the proposed properties), **Reject** with a comment, **Edit** (terms restricted to the target catalog; saved as accepted, `proposedBy: {kind: human}`), **Ask the model** / **Reject and ask again**: the rejected proposal and the comment go into the prompt (a model needed: Connections tab or environment).
+- **Oracle.** Projects the accepted entries (or the proposals too) and runs the oracle; a failure lists the rows missing or extra in RDF (an oracle, a source and n20s-server needed: `oracle:` on the mapping in the project, or `--oracle`).
+
+Options for showing the studio: `--title <text>` (the name in the header), `--mask-hosts` (database host names shown as `••••••••`), `--replay <recording>` (the AI answers of a recording, so a demo runs the same every time; the Connections tab says so) and `--record <file>` (keeps every answer of the live model). [demo/](demo/README.md) is a narrated demo built on them.
 
 Decisions are recorded in `meta`: `status`, `reviewedBy`, `reviewedAt`, `reviewComment`.
 
@@ -432,7 +444,9 @@ n20s-mapping unpublish lineage --recipes examples/lineage/recipes
 | `missing` | Recorded but not in n20s-server, which keeps graphs in memory: a restart empties it. |
 | `unknown` | In n20s-server, built by no recipe of the directory (an ephemeral graph kept with `--keep`, another tool). |
 
-Changes in the source data are not detected: the publication time says how old an endpoint is. **Next: change data capture.** The registry knows, per published graph, the mapping, the source and the subject keys that identify every resource; a CDC feed (Neo4j change data capture) gives the keys of the nodes and relationships that changed. Re-scoping only those keys into a new version (their triples out, the rows of the plan for those keys in, the closure again), then swapping it in, would keep an endpoint current without rebuilding it, and make "stale" mean "behind the change feed".
+**Following the database.** A published endpoint can follow the database (*Follow the database* in its panel, or `n20s-mapping follow <endpoint> --recipes <dir>`): Neo4j change data capture says which transactions committed since the last look (every 1.5 s); when one touches a label or relationship type the publication is built from (its recipe's mapping; any change at all when the recipe has free Cypher `rows` steps), the publication is rebuilt with the same recipe and parameters, through its gates, and swapped in, exactly as *Re-publish*. A transaction the database rolled back changes nothing, so nothing is rebuilt. The studio and `serve` do the following, for every mapping of the project; the endpoint panel shows the last change, the last rebuild and what it serves now, and the state is kept in `graphs.json` (`follow`: cursor, what is watched, counts). On the Aura instance of the demo, a committed transaction is in the published graph about three seconds later.
+
+It needs change data capture in **FULL** mode (Neo4j Enterprise 5.13+; on Aura, instance → ⋯ → Change Data Capture → FULL): FULL rather than DIFF because the state before and after a change carries the subject key even when another property changed, which the next step needs. Without it the option is off and says how to enable it; on Relate and Community there is none. **Next:** re-scope only the keys that changed into a new version (their triples out, the rows of the plan for those keys in, the closure again) instead of rebuilding.
 
 **Endpoints.** `n20s-mapping serve <recipes dir>` (127.0.0.1:7480 by default; also mounted in the studio):
 
@@ -444,7 +458,7 @@ Changes in the source data are not detected: the publication time says how old a
 | `GET\|POST /query/<api>` | Runs the recipe with these parameters and returns its result step: rows, or violations. `?trace` adds the full run. |
 | `GET /run`, `POST /run/<recipe>` | Any recipe, by id: only with `serve --run` (and in the studio). |
 
-n20s-server answers SELECT rows with numbers and booleans as JSON and literals as plain strings: the endpoint types numbers and booleans, takes strings that are `http(s)`, `urn`… IRIs as IRIs, and the rest as literals, without their language or datatype. Keeping them needs n20s to say them.
+The endpoint asks n20s-server for terms (`terms: true`): literals keep their datatype and language.
 
 **In the studio**, the **Recipes** tab lists the recipes (with their kind and API), the SPARQL endpoints, the query APIs, and the graphs of n20s-server with their status. A recipe shows as its sequence of steps (role, graph, state of the graph after the step, result); a step's panel edits it and, after a run, shows what its graph holds (classes and predicates with counts). Recipes are built from scratch there: **New recipe**, graphs (ephemeral, persistent and versioned, or published), parameters, **publish as API**, steps added from a skeleton for their type (`publish` included), moved, deleted, every field edited; each change is written to the file at once, comments kept, and checked as you go. An endpoint's panel shows what it serves and how it was published, **Re-publish** (the same recipe and parameters: a new version, through its gates, swapped in), **Unpublish**, and a SPARQL console on the endpoint; an API's panel has a form for its parameters and **Call**; a graph's panel shows where it comes from and a console on it.
 

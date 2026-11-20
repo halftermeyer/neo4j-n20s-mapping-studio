@@ -1,0 +1,57 @@
+# 4. A chain: reasoning finds the tainted versions, their ids go back to Cypher
+# as a parameter, and a second scope adds only their datasets and owners to the
+# graph. Nothing about owners is projected until the reasoning asks for it.
+# Declared as an api: served as /query/owners-to-notify?name=raw.orders, every
+# call scoped and reasoned on demand (lazy).
+format: n20s-recipe/0.1
+id: owners-to-notify
+title: Owners of datasets with a tainted version
+mapping: ../lineage-prov.mapping.yaml
+params:
+  namespace:
+    default: "demo:lineage:v2:postgres://pg1"
+  name:
+    default: "raw.orders"
+api:
+  name: owners-to-notify
+  result: owners
+  description: Who to notify when a source fed a run that read an invalidated input (computed on each call).
+steps:
+  - id: downstream
+    type: scope
+    title: Every version downstream of the source
+    cypher: |
+      MATCH (:Dataset {namespace: $namespace, name: $name})<-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH p = (s)<-[:USED|WAS_GENERATED_BY*0..20]-()
+      RETURN p
+
+  - id: tainted
+    type: query
+    title: Versions written by a run that read an invalidated input
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+    sparql: |
+      SELECT DISTINCT ?version WHERE { ?version lin:taintedBy ?input }
+    decode: { version: "node:n:0" }
+
+  - id: owners-scope
+    type: scope
+    title: Only their datasets and the agents they are attributed to
+    params: { versions: $tainted.version }
+    cypher: |
+      MATCH (v:DatasetVersion) WHERE v.id IN $versions
+      MATCH p = (v)-[:VERSION_OF_DATASET]->(:Dataset)-[:WAS_ATTRIBUTED_TO]->(:Agent)
+      RETURN p
+
+  - id: owners
+    type: query
+    title: Who to notify, and why
+    sparql: |
+      SELECT ?dataset ?agent ?role WHERE {
+        VALUES ?version { {{n:0|$tainted.version}} }
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?ag ; prov:hadRole ?role .
+        ?ag rdfs:label ?agent .
+      }

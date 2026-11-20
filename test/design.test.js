@@ -17,7 +17,8 @@ test('elements by the names people use; proposals checked against them', () => {
   assert.deepEqual(names.get('Dataset.name'), { section: 'nodes', id: 'n:3', property: 'p:6' });
   assert.equal(names.has('Dataset.id'), false, 'an alias is its inherited property');
   assert.deepEqual(itemProblems({ kind: 'exclude', element: 'DEPENDS_ON' }, { names, targets }), ['exclude needs reason']);
-  assert.deepEqual(itemProblems({ kind: 'include', element: 'Dataset.name' }, { names, targets }), ['scope is decided for node kinds and relationship types; a property goes in a note']);
+  assert.deepEqual(itemProblems({ kind: 'include', element: 'Dataset.name' }, { names, targets }), ['scope is decided for node kinds and relationship types; a property goes in a note, or is excluded']);
+  assert.deepEqual(itemProblems({ kind: 'exclude', element: 'Dataset.name', reason: 'private' }, { names, targets }), [], 'a property can be left out');
   assert.deepEqual(itemProblems({ kind: 'note', element: 'Nope', text: 'x' }, { names, targets }), ['Nope is not an element of the LPG ontology']);
   assert.deepEqual(itemProblems({ kind: 'target', target: 'dcat' }, { names, targets }), ['dcat is not a known target']);
 });
@@ -67,7 +68,7 @@ test('studio design: conversation appended, decisions written to the spec next t
   fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
   const provider = () => functionProvider(() => ({ reply: 'Noted.', proposals: [{ kind: 'exclude', element: 'DEPENDS_ON', reason: 'potential' }, { kind: 'question', text: 'Who owns what?' }] }), { model: 'test' });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'Pierre', provider });
-  const call = async (p, body) => { const r = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
+  const call = async (p, body) => { const r = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
   try {
     let { data } = await call('/api/design');
     assert.deepEqual([data.chat.length, data.spec.items.length, data.scope.mode, data.can.model], [0, 0, 'full', true]);
@@ -112,6 +113,24 @@ test('propose from a spec: out of scope left out without the model, accepted; pu
   assert.doesNotMatch(requests.find((r) => r.element === 'relationships/r:0').user, /Note on/, 'notes only where they belong');
 });
 
+test('propose from a spec: a property left out is never asked about; its element still is', async () => {
+  const spec = accepted([{ kind: 'exclude', element: 'Dataset.system', reason: 'internal, not for partners' }]);
+  const requests = [];
+  const provider = functionProvider((req) => { requests.push(req); return goldAnswer(auraGold)(req); });
+  const res = await propose({ mapping: auraBlank(), lpgDoc: auraDoc, targets: prov, provider, prefix: 'lin', spec });
+  const asked = requests.find((r) => r.element === 'nodes/n:3');
+  assert.ok(asked, 'Dataset itself is still proposed');
+  assert.doesNotMatch(asked.user, /"name": "system"/);
+  const pid = Object.entries(auraDoc.nodes['n:3'].properties).find(([, p]) => p.name === 'system')[0];
+  assert.deepEqual(res.mapping.nodes['n:3'].properties[pid].ignore, { reason: 'Out of scope: internal, not for partners' });
+  assert.equal(res.mapping.nodes['n:3'].properties[pid].meta.status, 'accepted');
+  assert.deepEqual(res.mapping.nodes['n:3'].classes, auraGold.nodes['n:3'].classes);
+  // Mapped anyway: a departure from the spec.
+  const m = structuredClone(res.mapping);
+  m.nodes['n:3'].properties[pid] = { predicate: 'rdfs:comment' };
+  assert.deepEqual(specFindings(spec, m, auraDoc).map((x) => x.code), ['spec.out-of-scope-mapped']);
+});
+
 test('departures from the spec: out of scope but mapped, in scope but left out, a chosen target missing', () => {
   const spec = accepted([
     { kind: 'exclude', element: 'DEPENDS_ON', reason: 'potential' },
@@ -148,7 +167,7 @@ test('studio: a question drafted as a recipe, checked, repaired once, saved, add
       answerCypher: 'MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(:Run)-[:USED]->(i:DatasetVersion) WHERE i.invalidatedAt IS NOT NULL RETURN DISTINCT v.id AS version', explanation: 'Generation then usage.' };
   }, { model: 'test' });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'Pierre', provider });
-  const call = async (p, body) => { const r = await fetch(new URL(p, studio.url), { method: 'POST', body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
+  const call = async (p, body) => { const r = await fetch(new URL(p, studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
   try {
     await call('/api/design/decide', { action: 'edit', item: { kind: 'question', text: 'Which versions did a run write after reading an invalidated version?' } });
     const { data } = await call('/api/design/draft', { id: 'i1' });

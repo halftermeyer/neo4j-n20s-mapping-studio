@@ -5,3 +5,5 @@ node_modules/
 graphs.json
 # Editor settings, per machine.
 .vscode/
+# Local Claude Code skills (the demo video tooling stays out of the repository).
+.claude/

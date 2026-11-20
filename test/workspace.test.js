@@ -70,7 +70,7 @@ test('studio on a project: the Project tab, and switching the open mapping', asy
   await fetchTarget(p, 'dcat', { fetch: fakeFetch(ttl) });
   await newMapping(await readProject(file), { id: 'lineage-dcat', source: 'lineage', targets: ['dcat'], baseIri: 'https://example.org/catalog/', prefix: 'cat' });
   const studio = await startStudio({ projectFile: file, port: 0, reviewer: 'Pierre' });
-  const call = async (q, body) => { const r = await fetch(new URL(q, studio.url), body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
+  const call = async (q, body) => { const r = await fetch(new URL(q, studio.url), body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, data: await r.json() }; };
   try {
     let { data } = await call('/api/project');
     assert.equal(data.active, 'lineage-prov');

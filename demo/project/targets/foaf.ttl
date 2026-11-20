@@ -1,0 +1,92 @@
+# FOAF (Friend of a Friend), the terms this demo uses, from the FOAF
+# Vocabulary Specification 0.99 (http://xmlns.com/foaf/spec/, CC BY 1.0).
+# The specification is published as RDF/XML; this subset is the same terms in
+# Turtle, with their labels, comments, domains and ranges.
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+<http://xmlns.com/foaf/0.1/> a owl:Ontology ;
+  rdfs:label "Friend of a Friend (FOAF) vocabulary" ;
+  rdfs:comment "The Friend of a Friend (FOAF) RDF vocabulary, described using W3C RDF Schema and the Web Ontology Language." .
+
+foaf:Agent a owl:Class, rdfs:Class ;
+  rdfs:label "Agent" ;
+  rdfs:comment "An agent (eg. person, group, software or physical artifact)." .
+
+foaf:Person a owl:Class, rdfs:Class ;
+  rdfs:label "Person" ;
+  rdfs:comment "A person." ;
+  rdfs:subClassOf foaf:Agent .
+
+foaf:Group a owl:Class, rdfs:Class ;
+  rdfs:label "Group" ;
+  rdfs:comment "A class of Agents." ;
+  rdfs:subClassOf foaf:Agent .
+
+foaf:Organization a owl:Class, rdfs:Class ;
+  rdfs:label "Organization" ;
+  rdfs:comment "An organization." ;
+  rdfs:subClassOf foaf:Agent .
+
+foaf:Document a owl:Class, rdfs:Class ;
+  rdfs:label "Document" ;
+  rdfs:comment "A document." .
+
+foaf:name a rdf:Property, owl:DatatypeProperty ;
+  rdfs:label "name" ;
+  rdfs:comment "A name for some thing." ;
+  rdfs:domain owl:Thing ;
+  rdfs:range rdfs:Literal ;
+  rdfs:subPropertyOf rdfs:label .
+
+foaf:nick a rdf:Property, owl:DatatypeProperty ;
+  rdfs:label "nickname" ;
+  rdfs:comment "A short informal nickname characterising an agent (includes login identifiers, IRC and other chat nicknames)." ;
+  rdfs:range rdfs:Literal .
+
+foaf:knows a rdf:Property, owl:ObjectProperty ;
+  rdfs:label "knows" ;
+  rdfs:comment "A person known by this person (indicating some level of reciprocated interaction between the parties)." ;
+  rdfs:domain foaf:Person ;
+  rdfs:range foaf:Person .
+
+foaf:member a rdf:Property, owl:ObjectProperty ;
+  rdfs:label "member" ;
+  rdfs:comment "Indicates a member of a Group." ;
+  rdfs:domain foaf:Group ;
+  rdfs:range foaf:Agent .
+
+foaf:page a rdf:Property, owl:ObjectProperty ;
+  rdfs:label "page" ;
+  rdfs:comment "A page or document about this thing." ;
+  rdfs:domain owl:Thing ;
+  rdfs:range foaf:Document .
+
+foaf:homepage a rdf:Property, owl:ObjectProperty, owl:InverseFunctionalProperty ;
+  rdfs:label "homepage" ;
+  rdfs:comment "A homepage for some thing." ;
+  rdfs:subPropertyOf foaf:page ;
+  rdfs:domain owl:Thing ;
+  rdfs:range foaf:Document .
+
+foaf:mbox a rdf:Property, owl:ObjectProperty, owl:InverseFunctionalProperty ;
+  rdfs:label "personal mailbox" ;
+  rdfs:comment "A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox. This is a 'static inverse functional property', in that there is (across time and change) at most one individual that ever has any particular value for foaf:mbox." ;
+  rdfs:domain foaf:Agent ;
+  rdfs:range owl:Thing .
+
+foaf:birthday a rdf:Property, owl:DatatypeProperty, owl:FunctionalProperty ;
+  rdfs:label "birthday" ;
+  rdfs:comment "The birthday of this Agent, represented in mm-dd string form, eg. '12-31'." ;
+  rdfs:domain foaf:Agent ;
+  rdfs:range rdfs:Literal .
+
+foaf:givenName a rdf:Property, owl:DatatypeProperty ;
+  rdfs:label "Given name" ;
+  rdfs:comment "The given name of some person." .
+
+foaf:familyName a rdf:Property, owl:DatatypeProperty ;
+  rdfs:label "familyName" ;
+  rdfs:comment "The family name of some person." .

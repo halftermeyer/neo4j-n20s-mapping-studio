@@ -240,6 +240,14 @@ async function writeRegistry(dir, registry) {
   await fs.writeFile(registryPathFor(dir), JSON.stringify(registry, null, 2) + '\n');
 }
 
+/** Changes the registry of a directory in place: read, change, write. Returns the new registry. */
+export async function updateRegistry(dir, change) {
+  const registry = await readRegistry(dir);
+  await change(registry);
+  await writeRegistry(dir, registry);
+  return registry;
+}
+
 /** The graph an endpoint of this recipes directory serves now, for recipes that read it (lifecycle: published). */
 export const publishedResolver = (dir) => async (endpoint) => (await readRegistry(dir)).publications?.[endpoint]?.graph ?? null;
 
@@ -251,7 +259,11 @@ export async function graphsReport(recipesDir, n20s) {
     try { current[file] = await provenance(await loadRecipe(path.join(recipesDir, file))); } catch { /* recipe gone or broken: reported as such */ }
   }
   const graphs = graphStatuses(registry, await n20s.list(), current);
-  return Object.assign(graphs, { endpoints: publicationStatuses(registry, graphs) });
+  const endpoints = publicationStatuses(registry, graphs).map((e) => {
+    const f = registry.follow?.[e.endpoint];
+    return f ? { ...e, follow: { since: f.since, state: f.state, changes: f.changes, syncs: f.syncs, lastChange: f.lastChange, lastSync: f.lastSync, watched: f.watched } } : e;
+  });
+  return Object.assign(graphs, { endpoints });
 }
 
 /** Runs again the recipe that published an endpoint, with the parameters of that run: a new version, gated, swapped. */

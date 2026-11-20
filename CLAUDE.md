@@ -20,7 +20,9 @@ README.md is the reference for the format, the checks and the commands; read it 
 - Only `meta.status: accepted` entries compile; `proposed` entries are checked
   and shown, not compiled. This is the hook for AI proposals.
 - In production, clients use their own AI provider: keep the provider behind a
-  thin interface, key from the environment.
+  thin interface, key from the environment. The studio's Connections tab may
+  set keys and passwords in its process and save them to the env file (refused
+  when git would commit it); the page never gets them back.
 - No git commits or pushes unless Pierre asks.
 
 ## Layout
@@ -34,7 +36,8 @@ README.md is the reference for the format, the checks and the commands; read it 
     oracle.js (Cypher vs SPARQL), iri.js (templates, n20s-identical encoding),
     prepare.js (deterministic part of proposals: subjects, qualified and value
     IRIs), propose.js (AI proposals, passes, variants), providers.js (Gemini,
-    record, replay), review.js (risk queue, accept/reject/edit), rekey.js (move a
+    Anthropic, OpenAI-compatible, record, replay; PROVIDERS, makeProvider,
+    listModels, aiSettingsFromEnv), settings.js (studio connections, env file), review.js (risk queue, accept/reject/edit), rekey.js (move a
     mapping between exports with different ids), studio.js (local server),
     recipe.js (recipes: ordered steps feeding, changing or asking named n20s
     graphs, ephemeral or persistent), graphs.js (registry of persistent graphs
@@ -42,11 +45,13 @@ README.md is the reference for the format, the checks and the commands; read it 
     bench.js (requests, checks, benchmark; also loaded by the page),
     workspace.js (projects: sources, targets, mappings, lock, status),
     catalog.js (target vocabularies), introspect.js (LPG ontology from a
-    database), design.js (spec, design conversation, spec checks, recipe drafts).
+    database), design.js (spec, design conversation, spec checks, recipe drafts),
+    follow.js (publications following the database through CDC FULL).
     project.js is NOT the project file: it runs a projection plan (project,
     compareSources); projects are workspace.js.
 - `studio/` the page (plain DOM + SVG, no build step): app.js (Mapping tab),
-  project-tab.js, design-tab.js, recipes.js, bench-tab.js (tabs), dom.js (shared helpers).
+  project-tab.js, design-tab.js, recipes.js, bench-tab.js, connections-tab.js
+  (tabs), dom.js (shared helpers).
 - `bin/n20s-mapping.js` CLI: status, introspect, fetch, check, lock, compile,
   propose, studio, recipe, graphs, serve, bench, republish, unpublish, project,
   compare, snapshot, load, query, oracle.
@@ -62,6 +67,12 @@ README.md is the reference for the format, the checks and the commands; read it 
   graphs.json (run state) is git-ignored. n20s-project.yaml makes the example
   a project (Aura export, introspected source, prov file, dcat from the catalog).
 - `aura.snapshot.json` rows from the Aura instance `data-lineage` (Neo4j 5.27).
+- `demo/` the narrated demo (README there): act 1 member directory → FOAF, act 2
+  lineage → PROV-O, on the Aura instance of .env (Enterprise, CDC FULL); aura.mjs
+  (reset, tx, teardown: directory data, role rdf_partner, user partner),
+  demo.sh (start, live, stop), demo-script.md (scenes), video/ (recorder tools
+  from the demo-video skill, hooks.py). Story: the graph database stays the
+  system of record, RDF is a view of it; n20s stays in the background (Pierre).
 
 ## Running
 
@@ -133,11 +144,14 @@ republish/unpublish (CLI and studio). Bench (Pierre, 2026-11-20): bench.yaml
 collections of requests (published APIs and endpoints, draft recipes via /run)
 with expectations; `bench` CLI and a Bench tab (send, checks, history,
 benchmark with percentiles and histogram, compare). Only published endpoints are served;
-/run needs serve --run. Future: CDC-driven updates of published graphs
-(re-scope the changed keys into a new version, then swap).
+/run needs serve --run. Follow the database (Pierre, 2026-11-20): an endpoint
+can follow CDC (FULL mode only; otherwise the option is off and says how to
+enable it); a committed transaction touching its labels or types rebuilds it
+through its gates and swaps it in (full rebuild; next: re-scope the changed keys).
+n20s fixed the same day (temporal XSD forms, column-valued IRIs, query terms).
 Scopes restrict the plan by subject keys, not elementId (elementId is for the
 canonical-bridge strategy; Pierre's call). Not yet: composite subject keys in
-scopes, rows/construct examples, detecting source data changes for staleness.
+scopes, rows/construct examples, incremental CDC updates.
 
 Next, in order:
 Head of the pipeline (Pierre, 2026-11-20): project (sources from an Aura or
@@ -146,7 +160,8 @@ specification written in a chat where the AI proposes and the person
 validates (scope, purpose, principles, notes, competency questions, targets),
 propose driven by the spec, departures from the spec in the review queue, and
 competency questions drafted as recipes cross-checked against a direct Cypher
-answer. Tabs: Project, Design, Mapping, Recipes, Bench.
+answer. Tabs: Project, Design, Mapping, Recipes, Bench, Connections (Neo4j,
+AI provider, key and model, n20s-server; Pierre, 2026-11-20).
 
 Order agreed with Pierre (2026-11-20): 3 (recipes, done), then 2, then 1.
 1. Repair calls for AI entries with domain/range warnings; second eval set from

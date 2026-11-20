@@ -24,10 +24,16 @@ import { project } from './project.js';
 import { runOracle } from './oracle.js';
 import { shorten } from './iri.js';
 import { qualifiedSubject } from './prepare.js';
+import { openSource as openBolt } from './source.js';
+import { sourceValues, readRegistry } from './node.js';
+import { n20sClient } from './n20s.js';
+import { makeProvider, listModels } from './providers.js';
+import { envFileRisk, writeEnvFile } from './settings.js';
+import { cdcStatus, startFollowing, stopFollowing, follower } from './follow.js';
 
 const STATIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../studio');
 const FILES = {
-  '/': ['index.html', 'text/html'], '/recipes': ['index.html', 'text/html'], '/bench': ['index.html', 'text/html'], '/project': ['index.html', 'text/html'], '/design': ['index.html', 'text/html'],
+  '/': ['index.html', 'text/html'], '/recipes': ['index.html', 'text/html'], '/bench': ['index.html', 'text/html'], '/project': ['index.html', 'text/html'], '/design': ['index.html', 'text/html'], '/connections': ['index.html', 'text/html'], '/connections-tab.js': ['connections-tab.js', 'text/javascript'],
   '/app.js': ['app.js', 'text/javascript'], '/dom.js': ['dom.js', 'text/javascript'], '/recipes.js': ['recipes.js', 'text/javascript'],
   '/style.css': ['style.css', 'text/css'], '/bench-tab.js': ['bench-tab.js', 'text/javascript'], '/project-tab.js': ['project-tab.js', 'text/javascript'], '/design-tab.js': ['design-tab.js', 'text/javascript'],
   // The bench engine is the one the CLI uses.
@@ -146,11 +152,41 @@ async function designTargetsOf(l, projectFile) {
   return out;
 }
 
-export async function startStudio({ mappingFile = null, projectFile = null, mappingId = null, lpg, port = 4321, reviewer, oracleFile = null, openSource = null, n20s = null, provider = null, valuesOf = null, prefix = null, recipesDir = null }) {
+export async function startStudio({ mappingFile = null, projectFile = null, mappingId = null, lpg, port = 4321, reviewer, oracleFile = null, openSource = null, n20s = null, provider = null, valuesOf = null, prefix = null, recipesDir = null, settings = null, followIntervalMs = 1500, title = 'n20s-mapping studio' }) {
+  // With settings (the CLI), the connections come from them and the Connections tab changes them.
+  function applySettings() {
+    if (!settings) return;
+    const neo = settings.neo4j;
+    const openOne = (u) => (u && u !== neo?.url ? openBolt(u) : openBolt(neo.url, { user: neo.user ?? undefined, password: neo.password ?? undefined, database: neo.database ?? undefined }));
+    openSource = neo ? openOne : null;
+    valuesOf = neo ? async (...a) => { const src = openOne(); try { return await sourceValues(src)(...a); } finally { await src.close(); } } : null;
+    provider = settings.fixedProvider ? () => settings.fixedProvider
+      : settings.ai ? () => (settings.wrapProvider ?? ((x) => x))(makeProvider(settings.ai)) : null;
+    n20s = n20sClient(settings.n20sUrl ?? undefined);
+  }
+  applySettings();
+  /** Saves the current settings of one kind to the env file, if git would not commit it. */
+  async function saveSettings(which) {
+    if (!settings.envFile) throw new UsageError('No env file to save to (--dotenv).');
+    const risk = await envFileRisk(settings.envFile);
+    if (risk) throw new UsageError(`Not saved: ${risk}`);
+    const updates = settings.envUpdates(which);
+    await writeEnvFile(settings.envFile, updates);
+    for (const [k, v] of Object.entries(updates)) { if (v === null || v === undefined) delete process.env[k]; else process.env[k] = String(v); }
+  }
+  async function settingsView() {
+    let n20sStatus;
+    try { n20sStatus = { ok: true, ...(await n20s.version()) }; } catch (err) { n20sStatus = { ok: false, error: err.message }; }
+    const shown = settings.describe();
+    const risk = settings.envFile ? await envFileRisk(settings.envFile) : null;
+    return { ...shown, n20s: { url: n20s.url, ...n20sStatus }, envRisk: risk ? risk.replaceAll(settings.envFile, shown.envFile) : null };
+  }
+
   let variantsFile;
   let recipeDir;
   let specFile;
   let active = null;
+  const oracleOption = oracleFile;
   const designTargets = (l) => designTargetsOf(l, projectFile);
   const specCheckPath = () => specFile.replace(/\.spec\.ya?ml$/i, '') + '.spec-check.json';
   /** The last check of the mapping against the spec, as review reasons. */
@@ -171,6 +207,8 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     recipeDir = m.recipes ? path.join(p.dir, m.recipes) : path.join(path.dirname(mappingFile), 'recipes');
     variantsFile = variantsPathFor(mappingFile);
     specFile = m.spec ? path.join(p.dir, m.spec) : specPathFor(mappingFile);
+    // An oracle may come with the mapping in the project; --oracle otherwise.
+    oracleFile = m.oracle ? path.join(p.dir, m.oracle) : oracleOption;
     active = id;
   }
   if (projectFile) {
@@ -223,6 +261,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
   async function view() {
     const s = await state();
     return {
+      title,
       file: mappingFile,
       project: projectFile ? { file: projectFile, mapping: active } : null,
       reviewer,
@@ -238,6 +277,74 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
 
   const routes = {
     'GET /api/state': () => view(),
+
+    // Connections: Neo4j, the AI provider, n20s-server. Passwords and keys are never sent back.
+    'GET /api/settings': () => {
+      if (!settings) throw new UsageError('Connections are set by the program that started the studio.');
+      return settingsView();
+    },
+    'POST /api/settings/neo4j': async ({ url, user, password, database, save }) => {
+      const next = settings.neo4jFrom({ url, user, password, database });
+      const src = openBolt(next.url, { user: next.user ?? undefined, password: next.password ?? undefined, database: next.database ?? undefined });
+      let agent;
+      let nodes;
+      try {
+        agent = await src.agent();
+        [{ nodes }] = await src.run('MATCH (n) RETURN count(n) AS nodes');
+      } catch (err) {
+        throw new UsageError(`Cannot connect to ${next.url}: ${err.message.split('\n')[0]}`);
+      } finally {
+        await src.close();
+      }
+      settings.setNeo4j(next, { agent, nodes });
+      applySettings();
+      if (save) await saveSettings('neo4j');
+      return { ...(await settingsView()), checked: { agent, nodes, saved: !!save } };
+    },
+    'POST /api/settings/ai/models': async ({ provider: id, apiKey, baseUrl }) => {
+      const cfg = settings.aiFrom({ provider: id, apiKey, baseUrl });
+      try {
+        return { models: await listModels(cfg) };
+      } catch (err) {
+        throw new UsageError(`Cannot list the models: ${err.message}`);
+      }
+    },
+    'POST /api/settings/ai': async ({ provider: id, apiKey, model, baseUrl, save, test }) => {
+      const cfg = settings.aiFrom({ provider: id, apiKey, model, baseUrl });
+      let checked = { models: null };
+      try {
+        checked.models = (await listModels(cfg)).length;
+      } catch (err) {
+        throw new UsageError(`The key or the address is not accepted: ${err.message}`);
+      }
+      if (test) {
+        const t0 = Date.now();
+        try {
+          const res = await makeProvider(cfg).complete({ system: 'You check that a connection works.', user: 'Answer with ok: true.', schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] }, maxOutputTokens: 256 });
+          checked = { ...checked, answered: res.json?.ok === true, ms: Date.now() - t0, model: res.model, usage: res.usage };
+        } catch (err) {
+          throw new UsageError(`${cfg.model} did not answer: ${err.message}`);
+        }
+      }
+      settings.setAi(cfg, checked);
+      applySettings();
+      if (save) await saveSettings('ai');
+      return { ...(await settingsView()), checked: { ...checked, saved: !!save } };
+    },
+    'POST /api/settings/n20s': async ({ url, save }) => {
+      const client = n20sClient(url || undefined);
+      let version;
+      try { version = await client.version(); } catch (err) { throw new UsageError(`No n20s-server at ${client.url}: ${err.message}`); }
+      settings.n20sUrl = client.url;
+      applySettings();
+      if (save) {
+        if (!settings.envFile) throw new UsageError('No env file to save to (--dotenv).');
+        await writeEnvFile(settings.envFile, { N20S_URL: client.url });
+        process.env.N20S_URL = client.url;
+      }
+      return { ...(await settingsView()), checked: { version, saved: !!save } };
+    },
+
 
     'POST /api/decide': async (body) => {
       const s = await state();
@@ -262,7 +369,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
 
     // Proposes an element again: its proposed entries are rejected with the comment first, so the model sees why.
     'POST /api/propose': async ({ key, comment }) => {
-      if (!provider) throw new UsageError('Proposing needs a model: start the studio with GEMINI_API_KEY set (--dotenv).');
+      if (!provider) throw new UsageError('Proposing needs a model: choose one in the Connections tab.');
       const s = await state();
       let mapping = s.l.mapping;
       const item = s.items.find((i) => i.key === key);
@@ -408,6 +515,18 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     'GET /api/graphs': async () => {
       if (!n20s) return { graphs: [], endpoints: [], can: false };
       const report = await graphsReport(recipeDir, n20s);
+      // Not built here does not mean unknown: the oracle's projection, or the recipes of another mapping of the project.
+      await refreshFollowDirs();
+      const elsewhere = new Map();
+      for (const [dir, id] of followOwners) {
+        if (dir === recipeDir) continue;
+        try { for (const name of Object.keys((await readRegistry(dir)).graphs ?? {})) elsewhere.set(name, id); } catch { /* no registry */ }
+      }
+      for (const g of report) {
+        if (g.status !== 'unknown') continue;
+        if (/^studio-(accepted|proposals)$/.test(g.name)) Object.assign(g, { status: 'other', reasons: ['the projection of the last oracle run'] });
+        else if (elsewhere.has(g.name)) Object.assign(g, { status: 'other', reasons: [`built by the recipes of mapping ${elsewhere.get(g.name)}`] });
+      }
       return { graphs: report, endpoints: report.endpoints, can: true };
     },
 
@@ -430,6 +549,24 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       } finally {
         await source.close();
       }
+    },
+
+    // Change Data Capture: a publication can follow the database only when CDC is on, in FULL mode.
+    'GET /api/cdc': async () => {
+      if (!openSource) return { mode: 'unknown', available: false, message: 'No database connected (Connections tab).' };
+      const source = openSource();
+      try { return await cdcStatus(source); } finally { await source.close(); }
+    },
+    'POST /api/graphs/follow': async ({ endpoint, on }) => {
+      await refreshFollowDirs();
+      if (on) {
+        if (!openSource) throw new UsageError('No database connected (Connections tab).');
+        const source = openSource();
+        try { await startFollowing(recipeDir, endpoint, source); } finally { await source.close(); }
+      } else {
+        await stopFollowing(recipeDir, endpoint);
+      }
+      return routes['GET /api/graphs']();
     },
 
     'POST /api/graphs/unpublish': async ({ endpoint }) => {
@@ -546,7 +683,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       };
     },
     'POST /api/design/say': async ({ message }) => {
-      if (!provider) throw new UsageError('The conversation needs a model: start the studio with GEMINI_API_KEY (--dotenv).');
+      if (!provider) throw new UsageError('The conversation needs a model: choose one in the Connections tab.');
       if (!String(message ?? '').trim()) throw new UsageError('Say something.');
       const l = await loadFiles(mappingFile, { lpg });
       const spec = await readSpec(specFile, l.mapping.id);
@@ -575,7 +712,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
 
     // Proposes every undecided element of the mapping from its spec (passes > 1 also writes the variants).
     'POST /api/design/propose': async ({ passes = 1 }) => {
-      if (!provider) throw new UsageError('Proposing needs a model: start the studio with GEMINI_API_KEY (--dotenv).');
+      if (!provider) throw new UsageError('Proposing needs a model: choose one in the Connections tab.');
       const s = await state();
       const pfx = prefix ?? inferPrefix(s.l.mapping) ?? baseOf(s.l.mapping);
       if (!pfx) throw new UsageError('No prefix for generated IRIs: start the studio with --prefix.');
@@ -589,7 +726,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     // A competency question of the spec drafted as a recipe: checked, repaired once, written as a draft,
     // added to the bench, and run once when a source and n20s-server are there.
     'POST /api/design/draft': async ({ id }) => {
-      if (!provider) throw new UsageError('Drafting needs a model: start the studio with GEMINI_API_KEY (--dotenv).');
+      if (!provider) throw new UsageError('Drafting needs a model: choose one in the Connections tab.');
       const s = await state();
       const item = (s.spec.items ?? []).find((i) => i.id === id && i.kind === 'question' && i.status === 'accepted');
       if (!item) throw new UsageError(`No accepted question ${id} in the spec.`);
@@ -660,7 +797,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     },
 
     'POST /api/design/check': async () => {
-      if (!provider) throw new UsageError('The check needs a model: start the studio with GEMINI_API_KEY (--dotenv).');
+      if (!provider) throw new UsageError('The check needs a model: choose one in the Connections tab.');
       const s = await state();
       const res = await provider().complete(specCheckRequest({ spec: s.spec, decisions: decisionsText(s.l.mapping, s.l.lpgDoc), lpgDoc: s.l.lpgDoc }));
       const names = elementNames(s.l.lpgDoc);
@@ -702,6 +839,9 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       }
       const route = routes[`${req.method} ${url.pathname}`];
       if (!route) return send(404, 'application/json', JSON.stringify({ error: 'Not found' }));
+      // The page only: another site cannot reach the API by a name pointing here (Host) nor post to it without a preflight (JSON).
+      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(req.headers.host ?? '')) return send(403, 'application/json', JSON.stringify({ error: 'Forbidden host' }));
+      if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] ?? '')) return send(415, 'application/json', JSON.stringify({ error: 'JSON only' }));
       let body = {};
       if (req.method === 'POST') {
         let text = '';
@@ -718,8 +858,24 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     }
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
+  // Publications that follow the database are rebuilt when a transaction touches their sources.
+  // Every mapping of the project: a publication keeps following when another mapping is opened.
+  let followDirs = [recipeDir];
+  let followOwners = new Map();   // recipes directory → mapping id
+  const refreshFollowDirs = async () => {
+    if (!projectFile) { followDirs = [recipeDir]; return; }
+    try {
+      const p = await readProject(projectFile);
+      followOwners = new Map(Object.entries(p.project.mappings ?? {}).map(([id, m]) => [m.recipes ? path.join(p.dir, m.recipes) : path.join(path.dirname(path.join(p.dir, m.file)), 'recipes'), id]));
+      followDirs = [...followOwners.keys()];
+    } catch { followDirs = [recipeDir]; }
+  };
+  await refreshFollowDirs();
+  const following = follower({ recipesDir: () => followDirs, openSource: () => openSource, n20s: () => n20s, intervalMs: followIntervalMs,
+    onSync: (r) => console.error(`  ${r.endpoint}: ${r.transactions} transaction(s) → ${r.sync.ok ? `rebuilt as ${r.sync.graph} in ${r.sync.ms} ms` : `not rebuilt: ${r.sync.error}`}`),
+    onError: (err) => console.error(`  following: ${err.message.split('\n')[0]}`) });
   return {
     url: `http://127.0.0.1:${server.address().port}/`,
-    close: () => new Promise((resolve) => server.close(() => resolve())),
+    close: () => { following.stop(); return new Promise((resolve) => server.close(() => resolve())); },
   };
 }

@@ -1,0 +1,143 @@
+{
+  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json",
+  "version": "1",
+  "id": "Member directory",
+  "name": "Member directory",
+  "description": "The members of a professional community, who knows whom, and the groups they belong to. Maintained by the member portal; read by the community's partners.",
+  "nodes": {
+    "n:0": {
+      "labels": {
+        "identifier": "Member"
+      },
+      "properties": {
+        "p:0": {
+          "type": "STRING",
+          "name": "id",
+          "description": "Stable member handle, unique."
+        },
+        "p:1": {
+          "type": "STRING",
+          "name": "name",
+          "description": "Full name, as the member wants it shown."
+        },
+        "p:2": {
+          "type": "STRING",
+          "name": "nick",
+          "description": "Nickname used in the community chat."
+        },
+        "p:3": {
+          "type": "STRING",
+          "name": "email",
+          "description": "Login and contact email. Private: members did not agree to share it."
+        },
+        "p:4": {
+          "type": "STRING",
+          "name": "homepage",
+          "description": "URL of the member's public page."
+        },
+        "p:5": {
+          "type": "STRING",
+          "name": "birthday",
+          "description": "Birthday as month-day (MM-DD), shown to other members only."
+        }
+      },
+      "constraints": {
+        "c:0": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:0"
+          ],
+          "name": "member_id"
+        },
+        "c:1": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:3"
+          ],
+          "name": "member_email"
+        },
+        "c:3": {
+          "type": "EXISTS",
+          "properties": [
+            "p:0"
+          ],
+          "name": "member_id_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 120,
+          "y": 160
+        }
+      },
+      "description": "A person who joined the community."
+    },
+    "n:1": {
+      "labels": {
+        "identifier": "Group"
+      },
+      "properties": {
+        "p:6": {
+          "type": "STRING",
+          "name": "id",
+          "description": "Stable group handle, unique."
+        },
+        "p:7": {
+          "type": "STRING",
+          "name": "name",
+          "description": "Name of the group."
+        },
+        "p:8": {
+          "type": "STRING",
+          "name": "homepage",
+          "description": "URL of the group's public page."
+        }
+      },
+      "constraints": {
+        "c:2": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:6"
+          ],
+          "name": "group_id"
+        },
+        "c:4": {
+          "type": "EXISTS",
+          "properties": [
+            "p:6"
+          ],
+          "name": "group_id_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 470,
+          "y": 160
+        }
+      },
+      "description": "An interest group inside the community, such as a reading circle or a working group."
+    }
+  },
+  "relationships": {
+    "r:0": {
+      "type": "KNOWS",
+      "from": {
+        "node": "n:0"
+      },
+      "to": {
+        "node": "n:0"
+      },
+      "description": "The first member says they know the second one."
+    },
+    "r:1": {
+      "type": "MEMBER_OF",
+      "from": {
+        "node": "n:0"
+      },
+      "to": {
+        "node": "n:1"
+      },
+      "description": "The member belongs to the group."
+    }
+  }
+}

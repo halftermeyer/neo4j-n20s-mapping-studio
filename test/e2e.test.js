@@ -161,7 +161,7 @@ test('studio: the oracle panel projects the accepted entries and asks the questi
     oracleFile: path.join(dir, 'oracle.aura.yaml'), openSource: () => ({ run: (q, p) => source.run(q, p), close: async () => {} }), n20s,
   });
   try {
-    const res = await fetch(new URL('/api/oracle', studio.url), { method: 'POST', body: '{}' });
+    const res = await fetch(new URL('/api/oracle', studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     const data = await res.json();
     assert.equal(res.status, 200, JSON.stringify(data));
     assert.equal(data.triples, 445);
@@ -299,6 +299,52 @@ test('publish: a versioned graph is built, validated, published; a failing gate 
   await assert.rejects(run('6-ask-lineage-kg.recipe.yaml'), /Endpoint lineage is not published/);
 });
 
+test('follow: a transaction on what a publication is built from rebuilds it and swaps it in (CDC scripted over Relate)', { skip, timeout: 120000 }, async () => {
+  const { loadRecipe, recordRecipeRun, publishedResolver, readRegistry } = await import('../src/node.js');
+  const { runRecipe } = await import('../src/recipe.js');
+  const { startFollowing, syncOnce } = await import('../src/follow.js');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-follow-e2e-'));
+  fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  const recipes = path.join(dir, 'recipes');
+  const file = path.join(recipes, '5-lineage-kg.recipe.yaml');
+  const f = await loadRecipe(file);
+  const first = await runRecipe({ ...f, source, n20s, resolvePublished: publishedResolver(recipes) });
+  await recordRecipeRun(file, first, f, { source: { url: 'test' }, n20s });
+  const served = async () => (await readRegistry(recipes)).publications.lineage.graph;
+  const g1 = await served();
+
+  // Relate has no Change Data Capture: the CDC procedures are scripted, the data is real.
+  const events = [{ id: 'c0' }];
+  const cdc = { ...source, async run(cypher, params) {
+    if (/db\.cdc\.current/.test(cypher)) return [{ id: events[events.length - 1].id }];
+    if (/db\.cdc\.query/.test(cypher)) return events.slice(events.findIndex((e) => e.id === params.from) + 1);
+    return source.run(cypher, params);
+  }, system: async () => [{ options: { txLogEnrichment: 'FULL' } }] };
+  await startFollowing(recipes, 'lineage', cdc);
+
+  const iri = 'https://example.org/lineage/entity/demo%3Afollow%3Anew';
+  const ask = async (g) => (await n20s.query(g, `SELECT ?c WHERE { <${iri}> a ?c }`)).length > 0;
+  assert.equal(await ask(g1), false);
+  await source.run("CREATE (:Dataset:Entity {id: 'demo:follow:new', name: 'new dataset', createdAt: datetime('2026-11-20T10:00:00Z')})");
+  try {
+    events.push({ id: 'c1', txId: 42, event: { eventType: 'n', operation: 'c', labels: ['Dataset', 'Entity'] } });
+    const [res] = await syncOnce(recipes, { source: cdc, n20s });
+    assert.equal(res.changes, 1);
+    assert.ok(res.sync.ok, JSON.stringify(res.sync));
+    const g2 = await served();
+    assert.notEqual(g2, g1, 'a new version is served');
+    assert.equal(await ask(g2), true, 'the new dataset is in the published graph');
+    assert.ok(!(await n20s.list()).some((g) => g.graphName === g1), 'the previous version is dropped');
+    const follow = (await readRegistry(recipes)).follow.lineage;
+    assert.equal(follow.cursor, 'c1');
+    assert.equal(follow.syncs, 1);
+    assert.equal(follow.state, 'idle');
+  } finally {
+    await source.run("MATCH (n {id: 'demo:follow:new'}) DETACH DELETE n");
+  }
+});
+
 test('serve: /sparql on published endpoints only (SELECT, ASK, CONSTRUCT, read-only), /query APIs lazy, precomputed, hybrid; /run only when allowed', { skip, timeout: 120000 }, async () => {
   const { serveEndpoints } = await import('../src/serve.js');
   const os = await import('node:os');
@@ -390,7 +436,7 @@ test('design: a drafted recipe is tried and cross-checked against its direct Cyp
     sparql: 'SELECT DISTINCT ?version WHERE { ?version prov:wasGeneratedBy ?r . ?r prov:used ?i . ?i prov:invalidatedAtTime ?t }', decode: [{ column: 'version', node: 'n:0' }],
     answerCypher: 'MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(:Run)-[:USED]->(i:DatasetVersion) WHERE i.invalidatedAt IS NOT NULL RETURN DISTINCT v.id AS version', explanation: '.' }), { model: 'test' });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'P', provider, n20s, openSource: () => ({ url: 'test', run: (q, p) => source.run(q, p), close: async () => {} }) });
-  const call = async (p, body) => (await (await fetch(new URL(p, studio.url), { method: 'POST', body: JSON.stringify(body) })).json());
+  const call = async (p, body) => (await (await fetch(new URL(p, studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json());
   try {
     await call('/api/design/decide', { action: 'edit', item: { kind: 'question', text: 'Which versions did a run write after reading an invalidated version?' } });
     const d = (await call('/api/design/draft', { id: 'i1' })).drafted;

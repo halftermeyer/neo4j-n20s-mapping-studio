@@ -1,0 +1,488 @@
+{
+ "format": "n20s-propose-recording/0.1",
+ "provider": "gemini",
+ "model": "gemini-2.5-flash",
+ "calls": [
+  {
+   "key": "80a974a5d409b3894ba99979a284715642c9e24e79d514f69053f7ff3fb3a04d",
+   "element": "relationships/r:2",
+   "json": {
+    "decision": "ignore",
+    "rationale": "The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:50",
+      "decision": "ignore",
+      "rationale": "This property describes an internal detail of how the 'DEPENDS_ON' relationship was computed, which is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes an internal detail of how the 'DEPENDS_ON' relationship was computed, which is ignored."
+     },
+     {
+      "id": "p:51",
+      "decision": "ignore",
+      "rationale": "This property describes an internal detail of when the 'DEPENDS_ON' relationship was computed, which is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes an internal detail of when the 'DEPENDS_ON' relationship was computed, which is ignored."
+     }
+    ],
+    "reason": "The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends."
+   },
+   "usage": {
+    "input": 9488,
+    "output": 218,
+    "thinking": 634,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "251efc647a7246fccd3353906ba6b50f7615642649b1d3d3a21a8cd98b2458b3",
+   "element": "relationships/r:6",
+   "json": {
+    "decision": "ignore",
+    "reason": "No suitable predicate in PROV-O for a general 'has part' or 'composition' relationship between two prov:Entity instances. prov:hadMember requires the domain to be prov:Collection, but Dataset is mapped to prov:Entity.",
+    "rationale": "PROV-O does not provide a direct predicate for a 'has column' relationship between a generic entity (Dataset) and another entity (Column). While a dataset could be seen as a collection, the Dataset node is currently mapped as a prov:Entity, not a prov:Collection, making prov:hadMember unsuitable.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9332,
+    "output": 147,
+    "thinking": 773,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "8f7c75e4045276b88f88f1874a20fb26f09b9de942051abab27738e8e74aa57d",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:hadMember",
+    "direction": "forward",
+    "rationale": "A DatasetVersion can be considered a prov:Collection of ColumnVersions, which are prov:Entity instances. The prov:hadMember property expresses this collection-member relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9344,
+    "output": 80,
+    "thinking": 1300,
+    "cached": 9179
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "61484a6488e4e223c189c200d6f8e232b4a3cec493b54d95e2740672c5702cc4",
+   "element": "relationships/r:8",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A ColumnVersion is a specific version, and thus a specialization, of a logical Column.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9369,
+    "output": 53,
+    "thinking": 253,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "1181c35d4583dace48ce354fa23b830e116a76fb09029d149958fb74bba5b884",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A JobVersion is a specific instance or definition of a more general Job, which aligns with the meaning of prov:specializationOf.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9369,
+    "output": 74,
+    "thinking": 358,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3fee991d931a5d7f4465f4fac9004523389010df7962a7466073ea28c9296700",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "defer",
+    "reason": "The relationship describes an activity instance executing a logical job definition. PROV-O does not have a direct predicate for this relationship between an Activity and an Entity (representing a job definition) that captures the 'executes' or 'instance-of' semantics. Expressing this relationship would likely require a qualified association pattern, possibly involving a re-evaluation of the 'Job' node kind to 'prov:Plan'.",
+    "rationale": "The 'RUN_OF' relationship links an activity instance (Run) to its abstract definition (Job). PROV-O's 'prov:hadPlan' predicate, which links an 'Association' to a 'Plan', is the closest concept for activity definitions, but 'Job' is currently mapped as 'prov:Entity' and 'Run' is 'prov:Activity', requiring a more complex qualified pattern.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9383,
+    "output": 201,
+    "thinking": 5908,
+    "cached": 9191
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "7b274e13e0a836465b1c7df754bc211c68d9117d8546a360ac293f172cf7731b",
+   "element": "relationships/r:11",
+   "json": {
+    "decision": "defer",
+    "reason": "The target ontology requires the plan to be associated with a prov:Association (between an activity and an agent), not directly with the prov:Activity. This requires a join with the WAS_ASSOCIATED_WITH relationship.",
+    "rationale": "The PROV-O property prov:hadPlan has prov:Association as its domain, not prov:Activity. To map this, the plan needs to be linked to the qualified association between the Run (Activity) and an Agent.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9431,
+    "output": 124,
+    "thinking": 730,
+    "cached": 9205
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "158fc1e29ba7267a1313c01393ac9696776e4611ef9f4bd20a52114f97eeda2c",
+   "element": "relationships/r:15",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:actedOnBehalfOf",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Delegation",
+     "link": "prov:qualifiedDelegation",
+     "target": "prov:agent"
+    },
+    "rationale": "The relationship directly corresponds to the prov:actedOnBehalfOf property, which describes an agent acting on behalf of another.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9399,
+    "output": 92,
+    "thinking": 409,
+    "cached": 9195
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "80a974a5d409b3894ba99979a284715642c9e24e79d514f69053f7ff3fb3a04d",
+   "element": "relationships/r:2",
+   "json": {
+    "decision": "ignore",
+    "rationale": "The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:50",
+      "decision": "ignore",
+      "rationale": "This property describes an internal detail of how the 'DEPENDS_ON' relationship was computed, which is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes an internal detail of how the 'DEPENDS_ON' relationship was computed, which is ignored."
+     },
+     {
+      "id": "p:51",
+      "decision": "ignore",
+      "rationale": "This property describes an internal detail of when the 'DEPENDS_ON' relationship was computed, which is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes an internal detail of when the 'DEPENDS_ON' relationship was computed, which is ignored."
+     }
+    ],
+    "reason": "The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends."
+   },
+   "usage": {
+    "input": 9488,
+    "output": 218,
+    "thinking": 634,
+    "cached": 1234
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "251efc647a7246fccd3353906ba6b50f7615642649b1d3d3a21a8cd98b2458b3",
+   "element": "relationships/r:6",
+   "json": {
+    "decision": "ignore",
+    "reason": "No suitable predicate in PROV-O for a general 'has part' or 'composition' relationship between two prov:Entity instances. prov:hadMember requires the domain to be prov:Collection, but Dataset is mapped to prov:Entity.",
+    "rationale": "PROV-O does not provide a direct predicate for a 'has column' relationship between a generic entity (Dataset) and another entity (Column). While a dataset could be seen as a collection, the Dataset node is currently mapped as a prov:Entity, not a prov:Collection, making prov:hadMember unsuitable.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9332,
+    "output": 147,
+    "thinking": 773,
+    "cached": 9175
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "8f7c75e4045276b88f88f1874a20fb26f09b9de942051abab27738e8e74aa57d",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:hadMember",
+    "direction": "forward",
+    "rationale": "A DatasetVersion can be considered a prov:Collection of ColumnVersions, which are prov:Entity instances. The prov:hadMember property expresses this collection-member relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9344,
+    "output": 80,
+    "thinking": 1300,
+    "cached": 9179
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "61484a6488e4e223c189c200d6f8e232b4a3cec493b54d95e2740672c5702cc4",
+   "element": "relationships/r:8",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A ColumnVersion is a specific version, thus a specialization, of a logical Column.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9369,
+    "output": 64,
+    "thinking": 265,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "1181c35d4583dace48ce354fa23b830e116a76fb09029d149958fb74bba5b884",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "rationale": "A JobVersion is a specific version of a Job, making it a specialization of the more general Job entity.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9369,
+    "output": 51,
+    "thinking": 238,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3fee991d931a5d7f4465f4fac9004523389010df7962a7466073ea28c9296700",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "defer",
+    "reason": "The relationship describes an activity instance executing a logical job definition. PROV-O does not have a direct predicate for this relationship between an Activity and an Entity (representing a job definition) that captures the 'executes' or 'instance-of' semantics. Expressing this relationship would likely require a qualified association pattern, possibly involving a re-evaluation of the 'Job' node kind to 'prov:Plan'.",
+    "rationale": "The 'RUN_OF' relationship links an activity instance (Run) to its abstract definition (Job). PROV-O's 'prov:hadPlan' predicate, which links an 'Association' to a 'Plan', is the closest concept for activity definitions, but 'Job' is currently mapped as 'prov:Entity' and 'Run' is 'prov:Activity', requiring a more complex qualified pattern.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9383,
+    "output": 201,
+    "thinking": 5908,
+    "cached": 9191
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "7b274e13e0a836465b1c7df754bc211c68d9117d8546a360ac293f172cf7731b",
+   "element": "relationships/r:11",
+   "json": {
+    "decision": "defer",
+    "reason": "The target ontology requires the plan to be associated with a prov:Association (between an activity and an agent), not directly with the prov:Activity. This requires a join with the WAS_ASSOCIATED_WITH relationship.",
+    "rationale": "The PROV-O property prov:hadPlan has prov:Association as its domain, not prov:Activity. To map this, the plan needs to be linked to the qualified association between the Run (Activity) and an Agent.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9431,
+    "output": 124,
+    "thinking": 730,
+    "cached": 9205
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "158fc1e29ba7267a1313c01393ac9696776e4611ef9f4bd20a52114f97eeda2c",
+   "element": "relationships/r:15",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:actedOnBehalfOf",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Delegation",
+     "link": "prov:qualifiedDelegation",
+     "target": "prov:agent"
+    },
+    "rationale": "The relationship directly corresponds to prov:actedOnBehalfOf, which models an agent acting on behalf of another agent.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9399,
+    "output": 113,
+    "thinking": 401,
+    "cached": 9195
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "80a974a5d409b3894ba99979a284715642c9e24e79d514f69053f7ff3fb3a04d",
+   "element": "relationships/r:2",
+   "json": {
+    "decision": "ignore",
+    "rationale": "The relationship represents a 'potential dependency' and 'over-approximation' computed from other facts, explicitly stating it is 'not a proven derivation'. No PROV-O term accurately captures this weaker, computed, and non-asserted form of dependency.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:50",
+      "decision": "ignore",
+      "rationale": "This property describes the internal computation aspect of the dependency, which is not directly mappable to PROV-O, especially since the relationship itself is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes the internal computation aspect of the dependency, which is not directly mappable to PROV-O, especially since the relationship itself is ignored."
+     },
+     {
+      "id": "p:51",
+      "decision": "ignore",
+      "rationale": "This property describes when the dependency was computed, which is an internal detail of the source system and not a direct provenance assertion. The relationship itself is ignored.",
+      "confidence": 0.9,
+      "reason": "This property describes when the dependency was computed, which is an internal detail of the source system and not a direct provenance assertion. The relationship itself is ignored."
+     }
+    ],
+    "reason": "The relationship represents a 'potential dependency' and 'over-approximation' computed from other facts, explicitly stating it is 'not a proven derivation'. No PROV-O term accurately captures this weaker, computed, and non-asserted form of dependency."
+   },
+   "usage": {
+    "input": 9488,
+    "output": 232,
+    "thinking": 610,
+    "cached": 9260
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "251efc647a7246fccd3353906ba6b50f7615642649b1d3d3a21a8cd98b2458b3",
+   "element": "relationships/r:6",
+   "json": {
+    "decision": "ignore",
+    "reason": "No suitable predicate in PROV-O for a general 'has part' or 'composition' relationship between two prov:Entity instances. prov:hadMember requires the domain to be prov:Collection, but Dataset is mapped to prov:Entity.",
+    "rationale": "PROV-O does not provide a direct predicate for a 'has column' relationship between a generic entity (Dataset) and another entity (Column). While a dataset could be seen as a collection, the Dataset node is currently mapped as a prov:Entity, not a prov:Collection, making prov:hadMember unsuitable.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9332,
+    "output": 147,
+    "thinking": 773,
+    "cached": 9175
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "8f7c75e4045276b88f88f1874a20fb26f09b9de942051abab27738e8e74aa57d",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:hadMember",
+    "direction": "forward",
+    "rationale": "A DatasetVersion can be considered a prov:Collection of ColumnVersions, which are prov:Entity instances. The prov:hadMember property expresses this collection-member relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9344,
+    "output": 80,
+    "thinking": 1300,
+    "cached": 9179
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "61484a6488e4e223c189c200d6f8e232b4a3cec493b54d95e2740672c5702cc4",
+   "element": "relationships/r:8",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A ColumnVersion is a specific version, thus a specialization, of a logical Column.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9369,
+    "output": 64,
+    "thinking": 265,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "1181c35d4583dace48ce354fa23b830e116a76fb09029d149958fb74bba5b884",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "rationale": "A JobVersion is a specific version of a Job, making it a specialization of the more general Job entity.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9369,
+    "output": 51,
+    "thinking": 238,
+    "cached": 9186
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3fee991d931a5d7f4465f4fac9004523389010df7962a7466073ea28c9296700",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "defer",
+    "reason": "The relationship describes an activity instance executing a logical job definition. PROV-O does not have a direct predicate for this relationship between an Activity and an Entity (representing a job definition) that captures the 'executes' or 'instance-of' semantics. Expressing this relationship would likely require a qualified association pattern, possibly involving a re-evaluation of the 'Job' node kind to 'prov:Plan'.",
+    "rationale": "The 'RUN_OF' relationship links an activity instance (Run) to its abstract definition (Job). PROV-O's 'prov:hadPlan' predicate, which links an 'Association' to a 'Plan', is the closest concept for activity definitions, but 'Job' is currently mapped as 'prov:Entity' and 'Run' is 'prov:Activity', requiring a more complex qualified pattern.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 9383,
+    "output": 201,
+    "thinking": 5908,
+    "cached": 9191
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "7b274e13e0a836465b1c7df754bc211c68d9117d8546a360ac293f172cf7731b",
+   "element": "relationships/r:11",
+   "json": {
+    "decision": "defer",
+    "reason": "The target property prov:hadPlan has prov:Association as its domain, not prov:Activity. This relationship needs to be expressed in the context of an association between the activity and an agent.",
+    "rationale": "The PROV-O model requires a plan to be associated with an `Association` (which links an activity to an agent), not directly with an `Activity`. Mapping this requires a pattern involving the `WAS_ASSOCIATED_WITH` relationship to create the `prov:Association` instance.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9431,
+    "output": 131,
+    "thinking": 1070,
+    "cached": 9205
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "158fc1e29ba7267a1313c01393ac9696776e4611ef9f4bd20a52114f97eeda2c",
+   "element": "relationships/r:15",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:actedOnBehalfOf",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Delegation",
+     "link": "prov:qualifiedDelegation",
+     "target": "prov:agent"
+    },
+    "rationale": "The relationship directly corresponds to the prov:actedOnBehalfOf property, which describes an agent acting on behalf of another.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9399,
+    "output": 92,
+    "thinking": 409,
+    "cached": 9195
+   },
+   "model": "gemini-2.5-flash"
+  }
+ ]
+}

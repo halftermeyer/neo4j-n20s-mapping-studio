@@ -1,11 +1,12 @@
 // n20s-mapping studio: review AI proposals on a drawing of the LPG ontology.
 // Plain DOM and SVG; the server holds the mapping file and does the checking.
 
-import { $, kids, fill, h, s, api, toast } from './dom.js';
+import { $, kids, fill, h, s, api, toast, tid } from './dom.js';
 import { showRecipes } from './recipes.js';
 import { showBench } from './bench-tab.js';
 import { showProject } from './project-tab.js';
 import { showDesign } from './design-tab.js';
+import { showConnections } from './connections-tab.js';
 
 let S = null;            // state from /api/state
 let selected = null;     // element key, for instance "relationships/r:0"
@@ -13,7 +14,7 @@ let filter = 'review';
 let editing = null;      // { path, kind } while an edit form is open
 let view = null;         // graph pan and zoom: { x, y, k }
 let oracle = null;       // last oracle run
-let tab = { '/recipes': 'recipes', '/bench': 'bench', '/project': 'project', '/design': 'design' }[location.pathname] ?? 'mapping';
+let tab = { '/recipes': 'recipes', '/bench': 'bench', '/project': 'project', '/design': 'design', '/connections': 'connections' }[location.pathname] ?? 'mapping';
 
 function setTab(t) {
   tab = t;
@@ -23,12 +24,16 @@ function setTab(t) {
   $('bench-view').hidden = t !== 'bench';
   $('project-view').hidden = t !== 'project';
   $('design-view').hidden = t !== 'design';
+  $('connections-view').hidden = t !== 'connections';
   $('oracle').hidden = true;
   renderTop();
   if (t === 'recipes') showRecipes($('recipes-view'));
   if (t === 'bench') showBench($('bench-view'));
   if (t === 'project') showProject($('project-view'));
   if (t === 'design') showDesign($('design-view'));
+  if (t === 'connections') showConnections($('connections-view'));
+  // Other tabs change the mapping (the design conversation proposes it): read it again.
+  if (t === 'mapping' && S) api('/api/state').then((state) => { S = state; render(); }).catch((err) => toast(err.message, true));
 }
 
 async function act(fn, done) {
@@ -121,24 +126,25 @@ function renderTop() {
   };
   const safe = S.items.filter((i) => i.safe).length;
   fill($('top'), 
-    h('h1', {}, 'n20s-mapping studio'),
+    h('h1', {}, S.title ?? 'n20s-mapping studio'),
     h('div', { class: 'tabs top-tabs' },
-      h('button', { class: tab === 'project' ? 'on' : '', onclick: () => setTab('project') }, 'Project'),
-      h('button', { class: tab === 'design' ? 'on' : '', onclick: () => setTab('design') }, 'Design'),
-      h('button', { class: tab === 'mapping' ? 'on' : '', onclick: () => setTab('mapping') }, 'Mapping'),
-      h('button', { class: tab === 'recipes' ? 'on' : '', onclick: () => setTab('recipes') }, 'Recipes'),
-      h('button', { class: tab === 'bench' ? 'on' : '', onclick: () => setTab('bench') }, 'Bench')),
+      h('button', { class: tab === 'project' ? 'on' : '', onclick: () => setTab('project'), 'data-testid': 'tab-project' }, 'Project'),
+      h('button', { class: tab === 'design' ? 'on' : '', onclick: () => setTab('design'), 'data-testid': 'tab-design' }, 'Design'),
+      h('button', { class: tab === 'mapping' ? 'on' : '', onclick: () => setTab('mapping'), 'data-testid': 'tab-mapping' }, 'Mapping'),
+      h('button', { class: tab === 'recipes' ? 'on' : '', onclick: () => setTab('recipes'), 'data-testid': 'tab-recipes' }, 'Recipes'),
+      h('button', { class: tab === 'bench' ? 'on' : '', onclick: () => setTab('bench'), 'data-testid': 'tab-bench' }, 'Bench'),
+      h('button', { class: tab === 'connections' ? 'on' : '', onclick: () => setTab('connections'), 'data-testid': 'tab-connections' }, 'Connections')),
     h('span', { class: 'file mono', title: S.file }, S.project ? `${S.project.mapping} · ${S.file.split('/').pop()}` : S.file.split('/').pop()),
     h('div', { class: 'cov' },
       bar('node kinds', cov.nodes), bar('node properties', cov.nodeProperties),
       bar('relationships', cov.relationships), bar('rel. properties', cov.relationshipProperties)),
     h('span', { class: `chip ${S.check.summary.errors ? 'error' : 'accepted'}` }, `check: ${S.check.summary.errors} errors, ${S.check.summary.warnings} warnings`),
     h('button', {
-      class: 'primary', disabled: !safe,
+      class: 'primary', disabled: !safe, 'data-testid': 'accept-safe',
       title: 'Proposed, identical in every pass, confidence ≥ 0.95, no check finding',
       onclick: () => confirm(`Accept the ${safe} safe elements?`) && act(() => api('/api/accept-safe', {}), `${safe} elements accepted`),
     }, `Accept safe (${safe})`),
-    h('button', { onclick: () => { $('oracle').hidden = !$('oracle').hidden; renderOracle(); } }, 'Oracle'),
+    h('button', { 'data-testid': 'oracle-toggle', onclick: () => { $('oracle').hidden = !$('oracle').hidden; renderOracle(); } }, 'Oracle'),
   );
 }
 
@@ -153,12 +159,12 @@ function renderQueue() {
   const list = S.items.filter(groups[filter]);
   fill($('queue'), 
     h('div', { class: 'tabs' }, Object.keys(groups).map((g) => h('button', {
-      class: g === filter ? 'on' : '', onclick: () => { filter = g; renderQueue(); },
+      class: g === filter ? 'on' : '', onclick: () => { filter = g; renderQueue(); }, 'data-testid': `queue-filter-${g}`,
     }, `${names[g]} ${S.items.filter(groups[g]).length}`))),
     list.length ? list.map((i) => h('div', {
       class: `qitem${i.key === selected ? ' sel' : ''}`,
       style: `border-left-color:${COLORS[category(i)] === '#ffffff' ? '#ccc' : COLORS[category(i)]}`,
-      onclick: () => select(i.key),
+      onclick: () => select(i.key), 'data-testid': `queue-${tid(i.key)}`,
     },
     h('div', { class: 'name' }, i.label),
     h('div', { class: 'meta' },
@@ -452,7 +458,7 @@ function renderPanel() {
   const proposedHere = item.proposed.length > 0;
 
   fill(panel, 
-    h('h2', {}, item.label),
+    h('h2', { 'data-testid': `panel-${tid(selected)}` }, item.label),
     h('div', {}, h('span', { class: `chip ${category(item)}` }, CAT_TEXT[category(item)]),
       [...new Set(item.reasons.map((r) => r.code))].map((c) => h('span', { class: `chip ${c}` }, c))),
     lpgEl.description ? h('div', { class: 'desc', style: 'margin-top:8px' }, lpgEl.description) : h('div', { class: 'desc', style: 'margin-top:8px;color:#999' }, 'No description in the LPG ontology. A description is what helps the model most.'),
@@ -469,9 +475,9 @@ function renderPanel() {
         e.meta.reviewComment ? `comment: ${e.meta.reviewComment}` : ''].filter(Boolean).join(' · ')) : null,
 
     h('div', { class: 'actions' },
-      proposedHere ? h('button', { class: 'good', onclick: () => act(() => api('/api/decide', { path: selected, action: 'accept' }), 'Accepted') }, `Accept${item.proposed.length > 1 ? ` (${item.proposed.length} entries)` : ''}`) : null,
-      proposedHere ? h('button', { class: 'bad', onclick: () => { editing = { path: selected, kind: 'reject' }; renderPanel(); } }, 'Reject…') : null,
-      h('button', { onclick: () => { editing = { path: selected, kind: 'element' }; renderPanel(); } }, 'Edit'),
+      proposedHere ? h('button', { class: 'good', 'data-testid': 'accept', onclick: () => act(() => api('/api/decide', { path: selected, action: 'accept' }), 'Accepted') }, `Accept${item.proposed.length > 1 ? ` (${item.proposed.length} entries)` : ''}`) : null,
+      proposedHere ? h('button', { class: 'bad', 'data-testid': 'reject', onclick: () => { editing = { path: selected, kind: 'reject' }; renderPanel(); } }, 'Reject…') : null,
+      h('button', { 'data-testid': 'edit', onclick: () => { editing = { path: selected, kind: 'element' }; renderPanel(); } }, 'Edit'),
       S.can.propose && !proposedHere && item.status !== 'accepted' ? h('button', { onclick: () => act(() => api('/api/propose', { key: selected }), 'Proposed') }, 'Ask the model') : null),
     editing?.path === selected && editing.kind === 'reject' ? rejectForm() : null,
     editing?.path === selected && editing.kind === 'element' ? (section === 'nodes' ? nodeForm(id, e) : relForm(id, e)) : null,
@@ -481,7 +487,7 @@ function renderPanel() {
     Object.keys(lpgEl.properties ?? {}).length ? [h('h3', {}, 'Properties'),
       h('table', { class: 'props' }, h('tr', {}, h('th', {}, 'property'), h('th', {}, 'decision'), h('th', {}, ''), h('th', {}, '')), propRows(selected))] : null,
 
-    variants.length ? h('details', { style: 'margin-top:14px' },
+    variants.length ? h('details', { style: 'margin-top:14px', 'data-testid': 'variants' },
       h('summary', { style: 'cursor:pointer;color:#e65100' }, `${variants.length} decision${variants.length > 1 ? 's differ' : ' differs'} between the ${S.variants.passes} passes`),
       variants.map(([p, v]) => h('div', {}, h('div', { class: 'mono', style: 'color:#888;margin-top:6px' }, p === selected ? '(element)' : propName(p)),
         v.variants.map((x) => h('div', { class: 'variant' }, `pass ${x.passes.join(', ')}: `, summarize(x.entry)))))) : null,
@@ -511,7 +517,7 @@ function termInput(value, options, placeholder) {
   return { input, el: h('div', {}, input, h('datalist', { id }, options.map((o) => h('option', { value: o }))), help) };
 }
 function decisionSelect(value) {
-  return h('select', {}, ['map', 'ignore', 'defer'].map((d) => h('option', { value: d, selected: d === value }, d)));
+  return h('select', { 'data-testid': 'decision' }, ['map', 'ignore', 'defer'].map((d) => h('option', { value: d, selected: d === value }, d)));
 }
 const decisionOf = (e) => (!e ? 'map' : e.ignore ? (e.ignore.deferred ? 'defer' : 'ignore') : 'map');
 
@@ -520,7 +526,7 @@ function formShell(title, fields, build) {
   return h('div', { class: 'form' }, h('b', {}, title), ...fields,
     err,
     h('div', { class: 'row' },
-      h('button', { class: 'primary', onclick: () => { try { build(); } catch (x) { err.textContent = x.message; } } }, 'Save as accepted'),
+      h('button', { class: 'primary', 'data-testid': 'save-accepted', onclick: () => { try { build(); } catch (x) { err.textContent = x.message; } } }, 'Save as accepted'),
       h('button', { onclick: () => { editing = null; renderPanel(); } }, 'Cancel')));
 }
 function check(value, list, what) {
@@ -534,10 +540,10 @@ function ignoreEntry(decision, reason) {
 const save = (path, entry) => act(() => api('/api/decide', { path, action: 'edit', entry }), 'Saved');
 
 function rejectForm() {
-  const text = h('textarea', { rows: 3, placeholder: 'What is wrong? The model gets this if you propose again.' });
+  const text = h('textarea', { rows: 3, placeholder: 'What is wrong? The model gets this if you propose again.', 'data-testid': 'reject-comment' });
   return h('div', { class: 'form' }, h('b', {}, 'Reject'), text, h('div', { class: 'row' },
     h('button', { class: 'bad', onclick: () => act(() => api('/api/decide', { path: selected, action: 'reject', comment: text.value || undefined }), 'Rejected') }, 'Reject'),
-    S.can.propose ? h('button', { class: 'primary', onclick: () => act(() => api('/api/propose', { key: selected, comment: text.value || undefined }), (r) => `Proposed again (${r.log.calls} call${r.log.calls > 1 ? 's' : ''})`) }, 'Reject and ask again') : null,
+    S.can.propose ? h('button', { class: 'primary', 'data-testid': 'reject-ask', onclick: () => act(() => api('/api/propose', { key: selected, comment: text.value || undefined }), (r) => `Proposed again (${r.log.calls} call${r.log.calls > 1 ? 's' : ''})`) }, 'Reject and ask again') : null,
     h('button', { onclick: () => { editing = null; renderPanel(); } }, 'Cancel')));
 }
 
@@ -558,12 +564,13 @@ function relForm(id, e) {
   const m = e && !e.ignore ? e : {};
   const dec = decisionSelect(decisionOf(e));
   const pred = termInput(m.predicate, properties(), 'predicate, start → end');
+  pred.input.setAttribute('data-testid', 'rel-predicate');
   const dir = h('select', {}, ['forward', 'reverse'].map((d) => h('option', { value: d, selected: (m.direction ?? 'forward') === d }, d)));
   const q = h('input', { type: 'checkbox', checked: !!m.qualified, style: 'width:auto' });
   const qc = termInput(m.qualified?.class, classes(), 'class of the qualified resource');
   const ql = termInput(m.qualified?.link, properties(), 'link: subject → resource');
   const qt = termInput(m.qualified?.target, properties(), 'target: resource → object');
-  const reason = h('input', { value: e?.ignore?.reason ?? '', placeholder: 'reason, when left out or deferred' });
+  const reason = h('input', { value: e?.ignore?.reason ?? '', placeholder: 'reason, when left out or deferred', 'data-testid': 'rel-reason' });
   return formShell(`Edit ${relOf(id).type}`, [
     h('label', {}, 'decision', dec), h('label', {}, 'predicate', pred.el), h('label', {}, 'direction', dir),
     h('label', {}, h('span', { class: 'row' }, q, 'qualified pattern (needed for relationship properties)'), qc.el, ql.el, qt.el),
@@ -588,15 +595,19 @@ function propertyForm(path, p, pe) {
   const dec = decisionSelect(decisionOf(pe));
   const pred = termInput(m.predicate, properties(), 'predicate');
   const dt = h('select', {}, h('option', { value: '' }, '(default for the Neo4j type)'), S.catalog.datatypes.map((d) => h('option', { value: d, selected: m.datatype === d }, d)));
+  const kind = h('select', {}, [['literal', 'a literal'], ['iri', 'an IRI (the value is a URL or an IRI)']].map(([v, t]) => h('option', { value: v, selected: (m.kind ?? 'literal') === v }, t)));
+  kind.addEventListener('change', () => { dt.disabled = kind.value === 'iri'; });
+  dt.disabled = kind.value === 'iri';
   const reason = h('input', { value: pe?.ignore?.reason ?? '', placeholder: 'reason, when left out or deferred' });
   return formShell(`Edit ${p.name ?? path.split('/').pop()}`, [
     h('label', {}, 'decision', dec), h('label', {}, 'predicate', pred.el),
-    m.values ? h('div', { class: 'term' }, `value table kept: ${Object.entries(m.values).map(([k, v]) => `${k} → ${v}`).join(', ')}`) : h('label', {}, 'datatype', dt),
+    m.values ? h('div', { class: 'term' }, `value table kept: ${Object.entries(m.values).map(([k, v]) => `${k} → ${v}`).join(', ')}`) : [h('label', {}, 'the value is', kind), h('label', {}, 'datatype', dt)],
     h('label', {}, 'reason', reason)], () => {
     if (dec.value !== 'map') return save(path, ignoreEntry(dec.value, reason.value));
     const entry = { predicate: check(pred.input.value.trim(), properties(), 'property') };
     if (!entry.predicate) throw new Error('Give a predicate.');
     if (m.values) entry.values = m.values;
+    else if (kind.value === 'iri') entry.kind = 'iri';
     else if (dt.value) entry.datatype = dt.value;
     return save(path, entry);
   });
@@ -613,7 +624,7 @@ function renderOracle() {
   };
   const head = h('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:6px' },
     h('b', {}, 'Oracle: the same questions in Cypher on the LPG and in SPARQL on the projection'),
-    h('button', { disabled: !S.can.oracle, onclick: run(false) }, 'Run on accepted entries'),
+    h('button', { disabled: !S.can.oracle, onclick: run(false), 'data-testid': 'oracle-run' }, 'Run on accepted entries'),
     h('button', { disabled: !S.can.oracle, onclick: run(true) }, 'Run with proposals too'),
     S.can.oracle ? '' : h('span', { style: 'color:#888' }, 'Start the studio with --oracle, --source and n20s-server to use it.'),
     h('button', { style: 'margin-left:auto', onclick: () => { box.hidden = true; } }, 'Close'));
@@ -622,7 +633,7 @@ function renderOracle() {
   const cls = { pass: 'pass', fail: 'fail', error: 'error', 'not-expressible': 'ne' };
   fill(box, head,
     h('div', { style: 'color:#666;margin-bottom:4px' }, `${oracle.withProposals ? 'Accepted and proposed' : 'Accepted'} entries: ${oracle.triples} triples.${oracle.problems.length ? ` Left out by the compiler: ${oracle.problems.map((p) => p.path).join(', ')}.` : ''}`),
-    h('table', {}, h('tr', {}, h('th', {}, 'check'), h('th', {}, 'result'), h('th', {}, 'details')),
+    h('table', { 'data-testid': `oracle-results-${oracle.results.every((r) => r.status === 'pass' || r.status === 'not-expressible') ? 'pass' : 'fail'}` }, h('tr', {}, h('th', {}, 'check'), h('th', {}, 'result'), h('th', {}, 'details')),
       oracle.results.map((r) => h('tr', {},
         h('td', { class: 'mono' }, r.id),
         h('td', { class: cls[r.status] }, r.status),
@@ -640,6 +651,7 @@ window.addEventListener('resize', () => { view = null; renderGraph(); });
 // The layout depends on the document only: computed once per page.
 api('/api/state').then((state) => {
   S = state;
+  if (S.title) document.title = S.title;
   const linked = decodeURIComponent(location.hash.slice(1));
   selected = itemOf(linked) ? linked : S.items.find((i) => i.status === 'proposed' && !i.safe)?.key ?? null;
   render();

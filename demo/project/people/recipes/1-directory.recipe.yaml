@@ -1,0 +1,43 @@
+# 1. The member directory as a SPARQL endpoint for partners. Every run builds a
+# new version of the graph, checks it, and only then points the endpoint at it:
+# partners never see a half-built or invalid directory.
+format: n20s-recipe/0.1
+id: directory
+title: Publish the member directory (FOAF)
+mapping: ../people-foaf.mapping.yaml
+prefixes:
+  sh: "http://www.w3.org/ns/shacl#"
+  shapes: "https://people.example.org/shapes/"
+graphs:
+  kg: { name: directory-kg, lifecycle: persistent, versioned: true }
+steps:
+  - id: members
+    type: scope
+    title: Members and groups; the mapping projects them and how they relate
+    cypher: |
+      MATCH (n) WHERE n:Member OR n:Group RETURN n
+
+  - id: shapes
+    type: triples
+    title: What the published directory must satisfy
+    turtle: |
+      shapes:PersonHasName a sh:NodeShape ;
+        sh:targetClass foaf:Person ;
+        sh:property [ sh:path foaf:name ; sh:minCount 1 ; sh:message "A person without a name." ] .
+
+  - id: check
+    type: validate
+    title: Validate before anything is published
+
+  - id: unshape
+    type: update
+    title: Take the shapes out again, they are not data
+    sparql: |
+      DELETE { ?s ?p ?o } WHERE { ?s ?p ?o FILTER (STRSTARTS(STR(?s), STR(shapes:))) }
+
+  - id: publish
+    type: publish
+    title: Serve it as /sparql/directory
+    as: directory
+    gate: [check]
+    description: The member directory in FOAF, for partner organisations.

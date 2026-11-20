@@ -1,0 +1,142 @@
+{
+ "format": "n20s-propose-variants/0.1",
+ "passes": 3,
+ "elements": {
+  "relationships/r:2": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "ignore": {
+       "reason": "The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends."
+      }
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:6": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "ignore": {
+       "reason": "No suitable predicate in PROV-O for a general 'has part' or 'composition' relationship between two prov:Entity instances. prov:hadMember requires the domain to be prov:Collection, but Dataset is mapped to prov:Entity."
+      }
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:7": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "predicate": "prov:hadMember"
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:8": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "predicate": "prov:specializationOf"
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:9": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "predicate": "prov:specializationOf"
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:10": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "ignore": {
+       "deferred": true,
+       "reason": "The relationship describes an activity instance executing a logical job definition. PROV-O does not have a direct predicate for this relationship between an Activity and an Entity (representing a job definition) that captures the 'executes' or 'instance-of' semantics. Expressing this relationship would likely require a qualified association pattern, possibly involving a re-evaluation of the 'Job' node kind to 'prov:Plan'."
+      }
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:11": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "ignore": {
+       "deferred": true,
+       "reason": "The target ontology requires the plan to be associated with a prov:Association (between an activity and an agent), not directly with the prov:Activity. This requires a join with the WAS_ASSOCIATED_WITH relationship."
+      }
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "relationships/r:15": {
+   "stable": true,
+   "variants": [
+    {
+     "entry": {
+      "predicate": "prov:actedOnBehalfOf",
+      "qualified": {
+       "class": "prov:Delegation",
+       "link": "prov:qualifiedDelegation",
+       "subject": "lin:delegation/{start.p:2}/{end.p:2}",
+       "target": "prov:agent"
+      }
+     },
+     "passes": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  }
+ }
+}

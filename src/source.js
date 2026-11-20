@@ -92,9 +92,9 @@ export function toPlain(v) {
 
 /**
  * @param {string} url bolt://, neo4j://, neo4j+s://… (see parseSourceUrl), or the path of a snapshot file
- * @param {{database?: string}} [options] overrides ?database= and the environment
+ * @param {{database?: string, user?: string, password?: string}} [options] override the URL and the environment
  */
-export function openSource(url, { database } = {}) {
+export function openSource(url, { database, user: givenUser, password: givenPassword } = {}) {
   if (!isSourceUrl(url)) {
     let snapshot;
     try {
@@ -106,7 +106,8 @@ export function openSource(url, { database } = {}) {
   }
   const parsed = parseSourceUrl(url);
   const clean = parsed.url;
-  const { user, password } = parsed;
+  const user = givenUser ?? parsed.user;
+  const password = givenPassword ?? parsed.password;
   const driver = neo4j.driver(clean, user ? neo4j.auth.basic(user, password) : undefined, { userAgent: 'n20s-mapping/0.1' });
   const db = database ?? parsed.database ?? undefined;
   return {
@@ -119,6 +120,13 @@ export function openSource(url, { database } = {}) {
     async agent() {
       const info = await driver.getServerInfo();
       return info.agent;
+    },
+    /** The database this source reads (null: the user's home database). */
+    database: db ?? null,
+    /** Runs a statement on the system database (database options, users, roles). */
+    async system(cypher, params = {}) {
+      const res = await driver.executeQuery(cypher, params, { database: 'system' });
+      return res.records.map((rec) => toPlain(rec.toObject()));
     },
     close: () => driver.close(),
   };

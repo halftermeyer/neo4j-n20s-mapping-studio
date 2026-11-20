@@ -1,4 +1,4 @@
-// AI providers behind one method:
+// AI providers behind one method (Gemini, Anthropic, any OpenAI-compatible API):
 //   complete({system, user, schema, temperature}) -> {json, usage}
 // The answer must follow `schema` (JSON Schema); the caller validates it again.
 // Keys come from the caller (the CLI reads the environment), never from files.
@@ -41,6 +41,148 @@ export function geminiProvider({ apiKey, model = 'gemini-2.5-flash', baseUrl = '
       }
     },
   };
+}
+
+/** Waits before retrying a rate-limited or failing call: 2 s, 4 s, 8 s. */
+const backoff = (attempt) => new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
+const parseJson = (who, text) => {
+  try { return JSON.parse(text); } catch { throw new Error(`${who} returned no JSON: ${String(text).slice(0, 200)}`); }
+};
+
+/** Gemini models that generate content, for choosing one. */
+geminiProvider.models = async ({ apiKey, baseUrl = 'https://generativelanguage.googleapis.com/v1beta', fetch = globalThis.fetch }) => {
+  const res = await fetch(`${baseUrl}/models?pageSize=1000`, { headers: { 'x-goog-api-key': apiKey } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${data?.error?.message ?? res.statusText}`);
+  return (data.models ?? []).filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
+    .map((m) => ({ id: m.name.replace(/^models\//, ''), label: m.displayName ?? m.name }));
+};
+
+/**
+ * Any OpenAI-compatible chat completions API: OpenAI, Azure OpenAI (v1), Mistral,
+ * OpenRouter, Ollama, vLLM… The answer is asked as a JSON schema response; a
+ * server that does not know json_schema gets json_object and the schema in the prompt.
+ */
+export function openaiProvider({ apiKey, model, baseUrl = 'https://api.openai.com/v1', fetch = globalThis.fetch, retries = 3 } = {}) {
+  if (!model) throw new Error('No model: choose one (N20S_AI_MODEL).');
+  const base = baseUrl.replace(/\/$/, '');
+  return {
+    name: 'openai',
+    model,
+    async complete({ system, user, schema, temperature = 0, maxOutputTokens = 32768 }) {
+      let format = { type: 'json_schema', json_schema: { name: 'answer', schema, strict: false } };
+      let withTemperature = true;
+      for (let attempt = 0; ; attempt++) {
+        const prompt = format.type === 'json_object' ? `${user}\n\nAnswer with one JSON object following this JSON Schema:\n${JSON.stringify(schema)}` : user;
+        const res = await fetch(`${base}/chat/completions`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) },
+          body: JSON.stringify({
+            model, messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
+            response_format: format, max_completion_tokens: maxOutputTokens, ...(withTemperature ? { temperature } : {}),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        const message = data?.error?.message ?? res.statusText;
+        // Reasoning models take no temperature; some servers know no json_schema: ask again without.
+        if (res.status === 400 && withTemperature && /temperature/i.test(message)) { withTemperature = false; attempt--; continue; }
+        if (res.status === 400 && format.type === 'json_schema' && /response_format|json_schema/i.test(message)) { format = { type: 'json_object' }; attempt--; continue; }
+        if ((res.status === 429 || res.status >= 500) && attempt < retries) { await backoff(attempt); continue; }
+        if (!res.ok) throw new Error(`${model} ${res.status}: ${message}`);
+        const choice = data.choices?.[0];
+        if (choice?.finish_reason && !['stop', 'tool_calls'].includes(choice.finish_reason)) throw new Error(`${model} stopped with ${choice.finish_reason}.`);
+        const u = data.usage ?? {};
+        return {
+          json: parseJson(model, choice?.message?.content ?? ''),
+          usage: { input: u.prompt_tokens ?? 0, output: u.completion_tokens ?? 0, thinking: u.completion_tokens_details?.reasoning_tokens ?? 0, cached: u.prompt_tokens_details?.cached_tokens ?? 0 },
+          model: data.model ?? model,
+        };
+      }
+    },
+  };
+}
+openaiProvider.models = async ({ apiKey, baseUrl = 'https://api.openai.com/v1', fetch = globalThis.fetch }) => {
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, { headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {} });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`${res.status}: ${data?.error?.message ?? res.statusText}`);
+  return (data.data ?? []).map((m) => ({ id: m.id, label: m.id })).sort((a, b) => a.id.localeCompare(b.id));
+};
+
+/** Anthropic Messages API: the answer is the input of a tool whose schema is the answer schema. */
+export function anthropicProvider({ apiKey, model = 'claude-sonnet-5-5', baseUrl = 'https://api.anthropic.com/v1', fetch = globalThis.fetch, retries = 3 } = {}) {
+  if (!apiKey) throw new Error('No Anthropic API key: set ANTHROPIC_API_KEY.');
+  const base = baseUrl.replace(/\/$/, '');
+  return {
+    name: 'anthropic',
+    model,
+    async complete({ system, user, schema, temperature = 0, maxOutputTokens = 32000 }) {
+      for (let attempt = 0; ; attempt++) {
+        const res = await fetch(`${base}/messages`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model, system, max_tokens: maxOutputTokens, temperature,
+            messages: [{ role: 'user', content: user }],
+            tools: [{ name: 'answer', description: 'Give the answer.', input_schema: schema }],
+            tool_choice: { type: 'tool', name: 'answer' },
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if ((res.status === 429 || res.status === 529 || res.status >= 500) && attempt < retries) { await backoff(attempt); continue; }
+        if (!res.ok) throw new Error(`Anthropic ${res.status}: ${data?.error?.message ?? res.statusText}`);
+        if (data.stop_reason === 'max_tokens') throw new Error('Anthropic stopped with max_tokens.');
+        const call = (data.content ?? []).find((c) => c.type === 'tool_use');
+        if (!call) throw new Error(`Anthropic returned no answer (${data.stop_reason}).`);
+        const u = data.usage ?? {};
+        return { json: call.input, usage: { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, thinking: 0, cached: u.cache_read_input_tokens ?? 0 }, model: data.model ?? model };
+      }
+    },
+  };
+}
+anthropicProvider.models = async ({ apiKey, baseUrl = 'https://api.anthropic.com/v1', fetch = globalThis.fetch }) => {
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/models?limit=100`, { headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${data?.error?.message ?? res.statusText}`);
+  return (data.data ?? []).map((m) => ({ id: m.id, label: m.display_name ?? m.id }));
+};
+
+/**
+ * The providers a person can choose, and where their settings live in the
+ * environment. The key of each comes from its own variable; N20S_AI_PROVIDER,
+ * N20S_AI_MODEL and N20S_AI_BASE_URL say which one, which model and where.
+ */
+export const PROVIDERS = {
+  gemini: { label: 'Google Gemini', make: geminiProvider, keyVar: 'GEMINI_API_KEY', model: 'gemini-2.5-flash', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
+  anthropic: { label: 'Anthropic Claude', make: anthropicProvider, keyVar: 'ANTHROPIC_API_KEY', model: 'claude-sonnet-5-5', baseUrl: 'https://api.anthropic.com/v1' },
+  openai: { label: 'OpenAI or compatible (Mistral, OpenRouter, Ollama…)', make: openaiProvider, keyVar: 'OPENAI_API_KEY', model: null, baseUrl: 'https://api.openai.com/v1', keyOptional: true },
+};
+
+/** A provider from explicit settings: {provider, apiKey, model, baseUrl}. */
+export function makeProvider({ provider = 'gemini', apiKey, model, baseUrl, fetch } = {}) {
+  const p = PROVIDERS[provider];
+  if (!p) throw new Error(`Unknown AI provider ${provider}: ${Object.keys(PROVIDERS).join(', ')}.`);
+  if (!apiKey && !p.keyOptional) throw new Error(`No API key for ${p.label}: set ${p.keyVar}.`);
+  return p.make({ apiKey, model: model || p.model || undefined, baseUrl: baseUrl || p.baseUrl, ...(fetch ? { fetch } : {}) });
+}
+
+/** Models a provider offers with these settings; checks the key without spending tokens. */
+export function listModels({ provider = 'gemini', apiKey, baseUrl, fetch } = {}) {
+  const p = PROVIDERS[provider];
+  if (!p) throw new Error(`Unknown AI provider ${provider}.`);
+  return p.make.models({ apiKey, baseUrl: baseUrl || p.baseUrl, ...(fetch ? { fetch } : {}) });
+}
+
+/**
+ * AI settings from the environment: N20S_AI_PROVIDER, else the first provider
+ * whose key is set (Gemini first). Null when there is none.
+ */
+export function aiSettingsFromEnv(env = globalThis.process?.env ?? {}, { provider, model } = {}) {
+  const id = provider || env.N20S_AI_PROVIDER || Object.keys(PROVIDERS).find((k) => env[PROVIDERS[k].keyVar]) || null;
+  if (!id || !PROVIDERS[id]) return null;
+  const p = PROVIDERS[id];
+  const apiKey = env[p.keyVar] || null;
+  if (!apiKey && !(p.keyOptional && env.N20S_AI_BASE_URL)) return null;
+  return { provider: id, apiKey, model: model || env.N20S_AI_MODEL || p.model, baseUrl: env.N20S_AI_BASE_URL || p.baseUrl };
 }
 
 /** Key of a request: the same prompt and schema always give the same key. */

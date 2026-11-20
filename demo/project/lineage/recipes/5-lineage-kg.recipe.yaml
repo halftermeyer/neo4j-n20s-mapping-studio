@@ -1,0 +1,58 @@
+# 5. Publishing a precomputed graph as a SPARQL endpoint. Every run builds a new
+# version of the graph (versioned: true), checks it, and only then points the
+# endpoint at it: consumers never see a half-built or invalid graph. The
+# previous version is dropped after the swap; a failed run leaves the endpoint
+# on the previous version.
+format: n20s-recipe/0.1
+id: lineage-kg
+title: Publish the lineage KG (PROV, RDFS closure materialized)
+mapping: ../lineage-prov.mapping.yaml
+prefixes:
+  sh: "http://www.w3.org/ns/shacl#"
+  shapes: "https://example.org/lineage/shapes/"
+graphs:
+  kg: { name: lineage-prov-kg, lifecycle: persistent, versioned: true }
+steps:
+  - id: everything
+    type: scope
+    title: Every node; the mapping projects them and the relationships between them
+    cypher: |
+      MATCH (n) RETURN n
+
+  - id: prov-o
+    type: triples
+    title: PROV-O
+    files: [../../targets/prov.nq]
+
+  - id: shapes
+    type: triples
+    title: What the published graph must satisfy
+    turtle: |
+      shapes:NoSelfDerivation a sh:NodeShape ;
+        sh:targetSubjectsOf prov:wasDerivedFrom ;
+        sh:sparql shapes:NoSelfDerivationQuery .
+      shapes:NoSelfDerivationQuery
+        sh:message "A version derived from itself." ;
+        sh:select "PREFIX prov: <http://www.w3.org/ns/prov#> SELECT $this WHERE { $this prov:wasDerivedFrom $this }" .
+
+  - id: check
+    type: validate
+    title: Validate before anything is published
+
+  - id: unshape
+    type: update
+    title: Take the shapes out again, they are not data
+    sparql: |
+      DELETE { ?s ?p ?o } WHERE { ?s ?p ?o FILTER (STRSTARTS(STR(?s), STR(shapes:))) }
+
+  - id: closure
+    type: infer
+    title: Materialize the RDFS closure (subclasses, subproperties, domains, ranges)
+    profile: RDFS
+
+  - id: publish
+    type: publish
+    title: Serve it as /sparql/lineage
+    as: lineage
+    gate: [check]
+    description: Data lineage in W3C PROV-O, with PROV-O and its RDFS closure.

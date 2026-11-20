@@ -113,7 +113,7 @@ test('studio server: state, decisions written to the file with its comments, mod
     provider: () => functionProvider((req) => { asked++; return goldAnswer(auraGold)(req); }),
   });
   const call = async (p, body) => {
-    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { status: res.status, data: res.headers.get('content-type').includes('json') ? await res.json() : await res.text() };
   };
   try {
@@ -160,7 +160,7 @@ test('studio recipes: list, detail with outline and findings, step edits keep th
   fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'Pierre' });
   const call = async (p, body) => {
-    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { status: res.status, data: await res.json() };
   };
   try {
@@ -192,7 +192,7 @@ test('studio recipes from scratch: new recipe, graphs, parameter, steps added, e
   fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'Pierre' });
   const call = async (p, body) => {
-    const res = await fetch(new URL(p, studio.url), { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetch(new URL(p, studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { status: res.status, data: await res.json() };
   };
   const file = 'stale-check.recipe.yaml';
@@ -261,7 +261,7 @@ test('studio bench: collection, targets, save keeps comments, delete', async () 
   fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
   const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'Pierre' });
   const call = async (p, body) => {
-    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetch(new URL(p, studio.url), body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { status: res.status, data: await res.json() };
   };
   try {

@@ -7,7 +7,9 @@ import {
   openSource, splitStatements, defaultSource,
 } from '../src/node.js';
 import YAML from 'yaml';
-import { geminiProvider, recordingProvider, replayProvider } from '../src/providers.js';
+import { recordingProvider, replayProvider, makeProvider, aiSettingsFromEnv, PROVIDERS } from '../src/providers.js';
+import { connectionSettings } from '../src/settings.js';
+import { follower, startFollowing, stopFollowing } from '../src/follow.js';
 import { startStudio } from '../src/studio.js';
 import { runRecipe, checkRecipe } from '../src/recipe.js';
 import { serveEndpoints } from '../src/serve.js';
@@ -23,20 +25,22 @@ const USAGE = `Usage:
   n20s-mapping check   <mapping> [--lpg <file>] [--lock <file>] [--json] [--strict] [--quiet]
   n20s-mapping lock    <mapping> [--lpg <file>] [--lock <file>] [--force]
   n20s-mapping compile <mapping> [--out <file>] [--force]
-  n20s-mapping propose <mapping> --out <file> --prefix <p> [--base-iri <iri>] [--model <id>] [--passes <n>]
+  n20s-mapping propose <mapping> --out <file> --prefix <p> [--base-iri <iri>] [--provider <id>] [--model <id>] [--passes <n>]
                        [--source <url>] [--no-descriptions] [--record <f>] [--replay <f>]
                        [--open-terms] [--no-repair] [--json]
   n20s-mapping status  <project.yaml> [--n20s <url>] [--json]
   n20s-mapping introspect <project.yaml> <source> [--source <url>]
   n20s-mapping fetch   <project.yaml> <target> [--repin]
   n20s-mapping studio  <mapping | project.yaml> [--mapping <id>] [--port <n>] [--reviewer <name>] [--oracle <oracle.yaml>]
-                       [--source <url>] [--n20s <url>] [--prefix <p>] [--model <id>] [--recipes <dir>]
+                       [--source <url>] [--n20s <url>] [--prefix <p>] [--provider <id>] [--model <id>] [--recipes <dir>]
+                       [--record <f>] [--replay <f>] [--mask-hosts] [--title <text>]
   n20s-mapping recipe  <recipe.yaml> [--param name=value]... [--source <url>] [--n20s <url>]
                        [--keep] [--proposals] [--json] [--check]
   n20s-mapping graphs  [<recipes dir>] [--n20s <url>] [--json]
   n20s-mapping serve   [<recipes dir>] [--port <n>] [--host <addr>] [--source <url>] [--n20s <url>] [--run]
   n20s-mapping bench   <bench.yaml> [--url <base>] [--only <id>]... [--iterations <n>] [--concurrency <n>] [--json]
   n20s-mapping republish <endpoint> [--recipes <dir>] [--source <url>] [--n20s <url>]
+  n20s-mapping follow  <endpoint> [--recipes <dir>] [--source <url>] [--off]
   n20s-mapping unpublish <endpoint> [--recipes <dir>] [--n20s <url>]
   n20s-mapping project <mapping> [--source <url>] [--n20s <url>] [--graph <name>] [--force]
   n20s-mapping compare <mapping> --source <url> [--source <url>]
@@ -57,8 +61,11 @@ propose  Asks an AI model for the undecided elements and writes the mapping with
          changed. Subjects come from uniqueness constraints, qualified and
          value IRIs from the --prefix namespace (--base-iri declares it). With
          --source, value tables use the distinct values found there (they are
-         not sent to the model). Gemini by default: GEMINI_API_KEY from the
-         environment or --dotenv. --record keeps the answers; --replay
+         not sent to the model). The model: --provider gemini|anthropic|openai
+         (or N20S_AI_PROVIDER, else the provider whose key is set:
+         GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY), --model (or
+         N20S_AI_MODEL); N20S_AI_BASE_URL for an OpenAI-compatible server
+         (Mistral, OpenRouter, Ollama…). --record keeps the answers; --replay
          answers from such a file, without a model. The spec of the mapping
          (<mapping>.spec.yaml, or --spec) drives it: elements out of scope are
          left out with their reason, the purpose, principles and notes go
@@ -75,8 +82,11 @@ fetch    Downloads a target of the project from its URL or the catalog into
          accepts a changed document).
 studio   Serves a local page (127.0.0.1) to review proposals on a drawing of the
          LPG ontology: accept, reject with a comment, edit, ask the model again
-         (with GEMINI_API_KEY), run the oracle (with --oracle, a source and
-         n20s-server). Every decision is written to the mapping file at once.
+         (with a model), run the oracle (with --oracle, a source and
+         n20s-server). The Connections tab connects to Neo4j, chooses the AI
+         provider, its key and model, and n20s-server, while the studio runs;
+         it can save them to the env file (--dotenv, default .env, which git
+         must ignore). Every decision is written to the mapping file at once.
          Reads <mapping>.variants.json when propose --passes wrote one.
          The Recipes tab shows, builds and runs the recipes of --recipes
          (default <mapping dir>/recipes); running needs a source and n20s-server.
@@ -95,7 +105,13 @@ serve    Serves the recipes of a directory (default .) over HTTP:
          /query/<api> runs a recipe that declares an api with the parameters of
          the query string or JSON body and returns its result; --run adds
          /run/<recipe> for any recipe. Listens on 127.0.0.1:7480 unless --host
-         and --port say otherwise.
+         and --port say otherwise. Endpoints that follow the database are
+         rebuilt when a committed transaction touches their sources.
+follow   Makes an endpoint follow the database (--off stops it): Change Data
+         Capture in FULL mode tells which transactions committed; one that
+         touches the labels or types the publication is built from rebuilds
+         it, through its gates, and swaps it in. serve and the studio do the
+         following. Without CDC FULL, it says how to enable it.
 bench    Sends the requests of a collection to a running serve (or studio),
          default http://127.0.0.1:7480, and checks what they answer. With
          --iterations, also times each one (latency percentiles, requests per
@@ -133,7 +149,7 @@ n20s-server: --n20s, default N20S_URL, else http://localhost:7474.
 
 Exit codes: 0 ok, 1 errors or failed checks (or warnings with --strict), 2 usage, I/O or connection error.`;
 
-const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle'];
+const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'follow', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle'];
 
 /** Explicit --source options first, then the default source when more are needed. */
 function sourceUrls(values, count) {
@@ -199,6 +215,7 @@ async function main() {
       prefix: { type: 'string' },
       'base-iri': { type: 'string' },
       model: { type: 'string' },
+      provider: { type: 'string' },
       record: { type: 'string' },
       replay: { type: 'string' },
       'no-descriptions': { type: 'boolean', default: false },
@@ -218,6 +235,9 @@ async function main() {
       keep: { type: 'boolean', default: false },
       check: { type: 'boolean', default: false },
       repin: { type: 'boolean', default: false },
+      off: { type: 'boolean', default: false },
+      'mask-hosts': { type: 'boolean', default: false },
+      title: { type: 'string' },
       recipes: { type: 'string' },
       proposals: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
@@ -279,8 +299,9 @@ async function main() {
     if (values.replay) {
       try { provider = replayProvider(JSON.parse(await fs.readFile(values.replay, 'utf8'))); } catch (err) { throw new UsageError(`Cannot read the recording ${values.replay}: ${err.message}`); }
     } else {
-      if (!process.env.GEMINI_API_KEY) throw new UsageError('No GEMINI_API_KEY in the environment (--dotenv <file> loads it from a file).');
-      provider = geminiProvider({ apiKey: process.env.GEMINI_API_KEY, model: values.model });
+      const ai = aiSettingsFromEnv(process.env, { provider: values.provider, model: values.model });
+      if (!ai) throw new UsageError(`No AI provider: set ${Object.values(PROVIDERS).map((x) => x.keyVar).join(', ')} or N20S_AI_PROVIDER in the environment (--dotenv <file> loads them from a file).`);
+      provider = makeProvider(ai);
     }
     if (values.record) provider = recordingProvider(provider);
     const source = values.source?.length ? openSource(values.source[0]) : null;
@@ -319,7 +340,30 @@ async function main() {
 
   if (command === 'studio') {
     const url = values.source?.[0] ?? defaultSource();
-    const withSource = (fn) => async (...a) => { const src = openSource(url); try { return await fn(src)(...a); } finally { await src.close(); } };
+    // The Connections tab changes them while the studio runs; secrets are saved only to the env file.
+    // --replay answers from a recording (a reproducible demo); --record keeps every answer of the live model.
+    let fixedProvider = null;
+    if (values.replay) {
+      try { fixedProvider = replayProvider(JSON.parse(await fs.readFile(values.replay, 'utf8'))); } catch (err) { throw new UsageError(`Cannot read the recording ${values.replay}: ${err.message}`); }
+    }
+    let recording = null;
+    if (values.record) {
+      try { recording = JSON.parse(await fs.readFile(values.record, 'utf8')); } catch { recording = null; }
+    }
+    const settings = connectionSettings({
+      fixedProvider, maskHosts: values['mask-hosts'],
+      sourceUrl: url, sourceOrigin: values.source ? 'command line' : 'environment',
+      provider: values.provider ?? null, model: values.model ?? null,
+      n20sUrl: values.n20s ?? process.env.N20S_URL ?? null,
+      envFile: path.resolve(values.dotenv ?? '.env'),
+    });
+    if (values.record) {
+      settings.wrapProvider = (inner) => {
+        recording ??= { format: 'n20s-propose-recording/0.1', provider: inner.name, model: inner.model, calls: [] };
+        const rec = recordingProvider(inner, recording);
+        return { ...rec, async complete(req) { const res = await rec.complete(req); await fs.writeFile(values.record, JSON.stringify(recording, null, 1) + '\n'); return res; } };
+      };
+    }
     // A project file opens the project; any other file is a mapping.
     let isProject = false;
     try { isProject = YAML.parse(await fs.readFile(first, 'utf8'))?.format === PROJECT_FORMAT; } catch { /* the studio reports it */ }
@@ -329,15 +373,14 @@ async function main() {
       port: values.port !== undefined ? Number(values.port) : 4321,
       reviewer: values.reviewer ?? process.env.USER ?? 'reviewer',
       oracleFile: values.oracle ?? null,
-      openSource: url ? (u) => openSource(u ?? url) : null,
-      n20s: values.oracle || url ? n20sClient(values.n20s) : null,
+      settings,
+      ...(values.title ? { title: values.title } : {}),
       recipesDir: values.recipes ?? null,
-      provider: process.env.GEMINI_API_KEY ? () => geminiProvider({ apiKey: process.env.GEMINI_API_KEY, model: values.model }) : null,
-      valuesOf: url ? withSource((src) => sourceValues(src)) : null,
       prefix: values.prefix ?? null,
     });
     console.log(`Studio on ${studio.url} for ${first}. Ctrl-C to stop.`);
-    if (!process.env.GEMINI_API_KEY) console.log('No GEMINI_API_KEY: "ask the model" is off (--dotenv <file> loads it).');
+    if (!settings.ai) console.log(`No AI provider: set one in the Connections tab (${studio.url}connections), or ${Object.values(PROVIDERS).map((x) => x.keyVar).join(', ')} in the environment.`);
+    if (!settings.neo4j) console.log(`No Neo4j source: connect in the Connections tab (${studio.url}connections), or set N20S_SOURCE.`);
     if (!values.oracle) console.log('No --oracle: the oracle panel is off.');
     await new Promise((resolve) => process.once('SIGINT', resolve));
     await studio.close();
@@ -431,7 +474,13 @@ async function main() {
     });
     console.log(`Serving ${first} on ${server.url}: GET ${server.url}sparql lists the endpoints, GET ${server.url}query the query APIs${values.run ? `, GET ${server.url}run the recipes` : ''}. Ctrl-C to stop.`);
     if (!url) console.log('No source: /query and /run are off (--source, N20S_SOURCE or NEO4J_URI).');
+    // Endpoints that follow the database (studio, or `follow`) are rebuilt when a transaction touches their sources.
+    const client = n20sClient(values.n20s);
+    const following = url ? follower({ recipesDir: () => first, openSource: () => () => openSource(url), n20s: () => client,
+      onSync: (r) => console.log(`${new Date().toISOString()} /sparql/${r.endpoint}: ${r.transactions} transaction(s) → ${r.sync.ok ? `rebuilt as ${r.sync.graph} in ${r.sync.ms} ms` : `not rebuilt (${r.sync.error}), the endpoint keeps its graph`}`),
+      onError: (err) => console.error(`following: ${err.message.split('\n')[0]}`) }) : null;
     await new Promise((resolve) => process.once('SIGINT', resolve));
+    following?.stop();
     await server.close();
     return 0;
   }
@@ -475,6 +524,19 @@ async function main() {
     }
     console.log(`\n${results.length - failed.length}/${results.length} requests answer as expected (${base}).`);
     return failed.length ? 1 : 0;
+  }
+
+  if (command === 'follow') {
+    const dir = values.recipes ?? '.';
+    if (values.off) { await stopFollowing(dir, first); console.log(`/sparql/${first} no longer follows the database.`); return 0; }
+    const source = openSource(sourceUrls(values, 1)[0]);
+    try {
+      await startFollowing(dir, first, source);
+      console.log(`/sparql/${first} follows the database from now on: serve (or the studio) rebuilds it when a transaction touches its sources.`);
+      return 0;
+    } finally {
+      await source.close();
+    }
   }
 
   if (command === 'republish') {

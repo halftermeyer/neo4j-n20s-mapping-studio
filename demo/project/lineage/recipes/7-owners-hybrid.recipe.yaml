@@ -1,0 +1,62 @@
+# 7. Hybrid: what changes often is computed on demand, what is stable is read
+# from the published lineage KG. The taint (which version read an invalidated
+# input) is scoped and reasoned per call; who owns which dataset is copied from
+# the precomputed graph with a construct ... from, instead of a second scope.
+format: n20s-recipe/0.1
+id: owners-hybrid
+title: Owners to notify, taint on demand, attributions precomputed
+mapping: ../lineage-prov.mapping.yaml
+graphs:
+  work: { lifecycle: ephemeral }
+  kg: { lifecycle: published, endpoint: lineage }
+params:
+  namespace:
+    default: "demo:lineage:v2:postgres://pg1"
+  name:
+    default: "raw.orders"
+api:
+  name: owners
+  result: owners
+  description: Owners of datasets with a tainted version (taint on demand, ownership precomputed).
+steps:
+  - id: downstream
+    type: scope
+    graph: work
+    title: Every version downstream of the source
+    cypher: |
+      MATCH (:Dataset {namespace: $namespace, name: $name})<-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH p = (s)<-[:USED|WAS_GENERATED_BY*0..20]-()
+      RETURN p
+
+  - id: attributions
+    type: construct
+    graph: work
+    from: kg
+    title: Ownership, from the published KG
+    sparql: |
+      CONSTRUCT {
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?agent ; prov:hadRole ?role .
+        ?agent rdfs:label ?name .
+      } WHERE {
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?agent ; prov:hadRole ?role .
+        ?agent rdfs:label ?name .
+      }
+
+  - id: owners
+    type: query
+    graph: work
+    title: Who to notify, and why
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+    sparql: |
+      SELECT DISTINCT ?dataset ?agent ?role WHERE {
+        ?version lin:taintedBy ?input ; prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?ag ; prov:hadRole ?role .
+        ?ag rdfs:label ?agent .
+      }

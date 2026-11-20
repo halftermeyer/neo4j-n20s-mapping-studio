@@ -1,7 +1,7 @@
 // Recipes tab: a recipe as a sequence of steps on named n20s graphs. Each step
 // feeds a graph, changes it, or asks it; the page shows the state of the graph
 // after each step and what it holds, and lets you build the recipe from scratch.
-import { fill, h, api, toast } from './dom.js';
+import { fill, h, api, toast, tid } from './dom.js';
 
 const ROLE = {
   feed: { icon: '＋', text: 'feeds', color: '#1565c0' },
@@ -62,6 +62,10 @@ let apiResult = null;
 let editingApi = false;
 let sparqlText = 'SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 20';
 let sparqlResult = null;
+let cdc = null;
+let apiCalls = 0;         // answers so far, for the demo recorder: api-result-<n>, sparql-result-<n>
+let sparqlAsks = 0;           // GET /api/cdc: can a publication follow the database?
+let followTimer = null;   // refreshes the endpoint list while a publication follows the database
 
 const STATUS_TEXT = {
   stable: 'built by a recipe that finished, from the mapping and LPG ontology as they are now',
@@ -69,11 +73,13 @@ const STATUS_TEXT = {
   incomplete: 'the last build stopped on an error',
   missing: 'recorded but not in n20s-server (restarted?): rebuild it',
   unknown: 'not built by a recipe of this directory',
+  other: 'built elsewhere in the project (another mapping, the oracle)',
 };
 
 async function loadGraphs() {
   try { graphs = await api('/api/graphs'); } catch (err) { graphs = { graphs: [], endpoints: [], can: false, error: err.message }; }
   try { apis = graphs.can ? (await api('/query')).apis : []; } catch { apis = []; }
+  watchFollowing();
 }
 
 export async function showRecipes(container) {
@@ -119,7 +125,7 @@ function render() {
         h('div', { class: 'mono', style: 'color:#888;font-weight:400' }, list.dir.split('/').slice(-3).join('/'))),
       creating ? newRecipeForm() : null,
       list.recipes.length ? list.recipes.map((f) => h('div', {
-        class: `qitem${current?.file === f.file ? ' sel' : ''}`, onclick: () => open(f.file),
+        class: `qitem${current?.file === f.file ? ' sel' : ''}`, onclick: () => open(f.file), 'data-testid': `recipe-${tid(f.id ?? f.file)}`,
       }, h('div', { class: 'name' }, f.title ?? f.file),
       h('div', { class: 'meta' }, f.error ? h('span', { class: 'chip error' }, f.error) : [kindChip(f.kind), ` ${f.steps} steps · ${f.file}`,
         f.api ? h('span', { class: 'chip', title: 'query API' }, `/query/${f.api}`) : ''])))
@@ -130,7 +136,54 @@ function render() {
   );
 }
 
-const show = (kind, name) => { view = { kind, name }; sparqlResult = null; apiResult = null; render(); };
+const show = (kind, name) => {
+  view = { kind, name }; sparqlResult = null; apiResult = null; render();
+  if (kind === 'endpoint') api('/api/cdc').then((c) => { cdc = c; render(); }).catch((err) => { cdc = { available: false, message: err.message }; render(); });
+};
+
+/** While a publication follows the database, its state (syncing, rebuilt) is refreshed every two seconds. */
+function watchFollowing() {
+  const following = graphs?.endpoints?.some((e) => e.follow);
+  if (following && !followTimer && root?.isConnected !== false) {
+    followTimer = setInterval(async () => {
+      if (!root || root.hidden || !root.isConnected) return;
+      // Graphs come and go (a run's ephemeral graphs): their names are part of what is shown.
+      const shown = () => JSON.stringify([graphs?.endpoints?.map((e) => [e.graph, e.follow?.state, e.follow?.syncs]), graphs?.graphs?.map((g) => g.name)]);
+      const before = shown();
+      await loadGraphs();
+      if (shown() !== before) render();
+      if (!graphs?.endpoints?.some((e) => e.follow)) { clearInterval(followTimer); followTimer = null; }
+    }, 2000);
+  }
+}
+const at = (iso) => (iso ? new Date(iso).toLocaleTimeString() : '');
+
+/** Follow the database: available only when Change Data Capture is on, in FULL mode. */
+function followBox(e) {
+  const f = e.follow;
+  const toggle = async (on) => {
+    try { graphs = await api('/api/graphs/follow', { endpoint: e.endpoint, on }); toast(on ? `/sparql/${e.endpoint} follows the database` : `/sparql/${e.endpoint} no longer follows the database`); watchFollowing(); } catch (err) { toast(err.message, true); }
+    render();
+  };
+  if (f) {
+    const s = f.lastSync;
+    return h('div', { class: 'follow on', 'data-testid': 'follow-box' },
+      h('div', { class: 'row', style: 'justify-content:space-between' },
+        h('b', {}, '⟲ Follows the database'),
+        h('span', { class: `chip ${f.state === 'syncing' ? 'g-stale' : f.state === 'failed' ? 'g-incomplete' : 'g-stable'}`, 'data-testid': `follow-state-${f.state}` }, f.state === 'syncing' ? 'rebuilding…' : f.state === 'failed' ? 'last rebuild failed' : 'in sync')),
+      h('div', { class: 'hint' }, `Since ${at(f.since)}: every committed transaction that touches ${f.watched ? [...f.watched.labels, ...f.watched.types].join(', ') : 'the database'} rebuilds the graph, checks it, and swaps it in.`),
+      f.lastChange ? h('div', { 'data-testid': 'follow-last-change' }, `Last change ${at(f.lastChange.at)}: ${f.lastChange.transactions ?? 0} transaction(s), ${f.lastChange.events} change(s)`) : h('div', { class: 'hint' }, 'No change yet.'),
+      s ? h('div', { 'data-testid': `follow-sync-${f.syncs}`, class: s.ok ? 'okline' : 'warnline' }, s.ok ? `Rebuilt ${at(s.at)} in ${(s.ms / 1000).toFixed(1)} s: now serving ${s.graph}` : `Rebuild failed ${at(s.at)}, the endpoint kept its graph: ${s.error}`) : null,
+      h('button', { onclick: () => toggle(false), 'data-testid': 'follow-off' }, 'Stop following'));
+  }
+  const ok = cdc?.available;
+  return h('div', { class: 'follow', 'data-testid': 'follow-box' },
+    h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, 'Follow the database'),
+      cdc ? h('span', { class: `chip ${ok ? 'g-stable' : 'g-incomplete'}`, title: cdc.message }, `CDC ${cdc.mode}`) : h('span', { class: 'chip' }, 'CDC …')),
+    h('div', { class: 'hint' }, 'Rebuild this graph whenever a transaction commits a change to what it is built from (Change Data Capture).'),
+    cdc && !ok ? h('div', { class: 'warnline', 'data-testid': 'cdc-off' }, cdc.message) : null,
+    h('button', { class: 'primary', disabled: !ok, title: ok ? '' : (cdc?.message ?? ''), onclick: () => toggle(true), 'data-testid': 'follow-on' }, 'Follow the database'));
+}
 const section = (title, extra) => h('div', { class: 'fhead', style: 'border-top:1px solid var(--line);margin-top:6px' }, h('div', { class: 'row', style: 'justify-content:space-between' }, title, extra));
 
 /** What is published (SPARQL endpoints, query APIs) and the graphs of n20s-server. */
@@ -140,16 +193,16 @@ function services() {
   const is = (kind, name) => view?.kind === kind && view.name === name;
   return [
     section('SPARQL endpoints', h('button', { class: 'mini', onclick: async () => { await loadGraphs(); render(); } }, 'refresh')),
-    graphs.endpoints.length ? graphs.endpoints.map((e) => h('div', { class: `qitem${is('endpoint', e.endpoint) ? ' sel' : ''}`, onclick: () => show('endpoint', e.endpoint) },
+    graphs.endpoints.length ? graphs.endpoints.map((e) => h('div', { class: `qitem${is('endpoint', e.endpoint) ? ' sel' : ''}`, onclick: () => show('endpoint', e.endpoint), 'data-testid': `endpoint-${tid(e.endpoint)}` },
       h('div', { class: 'name mono', style: 'font-size:12px' }, `/sparql/${e.endpoint}`),
-      h('div', { class: 'meta' }, h('span', { class: `chip g-${e.status}`, title: STATUS_TEXT[e.status] }, e.status), e.triples !== null ? ` ${e.triples} triples` : '', ` · ${e.published.recipe}`)))
+      h('div', { class: 'meta' }, h('span', { class: `chip g-${e.status}`, title: STATUS_TEXT[e.status] }, e.status), e.follow ? h('span', { class: 'chip', title: 'Follows the database (CDC)' }, '⟲ follows') : '', e.triples !== null ? ` ${e.triples} triples` : '', ` · ${e.published.recipe}`)))
       : h('div', { style: 'padding:8px 12px;color:#888' }, 'None: a publish step publishes a persistent graph.'),
     section('Query APIs'),
-    apis.length ? apis.map((a) => h('div', { class: `qitem${is('api', a.name) ? ' sel' : ''}`, onclick: () => { apiValues = Object.fromEntries(Object.entries(a.params).map(([k, d]) => [k, d.default ?? ''])); show('api', a.name); } },
+    apis.length ? apis.map((a) => h('div', { class: `qitem${is('api', a.name) ? ' sel' : ''}`, 'data-testid': `api-${tid(a.name)}`, onclick: () => { apiValues = Object.fromEntries(Object.entries(a.params).map(([k, d]) => [k, d.default ?? ''])); show('api', a.name); } },
       h('div', { class: 'name mono', style: 'font-size:12px' }, `/query/${a.name}`),
       h('div', { class: 'meta' }, kindChip(a.kind), ` ${a.recipe}`)))
       : h('div', { style: 'padding:8px 12px;color:#888' }, 'None: a recipe declares api: { name } to be served.'),
-    section('Graphs in n20s-server'),
+    section('In-memory RDF graphs'),
     graphs.graphs.length ? graphs.graphs.map((g) => h('div', { class: `qitem${is('graph', g.name) ? ' sel' : ''}`, onclick: () => show('graph', g.name) },
       h('div', { class: 'name mono', style: 'font-size:12px' }, g.name),
       h('div', { class: 'meta' }, h('span', { class: `chip g-${g.status}`, title: STATUS_TEXT[g.status] }, g.status), g.triples !== null ? ` ${g.triples} triples` : '',
@@ -169,16 +222,18 @@ function provenanceTable(b, triples) {
 }
 
 function sparqlConsole(ask, hint) {
-  const query = h('textarea', { class: 'mono', rows: 5, spellcheck: 'false', oninput: (e) => { sparqlText = e.target.value; } }, sparqlText);
+  const query = h('textarea', { class: 'mono', rows: 5, spellcheck: 'false', 'data-testid': 'sparql-input', oninput: (e) => { sparqlText = e.target.value; } }, sparqlText);
   return [
     h('h3', {}, 'SPARQL'),
     h('div', { class: 'term' }, hint),
     query,
-    h('div', { class: 'row', style: 'margin-top:6px' }, h('button', { class: 'primary', onclick: async () => {
+    h('div', { class: 'row', style: 'margin-top:6px' }, h('button', { class: 'primary', 'data-testid': 'sparql-ask', onclick: async () => {
+      sparqlResult = null; render();
       try { sparqlResult = await ask(sparqlText); } catch (err) { sparqlResult = { error: err.message }; }
+      sparqlAsks++;
       render();
     } }, 'Ask')),
-    sparqlResult ? sparqlView(sparqlResult) : null,
+    sparqlResult ? h('div', { 'data-testid': `sparql-result-${sparqlAsks}` }, sparqlView(sparqlResult)) : null,
   ];
 }
 
@@ -213,6 +268,7 @@ function endpointPanel() {
     h('div', { class: 'row', style: 'justify-content:space-between' }, h('h2', { class: 'mono', style: 'font-size:14px' }, `/sparql/${e.endpoint}`), h('button', { class: 'mini', onclick: () => { view = null; render(); } }, 'close')),
     h('div', {}, h('span', { class: `chip g-${e.status}` }, e.status), ' ', STATUS_TEXT[e.status]),
     e.reasons.length ? h('ul', { style: 'margin:6px 0;padding-left:18px;color:#8a4b00' }, e.reasons.map((r) => h('li', {}, r))) : null,
+    followBox(e),
     p.description ? h('div', { class: 'desc', style: 'margin-top:8px' }, p.description) : null,
     h('table', { class: 'props', style: 'margin-top:8px' },
       [['URL', url], ['graph', `${e.graph}${e.triples !== null ? ` · ${e.triples} triples` : ''}`], ['published', `${p.at.replace('T', ' ').slice(0, 19)} by ${p.recipe} (run ${p.runId})`],
@@ -258,22 +314,24 @@ function apiPanel() {
     a.description ? h('div', { class: 'desc', style: 'margin-top:8px' }, a.description) : null,
     h('h3', {}, 'Parameters'),
     Object.entries(a.params).length ? Object.entries(a.params).map(([k, d]) => h('label', { class: 'ffield', title: d.description ?? '' }, h('span', {}, `${k} (${d.type})`),
-      h('input', { value: apiValues[k] ?? '', oninput: (ev) => { apiValues[k] = ev.target.value; refresh(); } }))) : h('div', { style: 'color:#888' }, 'None.'),
+      h('input', { value: apiValues[k] ?? '', 'data-testid': `api-param-${tid(k)}`, oninput: (ev) => { apiValues[k] = ev.target.value; refresh(); } }))) : h('div', { style: 'color:#888' }, 'None.'),
     urlLine,
     h('div', { class: 'actions', style: 'display:flex;gap:6px;margin-top:10px' },
-      h('button', { class: 'primary', disabled: !list.can, onclick: async () => {
+      h('button', { class: 'primary', disabled: !list.can, 'data-testid': 'api-call', onclick: async () => {
+        apiResult = null; render();
         try {
           const res = await fetch(`/query/${encodeURIComponent(a.name)}${qs() ? `?${qs()}` : ''}`);
           apiResult = await res.json();
         } catch (err) { apiResult = { error: err.message }; }
+        apiCalls++;
         render();
       } }, 'Call'),
       recipe ? h('button', { onclick: () => open(recipe.file) }, 'Open the recipe') : null),
-    apiResult ? (apiResult.error && !apiResult.result ? h('div', { class: 'fail', style: 'margin-top:8px' }, apiResult.error) : [
+    apiResult ? (apiResult.error && !apiResult.result ? h('div', { class: 'fail', style: 'margin-top:8px', 'data-testid': `api-result-${apiCalls}` }, apiResult.error) : h('div', { 'data-testid': `api-result-${apiCalls}` },
       h('div', { style: 'margin-top:8px;color:#555' }, `${apiResult.ok ? 'ok' : 'stopped'} · ${apiResult.ms} ms · ${apiResult.kind}${apiResult.result ? ` · ${apiResult.result.rows?.length ?? 0} rows from ${apiResult.result.step}` : ''}`),
       apiResult.error ? h('div', { class: 'fail' }, apiResult.error) : null,
       apiResult.result?.rows ? table(apiResult.result.rows, apiResult.result.columns) : null,
-      h('details', {}, h('summary', { style: 'cursor:pointer;color:#666' }, 'JSON'), h('pre', { class: 'stmt' }, JSON.stringify(apiResult, null, 1)))]) : null,
+      h('details', {}, h('summary', { style: 'cursor:pointer;color:#666' }, 'JSON'), h('pre', { class: 'stmt' }, JSON.stringify(apiResult, null, 1))))) : null,
   ];
 }
 
@@ -326,8 +384,9 @@ function header() {
       h('div', { style: 'color:#666' }, `mapping ${current.mapping}`), apiLine()),
     h('div', { class: 'fparams' }, inputs),
     h('label', { class: 'row', style: 'gap:4px;color:#666;white-space:nowrap', title: 'Keep the ephemeral graphs after the run (persistent graphs always stay)' }, keep, 'keep ephemeral graphs'),
+    run ? h('span', { class: `chip ${run.ok ? 'accepted' : 'error'}`, 'data-testid': run.ok ? `run-ok-${current.recipe.id}` : `run-failed-${current.recipe.id}` }, run.ok ? `done in ${run.ms} ms` : 'stopped') : null,
     h('button', {
-      class: 'primary', disabled: running || !list.can || current.findings.length > 0,
+      class: 'primary', disabled: running || !list.can || current.findings.length > 0, 'data-testid': 'recipe-run',
       title: !list.can ? 'Start the studio with --source and n20s-server to run recipes' : '',
       onclick: async () => {
         running = true; render();

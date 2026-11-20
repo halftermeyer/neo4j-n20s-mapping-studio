@@ -1,5 +1,7 @@
 // Small DOM helpers shared by the studio tabs.
 export const $ = (id) => document.getElementById(id);
+/** A data-testid from any key (for the demo recorder and browser tests): relationships/r:6 → relationships-r-6. */
+export const tid = (s) => String(s).replace(/[^A-Za-z0-9_-]+/g, '-');
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 /** Children as nodes: nested arrays flattened, null, undefined and false left out. */

@@ -148,6 +148,7 @@ button.mini { padding: 0 7px; font-size: 11px; margin-left: 3px; }
 .gstate { display: grid; gap: 10px; margin-top: 6px; }
 .chip.g-stable { background: #e8f5e9; color: var(--accepted); }
 .chip.g-stale, .chip.g-incomplete { background: #fff1e6; color: var(--review); }
+.chip.g-other { background: #eef0f3; color: #555; }
 .chip.g-missing { background: #fdecea; color: var(--rejected); }
 .chip.g-unknown { background: #eceff1; color: #455a64; }
 .fpanel td.mono { word-break: break-all; }
@@ -202,3 +203,19 @@ button.mini { padding: 0 7px; font-size: 11px; margin-left: 3px; }
 .dprop.rejected { border-left-color: var(--rejected); opacity: .6; }
 .dinput { border-top: 1px solid var(--line); background: #fff; padding: 10px 16px; display: grid; gap: 6px; }
 .dempty { color: #777; max-width: 640px; margin: 30px auto; text-align: center; }
+
+/* Connections tab */
+#connections-view { flex: 1; overflow: auto; background: var(--bg); }
+#connections-view[hidden] { display: none; }
+.ccols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; padding: 0 18px 18px; }
+.ccard { display: grid; gap: 8px; align-content: start; }
+.ccard h3 { margin: 0; }
+.ccard label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.ccard .hint, .phead .hint { color: #777; font-size: 11px; margin: 0; }
+.ccard .ok { color: #2e7d32; font-size: 12px; }
+
+/* Follow the database (CDC) */
+.follow { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 10px; display: grid; gap: 5px; font-size: 12.5px; background: #fafbfc; }
+.follow.on { border-color: #00695c; background: #f1faf8; }
+.follow .hint { color: #777; font-size: 11.5px; }
+.okline { color: #2e7d32; }

@@ -1,7 +1,7 @@
 // Project tab: the head of the pipeline. LPG sources on the left, RDF targets
 // on the right, the mappings between them in the middle, each with how it
 // stands downstream (coverage, check, drift, recipes, endpoints).
-import { fill, h, api, toast } from './dom.js';
+import { fill, h, api, toast, tid } from './dom.js';
 
 let root = null;
 let data = null;    // GET /api/project
@@ -44,7 +44,7 @@ function render() {
   fill(root,
     h('div', { class: 'phead' }, h('h2', {}, p.name), h('span', { class: 'mono', style: 'color:#888' }, p.file),
       p.problems.length ? h('div', { class: 'fail' }, p.problems.map((x) => h('div', {}, x))) : null),
-    h('div', { class: 'pcols' },
+    h('div', { class: 'pcols', 'data-testid': 'project-cols' },
       h('section', { class: 'pcol' }, h('h3', {}, 'LPG ontologies'), p.sources.map(sourceCard),
         form === 'source' ? sourceForm() : h('button', { onclick: () => { form = 'source'; render(); } }, '+ source')),
       h('div', { class: 'parrow' }, '→'),
@@ -57,7 +57,7 @@ function render() {
 
 function sourceCard(s) {
   const d = s.doc;
-  return h('div', { class: 'pcard' },
+  return h('div', { class: 'pcard', 'data-testid': `source-${tid(s.id)}` },
     h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, s.id), chip(s.origin, ORIGIN[s.origin])),
     h('div', { class: 'mono', style: 'color:#666' }, s.file),
     d ? [
@@ -75,7 +75,7 @@ function sourceCard(s) {
 }
 
 function targetCard(t) {
-  return h('div', { class: 'pcard' },
+  return h('div', { class: 'pcard', 'data-testid': `target-${tid(t.id)}` },
     h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, t.title), chip(t.origin, ORIGIN[t.origin])),
     h('div', { class: 'mono', style: 'color:#666' }, `${t.prefix}: ${t.namespace}`),
     t.description ? h('div', { style: 'color:#555;font-size:12px' }, t.description) : null,
@@ -93,7 +93,7 @@ function mappingCard(m) {
   const active = data.active === m.id;
   const c = m.coverage;
   const pct = (n) => (c && c.total ? `${(100 * n) / c.total}%` : '0');
-  return h('div', { class: `pcard${active ? ' active' : ''}` },
+  return h('div', { class: `pcard${active ? ' active' : ''}`, 'data-testid': `mapping-${tid(m.id)}` },
     h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', { style: 'font-size:14px' }, m.id), active ? chip('open', '#018bff') : null),
     h('div', {}, h('span', { class: 'chip' }, m.source), ' → ', m.targets.map((t) => h('span', { class: 'chip' }, t))),
     h('div', { class: 'mono', style: 'color:#666' }, m.file),
@@ -109,7 +109,7 @@ function mappingCard(m) {
         (m.endpoints ?? []).map((e) => chip(`/sparql/${e.endpoint}`, e.status === 'served' ? '#00695c' : '#e65100', e.status))),
     ] : h('div', { class: 'warnline' }, m.error ?? 'The file is not there.'),
     h('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
-      h('button', { class: active ? '' : 'primary', disabled: !!busy || !m.exists, onclick: async () => {
+      h('button', { class: active ? '' : 'primary', disabled: !!busy || !m.exists, 'data-testid': `open-${tid(m.id)}`, onclick: async () => {
         try { await api('/api/project/open', { mapping: m.id }); location.href = '/'; } catch (err) { toast(err.message, true); }
       } }, active ? 'Review it' : 'Open'),
       active ? h('button', { onclick: () => { location.href = '/recipes'; } }, 'Recipes') : null));
