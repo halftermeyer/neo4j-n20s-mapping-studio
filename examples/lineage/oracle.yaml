@@ -1,0 +1,219 @@
+# Oracle for lineage-prov: the lineage queries (Neo4j Browser saved queries,
+# steps 5 to 12), each reduced to what the PROV export carries, asked once in
+# Cypher on the LPG and once in SPARQL on the projection.
+#
+# mode: equal     both sides return the same rows
+#       disjoint  no row of one side appears on the other (and Cypher is not empty)
+# decode: how to read a SPARQL value back into the LPG value
+#       node:<node id>        parse the IRI with that kind's subject template
+#       values:<section>/<id>/properties/<prop>   reverse that value table
+# {{<node id>|<value>}} in SPARQL is replaced by the IRI of that node.
+#
+# Run: n20s-mapping oracle examples/lineage/oracle.yaml --source bolt://127.0.0.1:7688
+
+mapping: lineage-prov.mapping.yaml
+prefixes: |
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+checks:
+  - id: q32-upstream-runs-and-agents
+    source: "32 Step 5: upstream runs, code and agents"
+    notExported: job name and code version (HAD_PLAN is deferred), run status (ignored)
+    mode: equal
+    columns: [run, agent, role]
+    decode: { run: "node:activity", role: "values:relationships/was-associated-with/properties/role" }
+    cypher: |
+      MATCH (:DatasetVersion {id: 'demo:lineage:v2:dsv:dash.revenue@31'})
+            ((:DatasetVersion)-[:WAS_GENERATED_BY]->(r:Run)-[:USED]->(:DatasetVersion)){1,10}
+            (:DatasetVersion)
+      UNWIND r AS upstreamRun
+      WITH DISTINCT upstreamRun
+      OPTIONAL MATCH (upstreamRun)-[a:WAS_ASSOCIATED_WITH]->(ag:Agent)
+      RETURN upstreamRun.id AS run, ag.name AS agent, a.role AS role
+    sparql: |
+      SELECT DISTINCT ?run ?agent ?role WHERE {
+        <{{entity|demo:lineage:v2:dsv:dash.revenue@31}}> (prov:wasGeneratedBy/prov:used)* ?v .
+        ?v prov:wasGeneratedBy ?run .
+        ?run prov:used ?anyInput .
+        OPTIONAL { ?run prov:qualifiedAssociation ?as .
+                   ?as prov:agent ?ag ; prov:hadRole ?role .
+                   ?ag rdfs:label ?agent }
+      }
+
+  - id: q33-upstream-asserted-sources
+    source: "33 Step 6: upstream asserted derivations"
+    notExported: number of hops; evidence (source, subtype, runId) is not PROV
+    mode: equal
+    columns: [source]
+    decode: { source: "node:entity" }
+    cypher: |
+      MATCH (:DatasetVersion {id: 'demo:lineage:v2:dsv:dash.revenue@31'})
+            -[w:WAS_DERIVED_FROM]->{1,10}(src:DatasetVersion)
+      WHERE NOT EXISTS { (src)-[:WAS_DERIVED_FROM]->(:DatasetVersion) }
+      RETURN DISTINCT src.id AS source
+    sparql: |
+      SELECT DISTINCT ?source WHERE {
+        <{{entity|demo:lineage:v2:dsv:dash.revenue@31}}> prov:wasDerivedFrom+ ?source .
+        FILTER NOT EXISTS { ?source prov:wasDerivedFrom ?any }
+      }
+
+  - id: q34-asserted-inputs
+    source: "34 Step 7: potential vs asserted dependencies"
+    notExported: the potential dependencies themselves (DEPENDS_ON is ignored on purpose)
+    mode: equal
+    columns: [input]
+    decode: { input: "node:entity" }
+    cypher: |
+      MATCH (o:DatasetVersion {id: 'demo:lineage:v2:dsv:mart.revenue@9'})-[d:DEPENDS_ON]->(i:DatasetVersion)
+      MATCH (o)-[:WAS_DERIVED_FROM {runId: d.runId}]->(i)
+      RETURN DISTINCT i.id AS input
+    sparql: |
+      SELECT DISTINCT ?input WHERE {
+        <{{entity|demo:lineage:v2:dsv:mart.revenue@9}}> prov:wasDerivedFrom ?input
+      }
+
+  - id: q34-potential-not-asserted
+    source: "34 Step 7: potential vs asserted dependencies"
+    note: >-
+      Inputs the run read but no source asserted as derivations. They must not
+      show up as prov:wasDerivedFrom: this is the check that catches DEPENDS_ON
+      mapped to prov:wasDerivedFrom, which the structural checks let through.
+    mode: disjoint
+    columns: [input]
+    decode: { input: "node:entity" }
+    cypher: |
+      MATCH (o:DatasetVersion {id: 'demo:lineage:v2:dsv:mart.revenue@9'})-[d:DEPENDS_ON]->(i:DatasetVersion)
+      WHERE NOT EXISTS { (o)-[:WAS_DERIVED_FROM {runId: d.runId}]->(i) }
+      RETURN DISTINCT i.id AS input
+    sparql: |
+      SELECT DISTINCT ?input WHERE {
+        <{{entity|demo:lineage:v2:dsv:mart.revenue@9}}> prov:wasDerivedFrom ?input
+      }
+
+  - id: q34-potential-no-influence
+    source: "34 Step 7: potential vs asserted dependencies"
+    note: >-
+      The same inputs must not show up as any influence either: DEPENDS_ON
+      mapped to prov:wasInfluencedBy (a model did it), or to another
+      subproperty, or through a qualified resource, passes the previous check.
+      The list is the closure of prov:wasInfluencedBy in targets/prov.nq.
+    mode: disjoint
+    columns: [input]
+    decode: { input: "node:entity" }
+    cypher: |
+      MATCH (o:DatasetVersion {id: 'demo:lineage:v2:dsv:mart.revenue@9'})-[d:DEPENDS_ON]->(i:DatasetVersion)
+      WHERE NOT EXISTS { (o)-[:WAS_DERIVED_FROM {runId: d.runId}]->(i) }
+      RETURN DISTINCT i.id AS input
+    sparql: |
+      SELECT DISTINCT ?input WHERE {
+        {
+          VALUES ?p {
+            prov:wasInfluencedBy prov:wasDerivedFrom prov:wasRevisionOf prov:wasQuotedFrom
+            prov:hadPrimarySource prov:derivedByInsertionFrom prov:derivedByRemovalFrom
+            prov:hadMember prov:used prov:wasGeneratedBy prov:wasInvalidatedBy
+            prov:wasStartedBy prov:wasEndedBy prov:wasInformedBy prov:wasAssociatedWith
+            prov:wasAttributedTo prov:actedOnBehalfOf
+          }
+          <{{entity|demo:lineage:v2:dsv:mart.revenue@9}}> ?p ?input .
+        } UNION {
+          <{{entity|demo:lineage:v2:dsv:mart.revenue@9}}> ?link ?influence .
+          ?influence prov:entity|prov:influencer ?input .
+        }
+      }
+
+  - id: q35-downstream-impact
+    source: "35 Step 8: downstream impact and owners"
+    notExported: dataset kind and version labels (ignored); versions are compared by id
+    mode: equal
+    columns: [impacted, version, readsInvalidatedInput]
+    decode: { version: "node:entity" }
+    cypher: |
+      MATCH (:Dataset {namespace: 'demo:lineage:v2:postgres://pg1', name: 'raw.orders'})
+            <-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH (s)((:DatasetVersion)<-[:USED]-(:Run)<-[:WAS_GENERATED_BY]-(:DatasetVersion)){1,10}(d:DatasetVersion)
+            -[:VERSION_OF_DATASET]->(ds:Dataset)
+      WITH DISTINCT ds, d
+      OPTIONAL MATCH (d)-[:WAS_GENERATED_BY]->(:Run)-[:USED]->(bad:DatasetVersion)
+        WHERE bad.invalidatedAt IS NOT NULL
+      RETURN ds.name AS impacted, d.id AS version, count(bad) > 0 AS readsInvalidatedInput
+    sparql: |
+      SELECT ?impacted ?version ((COUNT(?bad) > 0) AS ?readsInvalidatedInput) WHERE {
+        ?ds0 rdfs:label "raw.orders" .
+        ?s prov:specializationOf ?ds0 .
+        ?version (prov:wasGeneratedBy/prov:used)+ ?s .
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?impacted .
+        OPTIONAL { ?version prov:wasGeneratedBy/prov:used ?bad .
+                   ?bad prov:invalidatedAtTime ?when }
+      } GROUP BY ?impacted ?version
+
+  - id: q35-owners
+    source: "35 Step 8: downstream impact and owners"
+    mode: equal
+    columns: [impacted, agent, role]
+    decode: { role: "values:relationships/was-attributed-to/properties/role" }
+    cypher: |
+      MATCH (:Dataset {namespace: 'demo:lineage:v2:postgres://pg1', name: 'raw.orders'})
+            <-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH (s)((:DatasetVersion)<-[:USED]-(:Run)<-[:WAS_GENERATED_BY]-(:DatasetVersion)){1,10}(d:DatasetVersion)
+            -[:VERSION_OF_DATASET]->(ds:Dataset)
+      WITH DISTINCT ds
+      OPTIONAL MATCH (ds)-[a:WAS_ATTRIBUTED_TO]->(ag:Agent)
+      RETURN DISTINCT ds.name AS impacted, ag.name AS agent, a.role AS role
+    sparql: |
+      SELECT DISTINCT ?impacted ?agent ?role WHERE {
+        ?ds0 rdfs:label "raw.orders" .
+        ?s prov:specializationOf ?ds0 .
+        ?version (prov:wasGeneratedBy/prov:used)+ ?s .
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?impacted .
+        OPTIONAL { ?ds prov:qualifiedAttribution ?at .
+                   ?at prov:agent ?ag ; prov:hadRole ?role .
+                   ?ag rdfs:label ?agent }
+      }
+
+  - id: q36-point-in-time
+    source: "36 Step 9: point in time"
+    expressible: false
+    reason: validFrom and validTo are not PROV; point-in-time questions stay on the LPG.
+
+  - id: q37-column-sources
+    source: "37 Step 10: versioned column lineage with evidence"
+    notExported: hops, the dataset version of each source (HAS_COLUMN_VERSION is ignored), evidence
+    mode: equal
+    columns: [source, sourceColumn]
+    decode: { source: "node:entity" }
+    cypher: |
+      MATCH (:ColumnVersion {id: 'demo:lineage:v2:colv:mart.revenue@9.amount'})
+            -[e:COLUMN_DERIVED_FROM]->{1,5}(src:ColumnVersion)
+      WHERE NOT EXISTS { (src)-[:COLUMN_DERIVED_FROM]->(:ColumnVersion) }
+      RETURN DISTINCT src.id AS source, src.name AS sourceColumn
+    sparql: |
+      SELECT DISTINCT ?source ?sourceColumn WHERE {
+        <{{entity|demo:lineage:v2:colv:mart.revenue@9.amount}}> prov:wasDerivedFrom+ ?source .
+        FILTER NOT EXISTS { ?source prov:wasDerivedFrom ?any }
+        ?source rdfs:label ?sourceColumn
+      }
+
+  - id: q38-column-versions-and-sources
+    source: "38 Step 11: column lineage across code versions"
+    notExported: code version (jobVersionId is deferred), data type and expressions (ignored)
+    mode: equal
+    columns: [columnVersion, sourceColumn]
+    decode: { columnVersion: "node:entity" }
+    cypher: |
+      MATCH (:Column {id: 'demo:lineage:v2:col:stg.orders.price'})<-[:VERSION_OF_COLUMN]-(cv:ColumnVersion)
+      MATCH (cv)-[:COLUMN_DERIVED_FROM]->(src:ColumnVersion)
+      RETURN DISTINCT cv.id AS columnVersion, src.name AS sourceColumn
+    sparql: |
+      SELECT DISTINCT ?columnVersion ?sourceColumn WHERE {
+        ?columnVersion prov:specializationOf <{{entity|demo:lineage:v2:col:stg.orders.price}}> ;
+                       prov:wasDerivedFrom ?src .
+        ?src rdfs:label ?sourceColumn
+      }
+
+  - id: q39-runs-per-job-version
+    source: "39 Step 12: one job version, many runs"
+    expressible: false
+    reason: HAD_PLAN is deferred; PROV puts the plan on the association, which needs a rule.

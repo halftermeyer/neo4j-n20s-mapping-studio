@@ -1,0 +1,987 @@
+format: n20s-mapping/0.1
+id: lineage-prov-aura
+name: Data lineage LPG to PROV-O
+lpgOntology:
+  id: Data lineage LPG (PROV-inspired)
+  version: "1"
+  location: aura-export.json
+targets:
+  - namespace: http://www.w3.org/ns/prov#
+    location: targets/prov.nq
+strategy: template
+prefixes:
+  prov: http://www.w3.org/ns/prov#
+  xsd: http://www.w3.org/2001/XMLSchema#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  lin: https://example.org/lineage/
+nodes:
+  n:0:
+    subject: lin:entity/{p:0}
+    classes:
+      - prov:Entity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: "The prov:Entity class directly corresponds to the general concept of an entity in the LPG ontology, representing any physical, digital, or conceptual thing. (Subject: From the uniqueness of id on Entity.)"
+  n:1:
+    subject: lin:activity/{p:1}
+    classes:
+      - prov:Activity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: "The `Activity` node kind directly corresponds to the `prov:Activity` class, which represents something that occurs over a period of time and acts upon entities. (Subject: From the uniqueness of id on Activity.)"
+  n:2:
+    subject: lin:agent/{p:2}
+    classes:
+      - prov:Agent
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: "The Agent node kind directly corresponds to the prov:Agent class, which represents something that bears responsibility. (Subject: From the uniqueness of id on Agent.)"
+    properties:
+      p:3:
+        predicate: rdfs:label
+        datatype: xsd:string
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'name' property provides a human-readable label for the agent, which maps well to rdfs:label.
+  n:3:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: The Dataset node kind is a type of Entity in the LPG ontology, which directly maps to prov:Entity in PROV-O.
+    properties:
+      p:5:
+        ignore:
+          reason: No direct PROV-O predicate for 'namespace' as a literal property of an entity.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'namespace' property provides a grouping context, but there is no direct equivalent in PROV-O for a literal value.
+      p:6:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'name' property provides a human-readable identifier for the dataset, which directly maps to rdfs:label.
+      p:7:
+        ignore:
+          reason: No direct PROV-O predicate for 'system' as a literal property of an entity. 'prov:atLocation' requires a prov:Location instance.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'system' property indicates where the dataset resides, but a direct literal mapping is not available in PROV-O without further interpretation or a qualified relationship.
+      p:8:
+        ignore:
+          reason: No direct PROV-O predicate for 'kind' or 'type' of an entity as a literal.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'kind' property describes the format or nature of the dataset, but PROV-O does not offer a direct predicate for this as a literal.
+      p:9:
+        predicate: prov:invalidatedAtTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'retiredAt' property indicates when the dataset became invalid, which directly maps to prov:invalidatedAtTime.
+  n:4:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: DatasetVersion is a specific kind of Entity in the PROV model, representing a fixed thing. It inherits prov:Entity from the implied 'Entity' node kind.
+    properties:
+      p:11:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: While not a human-readable name in the traditional sense, rdfs:label is often used for primary identifiers or short descriptive strings when no more specific property exists in the target ontology.
+      p:12:
+        predicate: prov:generatedAtTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: This property directly corresponds to the PROV concept of when an entity was generated.
+      p:13:
+        ignore:
+          reason: Expressing publication time requires a qualified activity (e.g., a prov:Publish activity that generated the DatasetVersion and has a prov:endedAtTime).
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The publication event is an activity that generates the dataset version, and its time property would be associated with that activity, not directly with the entity.
+      p:14:
+        ignore:
+          reason: This property describes a business validity period for the entity, which is outside the scope of PROV's event-based provenance model.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: PROV focuses on the events of creation, usage, and invalidation, not on arbitrary business validity periods of an entity.
+      p:15:
+        ignore:
+          reason: This property describes a business validity period for the entity, which is outside the scope of PROV's event-based provenance model.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: PROV focuses on the events of creation, usage, and invalidation, not on arbitrary business validity periods of an entity.
+      p:16:
+        predicate: prov:invalidatedAtTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: This property directly corresponds to the PROV concept of when an entity was invalidated.
+      p:17:
+        ignore:
+          reason: There is no direct PROV property for a schema hash, and it represents a technical detail rather than a core provenance aspect.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The PROV ontology does not provide a specific predicate for technical metadata like a schema hash.
+  n:5:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: The Column node kind is a type of Entity, and its properties can be mapped to standard PROV-O and RDFS terms.
+    properties:
+      p:19:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'name' property provides a human-readable label for the column, which directly maps to rdfs:label.
+  n:6:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: ColumnVersion represents a specific state of a column, which is an entity in the PROV model. The inherited class prov:Entity is appropriate.
+    properties:
+      p:21:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'name' property provides a human-readable identifier for the ColumnVersion, which maps well to rdfs:label.
+      p:22:
+        ignore:
+          reason: No suitable predicate in PROV-O for data type information.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: PROV-O focuses on provenance aspects (who, what, when, where) rather than detailed structural or technical metadata like data types of entities.
+      p:23:
+        ignore:
+          reason: No suitable predicate in PROV-O for ordinal position.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The ordinal property describes the position of the column within a dataset, which is a structural detail not directly covered by PROV-O.
+      p:24:
+        ignore:
+          reason: No suitable predicate in PROV-O for nullability.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'nullable' property describes a technical constraint of the column, which is outside the scope of PROV-O's core provenance concepts.
+  n:7:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A Job is a type of entity in the data lineage context, inheriting prov:Entity. No additional PROV classes are directly applicable.
+    properties:
+      p:26:
+        ignore:
+          reason: This property represents an internal organizational identifier and does not have a direct equivalent in PROV-O.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The namespace property is likely for internal organization or scoping within the source system, not a core provenance concept.
+      p:27:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The name property provides a human-readable identifier for the Job, which maps well to rdfs:label.
+  n:8:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A JobVersion represents a specific version of a job, which functions as a plan for a Run activity, aligning with the definition of prov:Plan. It inherits prov:Entity.
+    properties:
+      p:29:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The codeRef property serves as a primary human-readable identifier for the specific version of the job plan.
+      p:30:
+        predicate: prov:value
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The definitionHash provides a direct, immutable representation of the job's definition, fitting prov:value.
+      p:31:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.6
+          rationale: The artifactRef provides descriptive information about an artifact associated with the job version, which can be captured as a general comment.
+      p:32:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.6
+          rationale: The configRef provides descriptive information about the configuration associated with the job version, which can be captured as a general comment.
+  n:9:
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The Run node kind represents an activity in the provenance model, directly mapping to prov:Activity. Its properties are mapped to corresponding PROV-O terms or ignored if they represent operational metadata.
+    properties:
+      p:34:
+        predicate: prov:startedAtTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'startedAt' property directly corresponds to the time an activity began, which is captured by prov:startedAtTime.
+      p:35:
+        predicate: prov:endedAtTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'endedAt' property directly corresponds to the time an activity concluded, which is captured by prov:endedAtTime.
+      p:36:
+        ignore:
+          reason: Operational metadata, not directly expressible in PROV-O.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: PROV-O focuses on the provenance of data and activities, not their operational status like 'status'.
+      p:37:
+        ignore:
+          reason: Operational metadata, not directly expressible in PROV-O.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: PROV-O does not provide terms for tracking the last event type of an activity, as this is operational metadata.
+      p:38:
+        ignore:
+          reason: Operational metadata, not directly expressible in PROV-O.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: PROV-O does not provide terms for tracking the last event time of an activity, as this is operational metadata.
+      p:39:
+        ignore:
+          reason: This property likely refers to the observation time of the provenance record, which is outside the scope of the PROV-O activity model.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: PROV-O focuses on the actual events and influences, not when those events were observed or recorded in a system.
+      p:40:
+        predicate: rdfs:comment
+        datatype: xsd:string
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: Run-specific parameters can be captured as a general descriptive comment on the activity, as no more specific PROV-O term exists.
+      p:41:
+        predicate: rdfs:comment
+        datatype: xsd:string
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: A reference to parameters can be captured as a general descriptive comment on the activity, as no more specific PROV-O term exists.
+  n:10:
+    classes:
+      - prov:Person
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The node kind 'Person' directly corresponds to the more specific 'prov:Person' class, which is a subclass of 'prov:Agent'.
+  n:11:
+    classes:
+      - prov:SoftwareAgent
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The SoftwareAgent node kind directly corresponds to the prov:SoftwareAgent class in the PROV ontology, which is a subclass of prov:Agent.
+  n:12:
+    classes:
+      - prov:Organization
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The Organization node kind directly corresponds to the prov:Organization class, which is a subclass of prov:Agent.
+relationships:
+  r:0:
+    predicate: prov:used
+    qualified:
+      subject: lin:usage/{start.p:1}/{end.p:0}
+      class: prov:Usage
+      link: prov:activity
+      target: prov:entity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship 'USED' from a Run (Activity) to a DatasetVersion (Entity) directly maps to prov:used, with prov:Usage as its qualified form.
+    properties:
+      p:48:
+        predicate: prov:hadRole
+        values:
+          config: lin:role/config
+          input: lin:role/input
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'role' property of the 'USED' relationship can be mapped to prov:hadRole on the qualified prov:Usage resource, with string values becoming IRIs for prov:Role instances.
+  r:1:
+    predicate: prov:wasGeneratedBy
+    qualified:
+      subject: lin:generation/{start.p:0}/{end.p:1}
+      class: prov:Generation
+      link: prov:qualifiedGeneration
+      target: prov:activity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship 'WAS_GENERATED_BY' from a DatasetVersion (Entity) to a Run (Activity) directly maps to prov:wasGeneratedBy, with a qualified form for additional properties.
+    properties:
+      p:49:
+        predicate: prov:hadRole
+        datatype: xsd:string
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'role' property on the generation event can be mapped to prov:hadRole within the qualified Generation instance.
+  r:2:
+    predicate: prov:wasDerivedFrom
+    qualified:
+      subject: lin:derivation/{start.p:0}/{end.p:0}
+      class: prov:Derivation
+      link: prov:qualifiedDerivation
+      target: prov:entity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The 'DEPENDS_ON' relationship indicates that one dataset version is derived from another, which directly maps to prov:wasDerivedFrom and its qualified form prov:Derivation.
+    properties:
+      p:50:
+        ignore:
+          reason: This property identifies the 'Run' (Activity) responsible for the derivation. Mapping it requires linking the qualified Derivation resource to a specific Run instance, which is a pattern spanning multiple elements.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The 'runId' property links this dependency to a specific 'Run' activity. This requires a join or pattern to connect the qualified Derivation instance to the corresponding Run node using prov:hadActivity.
+      p:51:
+        ignore:
+          reason: The target ontology does not provide a direct property to timestamp a prov:Derivation event itself, as prov:atTime is restricted to prov:InstantaneousEvent, which prov:Derivation is not.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: While 'computedAt' represents the time of the derivation event, prov:Derivation is not classified as an prov:InstantaneousEvent, making prov:atTime unsuitable. No other direct property for the time of derivation is available in the catalog.
+  r:3:
+    predicate: prov:wasDerivedFrom
+    qualified:
+      subject: lin:derivation/{start.p:0}/{end.p:0}
+      class: prov:Derivation
+      link: prov:qualifiedDerivation
+      target: prov:entity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship 'WAS_DERIVED_FROM' directly corresponds to the PROV-O property prov:wasDerivedFrom, with prov:Derivation as its qualified form.
+    properties:
+      p:52:
+        predicate: prov:hadActivity
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'runId' identifies the activity that performed the derivation, which can be linked to the qualified derivation instance via prov:hadActivity.
+      p:53:
+        ignore:
+          reason: Requires a join with the Run's association to link the JobVersion (Plan).
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The 'jobVersionId' refers to a Plan associated with the activity that performed the derivation. Linking a Plan to a Derivation requires a more complex pattern involving prov:Association and prov:hadPlan, which is not a direct property of prov:Derivation.
+      p:54:
+        ignore:
+          reason: Ambiguous meaning and potentially redundant with other properties.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'source' property is too generic and its specific meaning in the context of a derivation is unclear, especially with 'runId' and 'jobVersionId' providing activity context.
+      p:55:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The 'evidenceRef' provides a reference string, which can be captured as a general comment on the derivation event.
+      p:56:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'transformationType' provides a descriptive label for the type of derivation, suitable for rdfs:label on the qualified derivation instance.
+      p:57:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The 'transformationSubtype' provides additional descriptive information about the derivation, suitable for rdfs:comment on the qualified derivation instance.
+      p:58:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The 'expression' property contains a string representing the transformation logic, which can be captured as a comment on the qualified derivation instance.
+      p:59:
+        ignore:
+          reason: Metadata about the assertion of the provenance record, not the provenance event itself.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'assertedAt' property describes when the provenance record was created or asserted, which is meta-provenance and not a direct property of the derivation event in PROV-O.
+  r:4:
+    predicate: prov:wasDerivedFrom
+    qualified:
+      subject: lin:derivation/{start.p:0}/{end.p:0}
+      class: prov:Derivation
+      link: prov:qualifiedDerivation
+      target: prov:entity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship indicates that one column version is derived from another, which directly maps to prov:wasDerivedFrom and its qualified form prov:Derivation.
+    properties:
+      p:60:
+        ignore:
+          reason: This property links the derivation to a specific Run (Activity). The prov:Derivation instance can be linked to a prov:Activity via prov:hadActivity.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The runId identifies the activity responsible for this derivation, which can be expressed by linking the prov:Derivation instance to a prov:Activity (Run) using prov:hadActivity.
+      p:61:
+        ignore:
+          reason: This property links the derivation to a specific JobVersion (Entity). If JobVersion is considered a prov:Plan, then prov:hadPlan could be used on an Association related to the derivation.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.7
+          rationale: The jobVersionId identifies the plan or job definition associated with this derivation. Expressing this precisely in PROV-O might require a more complex pattern involving prov:Plan and prov:Association, hence deferring.
+      p:62:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: This property provides a descriptive string about the source of the derivation, which fits the general purpose of rdfs:comment for the prov:Derivation instance.
+      p:63:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: This property provides a reference to evidence for the derivation, which can be captured as a general comment on the prov:Derivation instance.
+      p:64:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: This property describes the specific type of transformation, which can serve as a human-readable label for the prov:Derivation instance.
+      p:65:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: This property provides further detail on the transformation type, suitable for a general comment on the prov:Derivation instance.
+      p:66:
+        predicate: prov:value
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.8
+          rationale: The expression represents the direct content or value of how the derivation occurred, making prov:value a suitable predicate for the prov:Derivation instance.
+      p:67:
+        ignore:
+          reason: No direct property for a timestamp on prov:Derivation itself. prov:atTime is for InstantaneousEvent, and prov:Derivation is not an InstantaneousEvent.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: prov:Derivation is an EntityInfluence, not an InstantaneousEvent, so prov:atTime is not applicable. There is no other suitable timestamp property in the PROV-O catalog for the derivation instance itself.
+  r:5:
+    predicate: prov:specializationOf
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A DatasetVersion is a specific version, and thus a specialization, of a Dataset. The prov:specializationOf property captures this relationship.
+  r:6:
+    predicate: prov:hadMember
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A Dataset can be considered a prov:Collection of Columns, and prov:hadMember links a prov:Collection to its prov:Entity members.
+  r:7:
+    predicate: prov:hadMember
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A DatasetVersion can be considered a collection of ColumnVersions, making prov:hadMember an appropriate predicate to express this relationship.
+  r:8:
+    predicate: prov:specializationOf
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A ColumnVersion is a specialization of a Column, fitting the definition of prov:specializationOf.
+  r:9:
+    predicate: prov:specializationOf
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: A JobVersion is a specific version, and thus a specialization, of a more general Job entity.
+  r:10:
+    ignore:
+      reason: The relationship expresses that an activity is an instance of a plan (job definition), which requires a qualified pattern in PROV-O involving prov:Association and prov:hadPlan, rather than a single direct predicate.
+      deferred: true
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: The 'RUN_OF' relationship links an Activity (Run) to an Entity (Job, interpreted as a Plan). PROV-O expresses an Activity being guided by a Plan through an intermediate prov:Association, which then uses prov:hadPlan to link to the Plan. This requires a pattern spanning multiple elements.
+  r:11:
+    ignore:
+      reason: The target property prov:hadPlan is defined on prov:Association, not directly on prov:Activity. Expressing that a Run (Activity) had a JobVersion (Plan) requires an intermediate prov:Association instance linking the Run to an Agent.
+      deferred: true
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 0.9
+      rationale: The `prov:hadPlan` property links a `prov:Association` to a `prov:Plan`. The LPG relationship `HAD_PLAN` directly links an `Activity` (Run) to an `Entity` (JobVersion, which can be a Plan). This requires a qualified pattern involving `prov:Association`.
+  r:12:
+    predicate: prov:wasInformedBy
+    qualified:
+      subject: lin:communication/{start.p:1}/{end.p:1}
+      class: prov:Communication
+      link: prov:qualifiedCommunication
+      target: prov:activity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship type 'WAS_INFORMED_BY' directly corresponds to the 'prov:wasInformedBy' property, which links an activity to another activity it was informed by.
+  r:13:
+    predicate: prov:wasAssociatedWith
+    qualified:
+      subject: lin:association/{start.p:1}/{end.p:2}
+      class: prov:Association
+      link: prov:qualifiedAssociation
+      target: prov:agent
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The WAS_ASSOCIATED_WITH relationship directly maps to prov:wasAssociatedWith, which has a qualified form prov:Association to capture additional details like the agent's role.
+    properties:
+      p:68:
+        predicate: prov:hadRole
+        values:
+          executor: lin:role/executor
+          triggeredBy: lin:role/triggeredBy
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 1
+          rationale: The 'role' property of the association maps to prov:hadRole, linking the prov:Association instance to a specific prov:Role instance identified by the role string.
+  r:14:
+    predicate: prov:wasAttributedTo
+    qualified:
+      subject: lin:attribution/{start.p:0}/{end.p:2}
+      class: prov:Attribution
+      link: prov:qualifiedAttribution
+      target: prov:agent
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship directly maps to prov:wasAttributedTo, which describes an entity being ascribed to an agent, and its qualified form prov:Attribution.
+    properties:
+      p:69:
+        predicate: prov:hadRole
+        values:
+          owner: lin:role/owner
+          steward: lin:role/steward
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'role' property describes the function of the agent in the attribution, which maps to prov:hadRole on the prov:Attribution instance, with the string value representing an IRI for a prov:Role.
+  r:15:
+    predicate: prov:actedOnBehalfOf
+    qualified:
+      subject: lin:delegation/{start.p:2}/{end.p:2}
+      class: prov:Delegation
+      link: prov:qualifiedDelegation
+      target: prov:agent
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship directly maps to prov:actedOnBehalfOf, which describes an agent acting on behalf of another agent. The qualified form prov:Delegation is also available.
+  r:16:
+    predicate: prov:wasInvalidatedBy
+    qualified:
+      subject: lin:invalidation/{start.p:0}/{end.p:1}
+      class: prov:Invalidation
+      link: prov:qualifiedInvalidation
+      target: prov:activity
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/1
+      confidence: 1
+      rationale: The relationship directly corresponds to prov:wasInvalidatedBy, indicating an entity was invalidated by an activity. The qualified form allows for additional properties.
+    properties:
+      p:70:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/1
+          confidence: 0.9
+          rationale: The 'reason' property provides a textual description of why the invalidation occurred, which maps well to rdfs:comment on the qualified Invalidation event.

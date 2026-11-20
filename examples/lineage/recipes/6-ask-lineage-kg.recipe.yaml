@@ -1,0 +1,26 @@
+# 6. A precomputed query: nothing is projected or reasoned here. The graph the
+# lineage endpoint serves already holds the closure, so a plain SPARQL query
+# sees prov:wasInfluencedBy. Declared as an api, it is served as
+# /query/influences?version=...
+format: n20s-recipe/0.1
+id: ask-lineage-kg
+title: Influences of a version, from the published lineage KG
+mapping: ../lineage-prov.aura.mapping.yaml
+graphs:
+  kg: { lifecycle: published, endpoint: lineage }
+params:
+  version:
+    type: string
+    default: "demo:lineage:v2:dsv:mart.revenue@9"
+    description: id of a DatasetVersion
+api:
+  name: influences
+  result: influences
+  description: What influenced a dataset version (precomputed closure).
+steps:
+  - id: influences
+    type: query
+    title: Direct influences, materialized by the closure
+    sparql: |
+      SELECT DISTINCT ?influence WHERE { {{n:0|$version}} prov:wasInfluencedBy ?influence }
+    decode: { influence: any }

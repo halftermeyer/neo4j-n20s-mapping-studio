@@ -1,0 +1,20 @@
+// Browser-safe entry point. File helpers and the Bolt source adapter are in ./node.js.
+export { check } from './check.js';
+export { buildLock, diffLock, LOCK_FORMAT } from './lock.js';
+export { indexLpg, contentHash, semanticContent, fingerprints, defaultDatatype } from './lpg.js';
+export { indexTargets, formatFromPath } from './targets.js';
+export { expand, shorten, parseTemplate, ambiguousSeparator, iriEncode, fillTemplate, matchTemplate } from './iri.js';
+export { resolve, statusOf, isActive, isCompiled } from './resolve.js';
+export { compile, PLAN_FORMAT } from './compile.js';
+export { project, compareSources } from './project.js';
+export { n20sClient } from './n20s.js';
+export { runOracle } from './oracle.js';
+export { takeSnapshot, recordingSource, snapshotSource, SNAPSHOT_FORMAT } from './snapshot.js';
+export { formatText } from './report.js';
+export { propose, proposePasses, variantsOf, acceptAll, PROMPT_VERSION, EXTRA_TERMS, VARIANTS_FORMAT } from './propose.js';
+export { prepareSubjects, qualifiedSubject, valueTable, slug } from './prepare.js';
+export { geminiProvider, recordingProvider, replayProvider, functionProvider, requestKey, RECORDING_FORMAT } from './providers.js';
+export { rekeyMapping, rekeyOracle } from './rekey.js';
+export { reviewItems, applyDecision, acceptSafe, SAFE_CONFIDENCE } from './review.js';
+export { emptyRegistry, recordRun, retire, provenance, graphStatuses, publicationStatuses, unpublish, REGISTRY_FORMAT } from './graphs.js';
+export { runRecipe, checkRecipe, recipeOutline, recipeKind, coerceParams, graphsOf, graphOf, roleOf, RECIPE_FORMAT, STEP_TYPES, STEP_ROLES, LIFECYCLES, PARAM_TYPES } from './recipe.js';

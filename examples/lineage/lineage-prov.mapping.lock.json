@@ -1,0 +1,551 @@
+{
+  "format": "n20s-mapping-lock/0.1",
+  "lpgOntology": {
+    "id": "data-lineage-lpg",
+    "version": "3",
+    "contentHash": "0fb132ae0426efc5e4b1003318aa2bbab934e0006a45bc4ac9692719a83ae5d2"
+  },
+  "elements": {
+    "nodes": {
+      "entity": {
+        "label": "Entity",
+        "implied": [],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          }
+        }
+      },
+      "activity": {
+        "label": "Activity",
+        "implied": [],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          }
+        }
+      },
+      "agent": {
+        "label": "Agent",
+        "implied": [],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      },
+      "dataset": {
+        "label": "Dataset",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "namespace": {
+            "name": "namespace",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          },
+          "system": {
+            "name": "system",
+            "type": "STRING"
+          },
+          "kind": {
+            "name": "kind",
+            "type": "STRING",
+            "oneOf": [
+              "table",
+              "view",
+              "dashboard",
+              "topic",
+              "file",
+              "model"
+            ]
+          },
+          "retiredAt": {
+            "name": "retiredAt",
+            "type": "ZONED DATETIME"
+          }
+        }
+      },
+      "dataset-version": {
+        "label": "DatasetVersion",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "version": {
+            "name": "version",
+            "type": "STRING"
+          },
+          "generatedAt": {
+            "name": "generatedAt",
+            "type": "ZONED DATETIME"
+          },
+          "publishedAt": {
+            "name": "publishedAt",
+            "type": "ZONED DATETIME"
+          },
+          "validFrom": {
+            "name": "validFrom",
+            "type": "ZONED DATETIME"
+          },
+          "validTo": {
+            "name": "validTo",
+            "type": "ZONED DATETIME"
+          },
+          "invalidatedAt": {
+            "name": "invalidatedAt",
+            "type": "ZONED DATETIME"
+          },
+          "schemaHash": {
+            "name": "schemaHash",
+            "type": "STRING"
+          }
+        }
+      },
+      "column": {
+        "label": "Column",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      },
+      "column-version": {
+        "label": "ColumnVersion",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          },
+          "dataType": {
+            "name": "dataType",
+            "type": "STRING"
+          },
+          "ordinal": {
+            "name": "ordinal",
+            "type": "INTEGER"
+          },
+          "nullable": {
+            "name": "nullable",
+            "type": "BOOLEAN"
+          }
+        }
+      },
+      "job": {
+        "label": "Job",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "namespace": {
+            "name": "namespace",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      },
+      "job-version": {
+        "label": "JobVersion",
+        "implied": [
+          "Entity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "codeRef": {
+            "name": "codeRef",
+            "type": "STRING"
+          },
+          "definitionHash": {
+            "name": "definitionHash",
+            "type": "STRING"
+          },
+          "artifactRef": {
+            "name": "artifactRef",
+            "type": "STRING"
+          },
+          "configRef": {
+            "name": "configRef",
+            "type": "STRING"
+          }
+        }
+      },
+      "run": {
+        "label": "Run",
+        "implied": [
+          "Activity"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "startedAt": {
+            "name": "startedAt",
+            "type": "ZONED DATETIME"
+          },
+          "endedAt": {
+            "name": "endedAt",
+            "type": "ZONED DATETIME"
+          },
+          "status": {
+            "name": "status",
+            "type": "STRING",
+            "oneOf": [
+              "RUNNING",
+              "SUCCESS",
+              "FAILED",
+              "ABORTED",
+              "PARTIAL"
+            ]
+          },
+          "lastEventType": {
+            "name": "lastEventType",
+            "type": "STRING",
+            "oneOf": [
+              "START",
+              "RUNNING",
+              "COMPLETE",
+              "ABORT",
+              "FAIL",
+              "OTHER"
+            ]
+          },
+          "lastEventTime": {
+            "name": "lastEventTime",
+            "type": "ZONED DATETIME"
+          },
+          "observedAt": {
+            "name": "observedAt",
+            "type": "ZONED DATETIME"
+          },
+          "parameters": {
+            "name": "parameters",
+            "type": "STRING"
+          },
+          "parametersRef": {
+            "name": "parametersRef",
+            "type": "STRING"
+          }
+        }
+      },
+      "person": {
+        "label": "Person",
+        "implied": [
+          "Agent"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      },
+      "software-agent": {
+        "label": "SoftwareAgent",
+        "implied": [
+          "Agent"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      },
+      "organization": {
+        "label": "Organization",
+        "implied": [
+          "Agent"
+        ],
+        "properties": {
+          "id": {
+            "name": "id",
+            "type": "STRING"
+          },
+          "name": {
+            "name": "name",
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "relationships": {
+      "used": {
+        "type": "USED",
+        "from": "run",
+        "to": "dataset-version",
+        "properties": {
+          "role": {
+            "name": "role",
+            "type": "STRING"
+          }
+        }
+      },
+      "was-generated-by": {
+        "type": "WAS_GENERATED_BY",
+        "from": "dataset-version",
+        "to": "run",
+        "properties": {
+          "role": {
+            "name": "role",
+            "type": "STRING"
+          }
+        }
+      },
+      "depends-on": {
+        "type": "DEPENDS_ON",
+        "from": "dataset-version",
+        "to": "dataset-version",
+        "properties": {
+          "runId": {
+            "name": "runId",
+            "type": "STRING"
+          },
+          "computedAt": {
+            "name": "computedAt",
+            "type": "ZONED DATETIME"
+          }
+        }
+      },
+      "was-derived-from": {
+        "type": "WAS_DERIVED_FROM",
+        "from": "dataset-version",
+        "to": "dataset-version",
+        "properties": {
+          "runId": {
+            "name": "runId",
+            "type": "STRING"
+          },
+          "jobVersionId": {
+            "name": "jobVersionId",
+            "type": "STRING"
+          },
+          "source": {
+            "name": "source",
+            "type": "STRING",
+            "oneOf": [
+              "OPENLINEAGE_COLUMN_LINEAGE",
+              "SQL_PARSER",
+              "DBT_MANIFEST",
+              "MANUAL",
+              "OTHER"
+            ]
+          },
+          "evidenceRef": {
+            "name": "evidenceRef",
+            "type": "STRING"
+          },
+          "transformationType": {
+            "name": "transformationType",
+            "type": "STRING",
+            "oneOf": [
+              "DIRECT",
+              "INDIRECT"
+            ]
+          },
+          "transformationSubtype": {
+            "name": "transformationSubtype",
+            "type": "STRING"
+          },
+          "expression": {
+            "name": "expression",
+            "type": "STRING"
+          },
+          "assertedAt": {
+            "name": "assertedAt",
+            "type": "ZONED DATETIME"
+          }
+        }
+      },
+      "column-derived-from": {
+        "type": "COLUMN_DERIVED_FROM",
+        "from": "column-version",
+        "to": "column-version",
+        "properties": {
+          "runId": {
+            "name": "runId",
+            "type": "STRING"
+          },
+          "jobVersionId": {
+            "name": "jobVersionId",
+            "type": "STRING"
+          },
+          "source": {
+            "name": "source",
+            "type": "STRING",
+            "oneOf": [
+              "OPENLINEAGE_COLUMN_LINEAGE",
+              "SQL_PARSER",
+              "DBT_MANIFEST",
+              "MANUAL",
+              "OTHER"
+            ]
+          },
+          "evidenceRef": {
+            "name": "evidenceRef",
+            "type": "STRING"
+          },
+          "transformationType": {
+            "name": "transformationType",
+            "type": "STRING",
+            "oneOf": [
+              "DIRECT",
+              "INDIRECT"
+            ]
+          },
+          "transformationSubtype": {
+            "name": "transformationSubtype",
+            "type": "STRING"
+          },
+          "expression": {
+            "name": "expression",
+            "type": "STRING"
+          },
+          "assertedAt": {
+            "name": "assertedAt",
+            "type": "ZONED DATETIME"
+          }
+        }
+      },
+      "version-of-dataset": {
+        "type": "VERSION_OF_DATASET",
+        "from": "dataset-version",
+        "to": "dataset",
+        "properties": {}
+      },
+      "has-column": {
+        "type": "HAS_COLUMN",
+        "from": "dataset",
+        "to": "column",
+        "properties": {}
+      },
+      "has-column-version": {
+        "type": "HAS_COLUMN_VERSION",
+        "from": "dataset-version",
+        "to": "column-version",
+        "properties": {}
+      },
+      "version-of-column": {
+        "type": "VERSION_OF_COLUMN",
+        "from": "column-version",
+        "to": "column",
+        "properties": {}
+      },
+      "version-of-job": {
+        "type": "VERSION_OF_JOB",
+        "from": "job-version",
+        "to": "job",
+        "properties": {}
+      },
+      "run-of": {
+        "type": "RUN_OF",
+        "from": "run",
+        "to": "job",
+        "properties": {}
+      },
+      "had-plan": {
+        "type": "HAD_PLAN",
+        "from": "run",
+        "to": "job-version",
+        "properties": {}
+      },
+      "was-informed-by": {
+        "type": "WAS_INFORMED_BY",
+        "from": "run",
+        "to": "run",
+        "properties": {}
+      },
+      "was-associated-with": {
+        "type": "WAS_ASSOCIATED_WITH",
+        "from": "run",
+        "to": "agent",
+        "properties": {
+          "role": {
+            "name": "role",
+            "type": "STRING"
+          }
+        }
+      },
+      "was-attributed-to": {
+        "type": "WAS_ATTRIBUTED_TO",
+        "from": "entity",
+        "to": "agent",
+        "properties": {
+          "role": {
+            "name": "role",
+            "type": "STRING"
+          }
+        }
+      },
+      "acted-on-behalf-of": {
+        "type": "ACTED_ON_BEHALF_OF",
+        "from": "agent",
+        "to": "agent",
+        "properties": {}
+      },
+      "was-invalidated-by": {
+        "type": "WAS_INVALIDATED_BY",
+        "from": "dataset-version",
+        "to": "run",
+        "properties": {
+          "reason": {
+            "name": "reason",
+            "type": "STRING"
+          }
+        }
+      }
+    }
+  }
+}

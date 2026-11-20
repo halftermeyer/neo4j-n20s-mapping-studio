@@ -1,0 +1,47 @@
+# 2. Inference needs the ontology in the graph. The projection only says
+# wasDerivedFrom, wasGeneratedBy and used; that each of them is an influence
+# comes from PROV-O (rdfs:subPropertyOf prov:wasInfluencedBy). Asked before the
+# ontology is loaded, the question has no answer; after, RDFS answers it.
+format: n20s-recipe/0.1
+id: influences
+title: Everything that influenced a dataset version, through PROV-O
+mapping: ../lineage-prov.aura.mapping.yaml
+params:
+  version:
+    default: "demo:lineage:v2:dsv:mart.revenue@9"
+    description: id of a DatasetVersion
+steps:
+  - id: neighbourhood
+    type: scope
+    title: The version, the run that wrote it, what that run read, and asserted derivations
+    cypher: |
+      MATCH (v:DatasetVersion {id: $version})
+      OPTIONAL MATCH g = (v)-[:WAS_GENERATED_BY]->(:Run)-[:USED]->(:DatasetVersion)
+      OPTIONAL MATCH d = (v)-[:WAS_DERIVED_FROM]->(:DatasetVersion)
+      RETURN v, g, d
+
+  - id: without-ontology
+    type: query
+    title: Influences, before the ontology is in the graph
+    profile: RDFS
+    sparql: |
+      SELECT DISTINCT ?influence WHERE { {{n:0|$version}} prov:wasInfluencedBy ?influence }
+    decode: { influence: any }
+
+  - id: prov-o
+    type: triples
+    title: PROV-O
+    files: [../targets/prov.nq]
+
+  - id: influences
+    type: query
+    title: Influences, under RDFS with PROV-O
+    profile: RDFS
+    sparql: |
+      SELECT DISTINCT ?influence ?how WHERE {
+        {{n:0|$version}} ?how ?influence .
+        {{n:0|$version}} prov:wasInfluencedBy ?influence .
+        FILTER (?how != prov:wasInfluencedBy)
+        FILTER (STRSTARTS(STR(?how), STR(prov:)))
+      }
+    decode: { influence: any }

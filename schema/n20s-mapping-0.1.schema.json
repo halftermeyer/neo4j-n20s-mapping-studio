@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:n20s:schema:mapping:0.1",
+  "title": "n20s mapping 0.1",
+  "description": "Maps the elements of a Neo4j Ontology Graph Spec document (the LPG ontology) to terms of RDF target ontologies. The mapping lives in its own file and points to the LPG ontology by id; the LPG ontology never points back. Entries are keyed by the stable ids of the spec document (node ids, relationship ids, property ids), never by labels, types or database property names. A compiler turns accepted entries into n20s templates or into canonical-projection bridge rules, depending on the strategy.",
+  "type": "object",
+  "required": ["format", "id", "lpgOntology", "strategy", "prefixes"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "n20s-mapping/0.1",
+      "description": "Format and version of this file."
+    },
+    "id": {
+      "$ref": "#/$defs/slug",
+      "description": "Identifier of this mapping. Several mappings can target the same LPG ontology (one per target ontology, for example)."
+    },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "lpgOntology": {
+      "type": "object",
+      "description": "The LPG ontology this mapping applies to. `version` is the version the mapping was last locked against; `n20s-mapping lock` updates it.",
+      "required": ["id", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "The `id` of the spec document." },
+        "version": { "type": "string", "minLength": 1, "description": "The `version` of the spec document at lock time." },
+        "location": { "type": "string", "minLength": 1, "description": "Path of the spec document, relative to this file. Optional; the CLI also accepts --lpg." }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "description": "Target ontologies. IRIs that fall in a target namespace are checked against that ontology when `location` is given.",
+      "items": { "$ref": "#/$defs/target" }
+    },
+    "strategy": {
+      "enum": ["template", "canonical-bridge"],
+      "description": "How accepted entries are compiled: into n20s projection templates, or into bridge rules over the canonical LPG snapshot."
+    },
+    "prefixes": {
+      "type": "object",
+      "description": "Prefixes for compact IRIs (prefix:local) used anywhere in this file.",
+      "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/absoluteIri" }
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Entries keyed by node id of the LPG ontology.",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": { "$ref": "#/$defs/nodeEntry" }
+    },
+    "relationships": {
+      "type": "object",
+      "description": "Entries keyed by relationship id of the LPG ontology.",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": { "$ref": "#/$defs/relationshipEntry" }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Rule files applied after projection, for logic that spans several elements.",
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "shapes": {
+      "type": "array",
+      "description": "SHACL files to validate the projected graph.",
+      "items": { "$ref": "#/$defs/artifactRef" }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "absoluteIri": {
+      "type": "string",
+      "description": "An absolute IRI.",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s<>\"{}|\\\\^`]+$"
+    },
+    "iriRef": {
+      "type": "string",
+      "description": "An absolute IRI or a compact IRI (prefix:local) whose prefix is declared in `prefixes`. No placeholders.",
+      "pattern": "^[A-Za-z][A-Za-z0-9+._-]*:[^\\s<>\"{}|\\\\^`]*$"
+    },
+    "iriTemplate": {
+      "type": "string",
+      "description": "An IRI with at least one {placeholder}. In node subjects a placeholder is a property id of the node or of a node it implies. In qualified subjects, {start.<id>} and {end.<id>} name properties of the end nodes and {<id>} a property of the relationship. Values are percent-encoded when substituted, as in R2RML.",
+      "pattern": "^[A-Za-z][A-Za-z0-9+._-]*:[^\\s<>\"|\\\\^`]*\\{[^{}\\s]+\\}[^\\s<>\"|\\\\^`]*$"
+    },
+    "target": {
+      "type": "object",
+      "required": ["namespace"],
+      "additionalProperties": false,
+      "properties": {
+        "namespace": { "$ref": "#/$defs/absoluteIri", "description": "Namespace IRI of the target ontology. IRIs starting with it are checked against `location`." },
+        "location": { "type": "string", "minLength": 1, "description": "Path of the ontology file (Turtle, N-Triples, N-Quads or TriG), relative to this file." },
+        "version": { "type": "string" }
+      }
+    },
+    "artifactRef": {
+      "type": "object",
+      "required": ["location"],
+      "additionalProperties": false,
+      "properties": {
+        "location": { "type": "string", "minLength": 1, "description": "Path relative to this file, or a URI." },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Expected SHA-256 of the file. Checked when the file is local." },
+        "description": { "type": "string" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Review status and provenance of an entry. Only accepted entries are compiled; an entry without `status` is accepted.",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["proposed", "accepted", "rejected"] },
+        "proposedBy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["human", "ai", "tool"], "description": "`tool`: derived by a deterministic step (for instance a subject from a uniqueness constraint)." },
+            "name": { "type": "string" },
+            "model": { "type": "string", "description": "Model identifier, for AI proposals." },
+            "promptVersion": { "type": "string", "description": "Version of the prompt that produced the proposal." }
+          }
+        },
+        "reviewedBy": { "type": "string" },
+        "reviewedAt": { "type": "string" },
+        "reviewComment": { "type": "string", "description": "Why the reviewer rejected or changed the entry. A rejected entry is proposed again with this comment." },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rationale": { "type": "string" }
+      }
+    },
+    "ignoreEntry": {
+      "type": "object",
+      "description": "A decision not to map the element, with the reason. `deferred: true` means it should be mapped later, usually by a rule.",
+      "required": ["ignore"],
+      "additionalProperties": false,
+      "properties": {
+        "ignore": {
+          "type": "object",
+          "required": ["reason"],
+          "additionalProperties": false,
+          "properties": {
+            "reason": { "type": "string", "minLength": 1 },
+            "deferred": { "type": "boolean" }
+          }
+        },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+    "propertyMapping": {
+      "type": "object",
+      "required": ["predicate"],
+      "additionalProperties": false,
+      "properties": {
+        "predicate": { "$ref": "#/$defs/iriRef" },
+        "kind": {
+          "enum": ["literal", "iri"],
+          "description": "Literal by default. With `values`, the object is always an IRI."
+        },
+        "datatype": {
+          "$ref": "#/$defs/iriRef",
+          "description": "Datatype of the literal. When absent, the compiler derives it from the property's Neo4j type."
+        },
+        "values": {
+          "type": "object",
+          "description": "Value table: each property value becomes the IRI it maps to. Values absent from the table emit nothing.",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/iriRef" }
+        },
+        "meta": { "$ref": "#/$defs/meta" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["values"] },
+          "then": {
+            "properties": { "kind": { "const": "iri" } },
+            "not": { "required": ["datatype"] }
+          }
+        },
+        {
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "iri" } } },
+          "then": { "not": { "required": ["datatype"] } }
+        }
+      ]
+    },
+    "propertyEntry": {
+      "if": { "type": "object", "required": ["ignore"] },
+      "then": { "$ref": "#/$defs/ignoreEntry" },
+      "else": { "$ref": "#/$defs/propertyMapping" }
+    },
+    "nodeMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "subject": {
+          "$ref": "#/$defs/iriTemplate",
+          "description": "IRI of each node of this kind. Optional when a node this one implies has a subject: it is then inherited, and both must be equal if both are set."
+        },
+        "classes": {
+          "type": "array",
+          "description": "Classes asserted for each node of this kind. Classes of implied nodes are asserted too.",
+          "items": { "$ref": "#/$defs/iriRef" },
+          "uniqueItems": true
+        },
+        "properties": {
+          "type": "object",
+          "description": "Entries keyed by property id.",
+          "additionalProperties": { "$ref": "#/$defs/propertyEntry" }
+        },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+    "nodeEntry": {
+      "if": { "type": "object", "required": ["ignore"] },
+      "then": { "$ref": "#/$defs/ignoreEntry" },
+      "else": { "$ref": "#/$defs/nodeMapping" }
+    },
+    "qualified": {
+      "type": "object",
+      "description": "Qualified pattern: each relationship also becomes a resource of `class`, linked from the start node by `link` and pointing to the end node with `target` (PROV qualification pattern). Relationship properties attach to this resource.",
+      "required": ["subject", "class", "link", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "subject": { "$ref": "#/$defs/iriTemplate" },
+        "class": { "$ref": "#/$defs/iriRef" },
+        "link": { "$ref": "#/$defs/iriRef" },
+        "target": { "$ref": "#/$defs/iriRef" }
+      }
+    },
+    "relationshipMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [ { "required": ["predicate"] }, { "required": ["qualified"] } ],
+      "properties": {
+        "predicate": { "$ref": "#/$defs/iriRef", "description": "Direct triple from the start node to the end node." },
+        "direction": {
+          "enum": ["forward", "reverse"],
+          "description": "`reverse` swaps subject and object for `predicate` and for the qualified pattern. Forward by default."
+        },
+        "qualified": { "$ref": "#/$defs/qualified" },
+        "properties": {
+          "type": "object",
+          "description": "Entries keyed by relationship property id. Mapped properties need a qualified pattern to attach to.",
+          "additionalProperties": { "$ref": "#/$defs/propertyEntry" }
+        },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+    "relationshipEntry": {
+      "if": { "type": "object", "required": ["ignore"] },
+      "then": { "$ref": "#/$defs/ignoreEntry" },
+      "else": { "$ref": "#/$defs/relationshipMapping" }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+# 3. Anomaly detection: versions written by a run that read an invalidated
+# input. A Jena rule derives lin:taintedBy, a SHACL shape forbids it, and the
+# violation is explained down to the LPG facts that caused it.
+format: n20s-recipe/0.1
+id: tainted-versions
+title: Versions downstream of a source that read an invalidated input
+mapping: ../lineage-prov.aura.mapping.yaml
+prefixes:
+  sh: "http://www.w3.org/ns/shacl#"
+params:
+  namespace:
+    default: "demo:lineage:v2:postgres://pg1"
+  name:
+    default: "raw.orders"
+    description: the source Dataset (namespace and name are its key)
+steps:
+  - id: downstream
+    type: scope
+    title: Every version downstream of the source, through runs (10 hops)
+    cypher: |
+      MATCH (:Dataset {namespace: $namespace, name: $name})<-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH p = (s)<-[:USED|WAS_GENERATED_BY*0..20]-()
+      RETURN p
+
+  - id: shape
+    type: triples
+    title: Rule target as a shape
+    turtle: |
+      lin:NoTaintedInput a sh:NodeShape ;
+        sh:targetSubjectsOf lin:taintedBy ;
+        sh:property [
+          sh:path lin:taintedBy ;
+          sh:maxCount 0 ;
+          sh:message "Written by a run that read an invalidated input."
+        ] .
+
+  - id: check
+    type: validate
+    title: Validate, with the taint rule applied on the fly
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+
+  - id: tainted
+    type: query
+    title: Which version, which input
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+    sparql: |
+      SELECT ?version ?input WHERE { ?version lin:taintedBy ?input }
+    decode: { version: "node:n:0", input: "node:n:0" }
+
+  - id: why
+    type: explain
+    title: Why the first one is tainted
+    s: "{{n:0|$tainted.version[0]}}"
+    p: lin:taintedBy
+    o: "{{n:0|$tainted.input[0]}}"
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]

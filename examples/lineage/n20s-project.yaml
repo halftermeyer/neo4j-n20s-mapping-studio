@@ -1,0 +1,23 @@
+# The lineage example as a project: where the LPG ontologies and the RDF
+# targets come from, and the mappings between them.
+format: n20s-project/0.1
+name: Data lineage
+
+sources:
+  # The model as the Aura ontology tool exports it.
+  lineage: { file: aura-export.json, origin: aura }
+  # The same graph read from the database (introspect: true takes the source
+  # of the command line or of the environment).
+  lineage-db: { introspect: true, file: introspected.json }
+
+targets:
+  prov: { file: targets/prov.nq, namespace: "http://www.w3.org/ns/prov#", prefix: prov }
+  dcat: { catalog: dcat }
+
+mappings:
+  lineage-prov:
+    source: lineage
+    targets: [prov]
+    file: lineage-prov.aura.mapping.yaml
+    recipes: recipes
+    spec: lineage-prov.spec.yaml

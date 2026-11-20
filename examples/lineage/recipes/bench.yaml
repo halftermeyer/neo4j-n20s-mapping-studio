@@ -1,0 +1,52 @@
+# Requests against the published endpoints and APIs of these recipes, and one
+# recipe before publication (target: recipe, through /run). Each says what it
+# must answer; `n20s-mapping bench` checks them and, with --iterations, times
+# them. Run recipe 5 first: it publishes /sparql/lineage, which 6 and 7 read.
+format: n20s-bench/0.1
+requests:
+  - id: owners-lazy
+    title: Owners to notify, scoped and reasoned per call
+    target: { query: owners-to-notify }
+    params: { name: raw.orders }
+    expect: { status: 200, rows: 2, contains: [{ agent: Alice }] }
+
+  - id: owners-hybrid
+    title: Same question, ownership read from /sparql/lineage
+    target: { query: owners }
+    params: { name: raw.orders }
+    expect: { status: 200, rows: 2, contains: [{ agent: Alice }] }
+
+  - id: owners-none
+    title: A source with nothing tainted downstream
+    target: { query: owners }
+    params: { name: raw.customers }
+    expect: { status: 200, rows: 0 }
+
+  - id: influences
+    title: Influences, from the published closure
+    target: { query: influences }
+    params: { version: "demo:lineage:v2:dsv:mart.revenue@9" }
+    expect: { status: 200, rows: 3, contains: [{ influence: "demo:lineage:v2:run:1002" }] }
+
+  - id: lineage-size
+    title: Size of the published lineage KG
+    target: { sparql: lineage }
+    sparql: SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }
+    expect: { status: 200, rows: 1, contains: [{ n: 3833 }] }
+
+  - id: lineage-closure
+    title: The RDFS closure is materialized
+    target: { sparql: lineage }
+    sparql: ASK { ?x <http://www.w3.org/ns/prov#wasInfluencedBy> ?y }
+    expect: { status: 200, contains: [{ boolean: true }] }
+
+  - id: tainted-draft
+    title: Tainted versions, before publication (needs /run)
+    target: { recipe: tainted-versions }
+    expect: { status: 200, rows: 4 }
+
+  - id: unknown-parameter
+    title: The API refuses what it does not declare
+    target: { query: owners }
+    params: { nope: 1 }
+    expect: { status: 400 }

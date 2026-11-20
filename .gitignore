@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.*
+# Registry of the persistent graphs built by recipes: run state, per machine.
+graphs.json
+# Editor settings, per machine.
+.vscode/

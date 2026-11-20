@@ -1,0 +1,27 @@
+# 1. A plain SPARQL question in an ephemeral graph: only the derivation chain of one
+# version is projected, not the lineage graph. Same answer as oracle q33.
+format: n20s-recipe/0.1
+id: upstream-sources
+title: Asserted sources upstream of a dataset version
+mapping: ../lineage-prov.aura.mapping.yaml
+params:
+  version:
+    default: "demo:lineage:v2:dsv:dash.revenue@31"
+    description: id of a DatasetVersion
+steps:
+  - id: chain
+    type: scope
+    title: The version and what it was derived from, 10 hops
+    cypher: |
+      MATCH p = (:DatasetVersion {id: $version})-[:WAS_DERIVED_FROM*0..10]->(:DatasetVersion)
+      RETURN p
+
+  - id: sources
+    type: query
+    title: Sources that derive from nothing else
+    sparql: |
+      SELECT DISTINCT ?source WHERE {
+        {{n:0|$version}} prov:wasDerivedFrom+ ?source .
+        FILTER NOT EXISTS { ?source prov:wasDerivedFrom ?any }
+      }
+    decode: { source: "node:n:0" }

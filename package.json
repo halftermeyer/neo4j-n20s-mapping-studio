@@ -1,0 +1,34 @@
+{
+  "name": "n20s-mapping",
+  "version": "0.1.0",
+  "description": "Mapping format between a Neo4j Ontology Graph Spec document and RDF target ontologies: checker, template compiler for n20s, projection from Relate or Neo4j over Bolt, and a Cypher vs SPARQL oracle.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "n20s-mapping": "bin/n20s-mapping.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "n3": "^1.26.0",
+    "neo4j-driver": "^5.28.3",
+    "yaml": "^2.9.1"
+  },
+  "files": [
+    "bin",
+    "src",
+    "schema",
+    "vendor",
+    "examples",
+    "README.md"
+  ]
+}

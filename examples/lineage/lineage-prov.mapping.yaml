@@ -1,0 +1,209 @@
+# Data lineage LPG -> W3C PROV-O.
+# The LPG model stays the query model (point in time, potential vs asserted
+# dependencies). This mapping exports what PROV can say, and says why the rest
+# is left out.
+format: n20s-mapping/0.1
+id: lineage-prov
+name: Data lineage LPG to PROV-O
+lpgOntology:
+  id: data-lineage-lpg
+  version: "3"
+  location: data-lineage-ontology.json
+targets:
+  - namespace: "http://www.w3.org/ns/prov#"
+    location: targets/prov.nq
+strategy: template
+prefixes:
+  prov: "http://www.w3.org/ns/prov#"
+  xsd: "http://www.w3.org/2001/XMLSchema#"
+  rdfs: "http://www.w3.org/2000/01/rdf-schema#"
+  lin: "https://example.org/lineage/"
+
+nodes:
+  # Base kinds carry the subjects; every subtype implies one of them and
+  # inherits its subject. One pattern per base kind, because the id
+  # uniqueness constraints are per base label.
+  entity:
+    subject: "lin:entity/{id}"
+    classes: [prov:Entity]
+  activity:
+    subject: "lin:activity/{id}"
+    classes: [prov:Activity]
+  agent:
+    subject: "lin:agent/{id}"
+    classes: [prov:Agent]
+    properties:
+      name: { predicate: rdfs:label }
+
+  dataset:
+    properties:
+      name: { predicate: rdfs:label }
+      namespace: { ignore: { reason: "Part of the OpenLineage identity, already encoded in the id." } }
+      system: { ignore: { reason: "No PROV equivalent." } }
+      kind: { ignore: { reason: "No PROV equivalent; a domain vocabulary (DCAT) would type it." } }
+      retiredAt: { ignore: { reason: "Retirement of the logical asset is not a PROV invalidation of a version." } }
+  dataset-version:
+    properties:
+      generatedAt: { predicate: prov:generatedAtTime, datatype: xsd:dateTime }
+      invalidatedAt: { predicate: prov:invalidatedAtTime, datatype: xsd:dateTime }
+      version: { ignore: { reason: "Opaque source-system version; no PROV equivalent." } }
+      publishedAt: { ignore: { reason: "Publication is not a PROV event." } }
+      validFrom: { ignore: { reason: "Point-in-time validity is not PROV; it stays in the LPG (query 36)." } }
+      validTo: { ignore: { reason: "Point-in-time validity is not PROV; it stays in the LPG (query 36)." } }
+      schemaHash: { ignore: { reason: "No PROV equivalent." } }
+  column:
+    properties:
+      name: { predicate: rdfs:label }
+  column-version:
+    properties:
+      name: { predicate: rdfs:label }
+      dataType: { ignore: { reason: "No PROV equivalent." } }
+      ordinal: { ignore: { reason: "No PROV equivalent." } }
+      nullable: { ignore: { reason: "No PROV equivalent." } }
+  job:
+    properties:
+      name: { predicate: rdfs:label }
+      namespace: { ignore: { reason: "Part of the OpenLineage identity, already encoded in the id." } }
+  job-version:
+    classes: [prov:Plan]
+    properties:
+      codeRef: { ignore: { reason: "No PROV equivalent." } }
+      definitionHash: { ignore: { reason: "No PROV equivalent." } }
+      artifactRef: { ignore: { reason: "No PROV equivalent." } }
+      configRef: { ignore: { reason: "No PROV equivalent." } }
+  run:
+    properties:
+      startedAt: { predicate: prov:startedAtTime, datatype: xsd:dateTime }
+      endedAt: { predicate: prov:endedAtTime, datatype: xsd:dateTime }
+      status: { ignore: { reason: "Not PROV. Invalid outputs are exported as invalidations of the versions." } }
+      lastEventType: { ignore: { reason: "Ingestion bookkeeping." } }
+      lastEventTime: { ignore: { reason: "Ingestion bookkeeping." } }
+      observedAt: { ignore: { reason: "Ingestion bookkeeping." } }
+      parameters: { ignore: { reason: "Execution parameters; may be sensitive and have no PROV equivalent." } }
+      parametersRef: { ignore: { reason: "Reference to a secure store; not exported." } }
+  person:
+    classes: [prov:Person]
+  software-agent:
+    classes: [prov:SoftwareAgent]
+  organization:
+    classes: [prov:Organization]
+
+relationships:
+  used:
+    predicate: prov:used
+    qualified:
+      subject: "lin:usage/{start.id}/{end.id}"
+      class: prov:Usage
+      link: prov:qualifiedUsage
+      target: prov:entity
+    properties:
+      role:
+        predicate: prov:hadRole
+        values: { input: "lin:role/input", lookup: "lin:role/lookup", config: "lin:role/config" }
+        meta:
+          proposedBy: { kind: human, name: Pierre }
+          rationale: "Role strings become prov:Role individuals; unknown roles are skipped and show up in coverage."
+  was-generated-by:
+    predicate: prov:wasGeneratedBy
+    qualified:
+      subject: "lin:generation/{start.id}"
+      class: prov:Generation
+      link: prov:qualifiedGeneration
+      target: prov:activity
+    properties:
+      role:
+        predicate: prov:hadRole
+        values: { output: "lin:role/output" }
+  depends-on:
+    ignore:
+      reason: >-
+        Potential dependency computed from run inputs and outputs, not an
+        asserted derivation. Mapping it to prov:wasDerivedFrom would state
+        lineage that no source asserted (query 34).
+  was-derived-from:
+    predicate: prov:wasDerivedFrom
+    qualified:
+      subject: "lin:derivation/{start.id}/{end.id}"
+      class: prov:Derivation
+      link: prov:qualifiedDerivation
+      target: prov:entity
+    properties:
+      runId: { ignore: { reason: "prov:hadActivity needs a join from runId to the Run node: a computed row in the scope or a rule.", deferred: true } }
+      jobVersionId: { ignore: { reason: "Reachable through the run once prov:hadActivity exists.", deferred: true } }
+      source: { ignore: { reason: "Evidence metadata; no PROV equivalent." } }
+      evidenceRef: { ignore: { reason: "Evidence metadata; no PROV equivalent." } }
+      transformationType: { ignore: { reason: "No PROV equivalent." } }
+      transformationSubtype: { ignore: { reason: "No PROV equivalent. IDENTITY is not prov:Quotation, which is about repeating content attributed to an author." } }
+      expression: { ignore: { reason: "Descriptive only." } }
+      assertedAt: { ignore: { reason: "Time of the assertion, not of the derivation." } }
+  column-derived-from:
+    predicate: prov:wasDerivedFrom
+    qualified:
+      subject: "lin:column-derivation/{start.id}/{end.id}"
+      class: prov:Derivation
+      link: prov:qualifiedDerivation
+      target: prov:entity
+    properties:
+      runId: { ignore: { reason: "prov:hadActivity needs a join from runId to the Run node: a computed row in the scope or a rule.", deferred: true } }
+      jobVersionId: { ignore: { reason: "Reachable through the run once prov:hadActivity exists.", deferred: true } }
+      source: { ignore: { reason: "Evidence metadata; no PROV equivalent." } }
+      evidenceRef: { ignore: { reason: "Evidence metadata; no PROV equivalent." } }
+      transformationType: { ignore: { reason: "No PROV equivalent." } }
+      transformationSubtype: { ignore: { reason: "No PROV equivalent." } }
+      expression: { ignore: { reason: "Descriptive only." } }
+      assertedAt: { ignore: { reason: "Time of the assertion, not of the derivation." } }
+  version-of-dataset:
+    predicate: prov:specializationOf
+  has-column:
+    ignore: { reason: "Structural containment between logical assets; no PROV equivalent." }
+  has-column-version:
+    ignore: { reason: "Structural containment between versions; no PROV equivalent." }
+  version-of-column:
+    predicate: prov:specializationOf
+  version-of-job:
+    predicate: prov:specializationOf
+  run-of:
+    ignore: { reason: "Links a run to its logical job; the executed definition is HAD_PLAN." }
+  had-plan:
+    ignore:
+      reason: >-
+        In PROV the plan hangs on the association (prov:qualifiedAssociation,
+        prov:hadPlan), not on the activity. Needs a cross-element rule and a
+        decision on which association gets the plan when a run has several
+        (executor and triggeredBy).
+      deferred: true
+  was-informed-by:
+    predicate: prov:wasInformedBy
+  was-associated-with:
+    predicate: prov:wasAssociatedWith
+    qualified:
+      subject: "lin:association/{start.id}/{end.id}"
+      class: prov:Association
+      link: prov:qualifiedAssociation
+      target: prov:agent
+    properties:
+      role:
+        predicate: prov:hadRole
+        values: { executor: "lin:role/executor", triggeredBy: "lin:role/triggeredBy" }
+  was-attributed-to:
+    predicate: prov:wasAttributedTo
+    qualified:
+      subject: "lin:attribution/{start.id}/{end.id}"
+      class: prov:Attribution
+      link: prov:qualifiedAttribution
+      target: prov:agent
+    properties:
+      role:
+        predicate: prov:hadRole
+        values: { owner: "lin:role/owner", steward: "lin:role/steward" }
+  acted-on-behalf-of:
+    predicate: prov:actedOnBehalfOf
+  was-invalidated-by:
+    predicate: prov:wasInvalidatedBy
+    qualified:
+      subject: "lin:invalidation/{start.id}"
+      class: prov:Invalidation
+      link: prov:qualifiedInvalidation
+      target: prov:activity
+    properties:
+      reason: { predicate: rdfs:comment }
