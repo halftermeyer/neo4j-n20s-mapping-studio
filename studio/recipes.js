@@ -11,9 +11,9 @@ const ROLE = {
 };
 const KIND = {
   build: { text: 'build', color: '#6a1b9a', help: 'writes a persistent graph, usually to publish it' },
-  precomputed: { text: 'precomputed', color: '#00695c', help: 'only reads published graphs: nothing is projected per call' },
+  precomputed: { text: 'precomputed', color: '#00695c', help: 'only reads published graphs or remote stores: nothing is projected per call' },
   lazy: { text: 'lazy', color: '#1565c0', help: 'scopes ephemeral graphs on each run: only what the question needs' },
-  hybrid: { text: 'hybrid', color: '#e65100', help: 'scopes on demand and reads published graphs' },
+  hybrid: { text: 'hybrid', color: '#e65100', help: 'scopes on demand and reads published graphs or remote stores' },
 };
 const kindChip = (k) => (k ? h('span', { class: 'chip', style: `background:${KIND[k].color};color:#fff`, title: KIND[k].help }, KIND[k].text) : null);
 const TYPE_TEXT = {
@@ -433,6 +433,7 @@ function graphsBar() {
     const titles = {
       persistent: 'Outlives the run, under a stable name: other recipes read it, a publish step serves it',
       published: 'Read-only: whatever the endpoint serves now (precomputed)',
+      remote: 'A SPARQL endpoint outside (the client\'s triple store): read with construct … from, never written',
       ephemeral: 'Built for one run, then dropped (lazy)',
     };
     return h('div', { class: `gchip ${g.lifecycle}`, title: titles[g.lifecycle] },
@@ -440,6 +441,7 @@ function graphsBar() {
       h('span', { class: `chip ${g.lifecycle}` }, g.lifecycle),
       g.lifecycle === 'persistent' ? [' ', h('code', {}, g.name), g.versioned ? ' versioned' : ` start: ${g.start}`] : '',
       g.lifecycle === 'published' ? [' ', h('code', {}, `/sparql/${g.endpoint}`)] : '',
+      g.lifecycle === 'remote' ? [' ', h('code', {}, g.sparql)] : '',
       a ? h('span', { style: 'color:#555' }, ` → ${a.triples} triples${a.lifecycle === 'ephemeral' ? (a.kept ? `, kept as ${a.name}` : ', dropped') : a.versioned ? ` in ${a.name}` : ''}`) : '',
       implicit ? h('span', { style: 'color:#888' }, ' (default)') : [
         h('button', { class: 'mini', onclick: () => { editingGraph = g.key; render(); } }, 'edit'),
@@ -452,26 +454,30 @@ function graphsBar() {
 function graphForm(key) {
   const g = current.recipe.graphs?.[key] ?? {};
   const k = h('input', { value: key, placeholder: 'key, for instance kg', disabled: !!key, style: 'width:110px' });
-  const lc = h('select', {}, [['ephemeral', 'ephemeral (lazy, per run)'], ['persistent', 'persistent (built here)'], ['published', 'published (read an endpoint)']].map(([x, t]) => h('option', { value: x, selected: (g.lifecycle ?? 'ephemeral') === x }, t)));
+  const lc = h('select', {}, [['ephemeral', 'ephemeral (lazy, per run)'], ['persistent', 'persistent (built here)'], ['published', 'published (read an endpoint)'], ['remote', 'remote (a client SPARQL endpoint)']].map(([x, t]) => h('option', { value: x, selected: (g.lifecycle ?? 'ephemeral') === x }, t)));
   const name = h('input', { value: g.name ?? '', placeholder: 'name in n20s-server', style: 'width:170px' });
   const versioned = h('input', { type: 'checkbox', checked: !!g.versioned, style: 'width:auto' });
   const versionedLabel = h('label', { class: 'row', style: 'gap:4px', title: 'A new version on every run, swapped in by a publish step once valid' }, versioned, 'versioned');
   const start = h('select', {}, [['reuse', 'start: reuse (keep its content)'], ['rebuild', 'start: rebuild (empty it first)']].map(([v, t]) => h('option', { value: v, selected: (g.start ?? 'reuse') === v }, t)));
   const endpoint = h('select', {}, (graphs?.endpoints ?? []).map((e) => h('option', { value: e.endpoint, selected: g.endpoint === e.endpoint }, `/sparql/${e.endpoint}`)), h('option', { value: '' }, '(other: type it)'));
   const endpointText = h('input', { value: g.endpoint ?? '', placeholder: 'endpoint name', style: 'width:140px' });
+  const sparql = h('input', { value: g.sparql ?? '', placeholder: 'SPARQL endpoint URL, or ${ENV_VAR}', style: 'width:240px' });
+  const user = h('input', { value: g.user ?? '', placeholder: 'user: env variable name', style: 'width:150px' });
+  const password = h('input', { value: g.password ?? '', placeholder: 'password: env variable name', style: 'width:170px' });
   const sync = () => {
     const p = lc.value === 'persistent';
     name.style.display = versionedLabel.style.display = p ? '' : 'none';
     start.style.display = p && !versioned.checked ? '' : 'none';
     endpoint.style.display = lc.value === 'published' ? '' : 'none';
     endpointText.style.display = lc.value === 'published' && !endpoint.value ? '' : 'none';
+    for (const x of [sparql, user, password]) x.style.display = lc.value === 'remote' ? '' : 'none';
   };
   for (const x of [lc, versioned, endpoint]) x.addEventListener('change', sync);
   sync();
-  return h('div', { class: 'row form', style: 'display:flex;flex-wrap:wrap' }, k, lc, name, versionedLabel, start, endpoint, endpointText,
+  return h('div', { class: 'row form', style: 'display:flex;flex-wrap:wrap' }, k, lc, name, versionedLabel, start, endpoint, endpointText, sparql, user, password,
     h('button', { class: 'primary', onclick: async () => {
       const key2 = k.value; editingGraph = null;
-      await change('/api/recipe/graph', { key: key2, lifecycle: lc.value, name: name.value, start: start.value, versioned: versioned.checked, endpoint: endpoint.value || endpointText.value }, `Graph ${key2} saved`);
+      await change('/api/recipe/graph', { key: key2, lifecycle: lc.value, name: name.value, start: start.value, versioned: versioned.checked, endpoint: endpoint.value || endpointText.value, sparql: sparql.value, user: user.value, password: password.value }, `Graph ${key2} saved`);
     } }, 'Save'),
     h('button', { onclick: () => { editingGraph = null; render(); } }, 'Cancel'));
 }
@@ -491,7 +497,10 @@ function sequence() {
         h('div', { class: 'sbody' },
           h('div', {}, h('span', { class: 'srole', style: `color:${role.color}` }, `${role.icon} ${role.text}`), ' ',
             multi || current.outline.graphs[0]?.lifecycle === 'persistent' ? h('span', { class: `chip ${current.outline.graphs.find((g) => g.key === st.graph)?.lifecycle}` }, st.graph) : '',
-            ' ', h('b', {}, st.id), ' ', h('span', { class: 'chip' }, st.type), ' ', h('span', { style: 'color:#555' }, step.title ?? '')),
+            ' ', h('b', {}, st.id), ' ', h('span', { class: 'chip' }, st.type),
+            // Where a construct reads: another graph of the recipe, or a remote store.
+            st.from ? [' from ', h('span', { class: `chip ${current.outline.graphs.find((g) => g.key === st.from)?.lifecycle ?? ''}`, title: current.outline.graphs.find((g) => g.key === st.from)?.sparql ?? '' }, st.from)] : '',
+            ' ', h('span', { style: 'color:#555' }, step.title ?? '')),
           st.uses.length ? h('div', { class: 'suses' }, 'uses ', st.uses.map((u, j) => [j ? ', ' : '', h('a', { href: '#', onclick: (e) => { e.preventDefault(); e.stopPropagation(); selected = u.step; render(); } }, `$${u.step}.${u.column}`)])) : null),
         x ? h('div', { class: 'sstate' },
           x.status === 'error' ? h('span', { class: 'fail' }, 'error')
@@ -510,7 +519,7 @@ function summary(type, r) {
   if (type === 'infer') return `${r.added} inferred (${r.profile || 'rules'})`;
   if (type === 'update') return `${r.inserted} inserted, ${r.deleted} deleted`;
   if (type === 'publish') return `→ /sparql/${r.as}`;
-  if (type === 'construct') return `${r.added} added`;
+  if (type === 'construct') return `${r.added} added${r.triples !== r.added ? ` (${r.triples} pulled)` : ''}`;
   return '';
 }
 

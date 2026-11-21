@@ -2,14 +2,16 @@
 # The demo, from a clean state, as many times as needed.
 #
 #   demo/demo.sh start     resets the database side (demo/aura.mjs reset), copies
-#                          demo/project to demo/.work, starts n20s-server and the
-#                          studio on http://127.0.0.1:4500 with the AI answers
-#                          replayed from demo/recordings/ai.json
+#                          demo/project to demo/.work, starts n20s-server, Fuseki
+#                          (act 3) and the studio on http://127.0.0.1:4500 with the
+#                          AI answers replayed from demo/recordings/ai.json
 #   demo/demo.sh live      the same, with the live model, recording its answers
 #                          to demo/recordings/ai.json (run it once, or after the
 #                          prompts or the script changed)
-#   demo/demo.sh stop      stops the studio and n20s-server, undoes the demo transactions
+#   demo/demo.sh stop      stops the studio, n20s-server and Fuseki, undoes the demo transactions
 #
+# Act 3 needs Apache Jena Fuseki: FUSEKI_JAR (default ~/bin/fuseki-dl/jena-fuseki-server-6.1.0.jar,
+# from Maven Central: org.apache.jena:jena-fuseki-server).
 # Needs: .env (NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD of a Neo4j Enterprise or
 # Aura instance with Change Data Capture in FULL mode; GEMINI_API_KEY for `live`),
 # Java 21, and N20S_JAR (default ../n20s-plugin/n20s-server/target/n20s-server-1.1.0-SNAPSHOT.jar).
@@ -21,11 +23,14 @@ RUN=$DEMO/.run
 STUDIO_PORT=${STUDIO_PORT:-4500}
 N20S_PORT=${N20S_PORT:-7490}
 N20S_JAR=${N20S_JAR:-../n20s-plugin/n20s-server/target/n20s-server-1.1.0-SNAPSHOT.jar}
+# Act 3: the client's own triple store. Apache Jena Fuseki (Apache 2.0), the standalone jar.
+FUSEKI_JAR=${FUSEKI_JAR:-$HOME/bin/fuseki-dl/jena-fuseki-server-6.1.0.jar}
+FUSEKI_PORT=${FUSEKI_PORT:-3031}
 RECORDING=$DEMO/recordings/ai.json
 mkdir -p "$RUN"
 
 stop() {
-  for p in studio n20s; do
+  for p in studio n20s fuseki; do
     if [[ -f $RUN/$p.pid ]]; then kill "$(cat "$RUN/$p.pid")" 2>/dev/null || true; rm -f "$RUN/$p.pid"; fi
   done
 }
@@ -49,6 +54,14 @@ start() {
   PORT=$N20S_PORT nohup "$JAVA" -jar "$N20S_JAR" >"$RUN/n20s.log" 2>&1 &
   echo $! >"$RUN/n20s.pid"
   wait_for "http://127.0.0.1:$N20S_PORT/version" n20s
+  if [[ -f $FUSEKI_JAR ]]; then
+    echo "▶ client triple store (Fuseki) on $FUSEKI_PORT"
+    FUSEKI_BASE="$RUN/fuseki" nohup "$JAVA" -jar "$FUSEKI_JAR" --port "$FUSEKI_PORT" --update --file $DEMO/client-kg/client.ttl /client >"$RUN/fuseki.log" 2>&1 &
+    echo $! >"$RUN/fuseki.pid"
+    wait_for "http://127.0.0.1:$FUSEKI_PORT/\$/ping" fuseki
+  else
+    echo "  (no Fuseki jar at $FUSEKI_JAR: act 3 is off)"
+  fi
   local ai=()
   if [[ $mode == live ]]; then
     rm -f "$RECORDING"
@@ -58,7 +71,7 @@ start() {
     ai=(--replay "$RECORDING")
   fi
   echo "▶ studio on http://127.0.0.1:$STUDIO_PORT ($mode)"
-  nohup node bin/n20s-mapping.js studio "$WORK/n20s-project.yaml" --port "$STUDIO_PORT" \
+  CLIENT_KG_SPARQL="http://127.0.0.1:$FUSEKI_PORT/client/query" nohup node bin/n20s-mapping.js studio "$WORK/n20s-project.yaml" --port "$STUDIO_PORT" \
     --n20s "http://127.0.0.1:$N20S_PORT" --reviewer Pierre --dotenv .env --mask-hosts --title "RDF mapping studio" "${ai[@]}" >"$RUN/studio.log" 2>&1 &
   echo $! >"$RUN/studio.pid"
   wait_for "http://127.0.0.1:$STUDIO_PORT/" studio
@@ -69,5 +82,5 @@ case "${1:-}" in
   start) start replay ;;
   live) start live ;;
   stop) stop; node $DEMO/aura.mjs reset >/dev/null; echo "✔ stopped" ;;
-  *) sed -n '2,15p' "$0"; exit 2 ;;
+  *) awk 'NR > 1 && /^#/ { print; next } NR > 1 { exit }' "$0"; exit 2 ;;
 esac

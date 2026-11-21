@@ -219,3 +219,7 @@ button.mini { padding: 0 7px; font-size: 11px; margin-left: 3px; }
 .follow.on { border-color: #00695c; background: #f1faf8; }
 .follow .hint { color: #777; font-size: 11.5px; }
 .okline { color: #2e7d32; }
+
+/* Remote graphs: a client's SPARQL endpoint */
+.chip.remote { background: #fff3e0; color: #e65100; }
+.gchip.remote { border-color: #ffb74d; }

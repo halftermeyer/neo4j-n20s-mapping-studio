@@ -1,0 +1,48 @@
+# The client's own knowledge graph, in their triple store (Fuseki in the demo):
+# a data classification ontology in OWL and their data catalog. It knows what
+# each dataset holds and who protects personal data in each domain; it knows
+# nothing of lineage. Act 3 of the demo mixes it with the lineage scoped from
+# Neo4j: the datasets are the same, named the same way (dct:identifier).
+@prefix ex:   <https://client.example.org/governance#> .
+@prefix cat:  <https://client.example.org/catalog/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org:  <http://www.w3.org/ns/org#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# --- Classification ontology ---------------------------------------------------------------
+ex:DataElement a owl:Class ; rdfs:label "Data element" .
+ex:PersonalData a owl:Class ; rdfs:subClassOf ex:DataElement ; rdfs:label "Personal data" ;
+  rdfs:comment "Any information relating to an identified or identifiable person (GDPR art. 4)." .
+ex:ContactDetails a owl:Class ; rdfs:subClassOf ex:PersonalData ; rdfs:label "Contact details" .
+ex:EmailAddress a owl:Class ; rdfs:subClassOf ex:ContactDetails ; rdfs:label "Email address" .
+ex:PostalAddress a owl:Class ; rdfs:subClassOf ex:ContactDetails ; rdfs:label "Postal address" .
+ex:BusinessFigure a owl:Class ; rdfs:subClassOf ex:DataElement ; rdfs:label "Business figure" .
+ex:Amount a owl:Class ; rdfs:subClassOf ex:BusinessFigure ; rdfs:label "Amount" .
+
+ex:holds a owl:ObjectProperty ; rdfs:label "holds" ; rdfs:range ex:DataElement .
+ex:dataProtectionOfficer a owl:ObjectProperty ; rdfs:label "data protection officer" .
+
+# A dataset holding at least one element of personal data is a personal dataset:
+# nobody tags it, the reasoner classifies it.
+ex:PersonalDataset a owl:Class ; rdfs:label "Personal dataset" ;
+  owl:equivalentClass [ a owl:Restriction ; owl:onProperty ex:holds ; owl:someValuesFrom ex:PersonalData ] .
+
+# --- Catalog -------------------------------------------------------------------------------
+cat:customer-domain a org:OrganizationalUnit ; rdfs:label "Customer domain" ; ex:dataProtectionOfficer cat:jane .
+cat:finance-domain a org:OrganizationalUnit ; rdfs:label "Finance domain" ; ex:dataProtectionOfficer cat:omar .
+cat:jane a foaf:Person ; foaf:name "Jane Doe" .
+cat:omar a foaf:Person ; foaf:name "Omar Haddad" .
+
+cat:raw-customers a dcat:Dataset ; dct:identifier "raw.customers" ; dct:publisher cat:customer-domain ;
+  ex:holds [ a ex:PostalAddress ] , [ a ex:EmailAddress ] .
+cat:stg-customers a dcat:Dataset ; dct:identifier "stg.customers" ; dct:publisher cat:customer-domain ;
+  ex:holds [ a ex:EmailAddress ] .
+cat:raw-orders a dcat:Dataset ; dct:identifier "raw.orders" ; dct:publisher cat:finance-domain ;
+  ex:holds [ a ex:Amount ] .
+cat:stg-orders a dcat:Dataset ; dct:identifier "stg.orders" ; dct:publisher cat:finance-domain ;
+  ex:holds [ a ex:Amount ] .
+cat:mart-revenue a dcat:Dataset ; dct:identifier "mart.revenue" ; dct:publisher cat:finance-domain ;
+  ex:holds [ a ex:Amount ] .

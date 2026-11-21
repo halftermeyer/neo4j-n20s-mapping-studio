@@ -1,0 +1,125 @@
+# 8. Three sources, one answer, each used for what it does best:
+#   - Neo4j, scoped by Cypher on each call: what the incident tainted (it
+#     changes with every transaction: the committed state, to the second);
+#   - our published lineage KG (/sparql/lineage, precomputed, following the
+#     database): who owns those datasets (stable: nothing to project per call);
+#   - the client's own triple store (a remote graph): what each dataset holds,
+#     and who protects personal data in its domain (theirs, read, never written).
+# OWL reasoning runs over all three: a dataset holding an email address is a
+# personal dataset, though nobody tagged it so.
+# Served as /query/personal-data-alert?name=raw.customers.
+format: n20s-recipe/0.1
+id: personal-data-alert
+title: Personal data downstream of a bad input, its owner and its data protection officer
+mapping: ../lineage-prov.mapping.yaml
+prefixes:
+  ex: "https://client.example.org/governance#"
+  dct: "http://purl.org/dc/terms/"
+  foaf: "http://xmlns.com/foaf/0.1/"
+  owl: "http://www.w3.org/2002/07/owl#"
+graphs:
+  work: { lifecycle: ephemeral }
+  kg: { lifecycle: published, endpoint: lineage }
+  client: { lifecycle: remote, sparql: "${CLIENT_KG_SPARQL}" }
+params:
+  namespace:
+    default: "demo:lineage:v2:postgres://pg1"
+  name:
+    default: "raw.customers"
+    description: the source Dataset (namespace and name are its key)
+api:
+  name: personal-data-alert
+  result: alert
+  description: Tainted datasets that hold personal data, with their owner (published lineage KG) and their data protection officer (client triple store); the taint is read from Neo4j on each call.
+steps:
+  - id: downstream
+    type: scope
+    graph: work
+    title: Every version downstream of the source (Neo4j)
+    cypher: |
+      MATCH (:Dataset {namespace: $namespace, name: $name})<-[:VERSION_OF_DATASET]-(s:DatasetVersion)
+      MATCH p = (s)<-[:USED|WAS_GENERATED_BY*0..20]-()
+      RETURN p
+
+  - id: tainted
+    type: query
+    graph: work
+    title: Versions written by a run that read an invalidated input
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+    sparql: |
+      SELECT DISTINCT ?version WHERE { ?version lin:taintedBy ?input }
+    decode: { version: "node:n:0" }
+
+  - id: ownership
+    type: construct
+    graph: work
+    from: kg
+    title: Their datasets and owners (published lineage KG)
+    sparql: |
+      CONSTRUCT {
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?agent ; prov:hadRole ?role .
+        ?agent rdfs:label ?name .
+      } WHERE {
+        VALUES ?version { {{n:0|$tainted.version}} }
+        ?version prov:specializationOf ?ds .
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent ?agent ; prov:hadRole ?role .
+        ?agent rdfs:label ?name .
+      }
+
+  - id: datasets
+    type: query
+    graph: work
+    title: The names of the tainted datasets
+    sparql: |
+      SELECT DISTINCT ?dataset WHERE {
+        VALUES ?version { {{n:0|$tainted.version}} }
+        ?version prov:specializationOf/rdfs:label ?dataset .
+      }
+
+  - id: classification
+    type: construct
+    graph: work
+    from: client
+    title: The classification ontology (client triple store)
+    sparql: |
+      CONSTRUCT { ?c ?p ?o . ?o ?p2 ?o2 } WHERE {
+        ?c a owl:Class ; ?p ?o .
+        OPTIONAL { ?o ?p2 ?o2 FILTER (isBlank(?o)) }
+      }
+
+  - id: catalog
+    type: construct
+    graph: work
+    from: client
+    title: What those datasets hold, and who protects their domain (client triple store)
+    sparql: |
+      CONSTRUCT {
+        ?d dct:identifier ?id ; ex:holds ?e ; dct:publisher ?dom .
+        ?e a ?kind .
+        ?dom ex:dataProtectionOfficer ?dpo . ?dpo foaf:name ?dpoName .
+      } WHERE {
+        VALUES ?id { {{literal|$datasets.dataset}} }
+        ?d dct:identifier ?id ; ex:holds ?e ; dct:publisher ?dom .
+        ?e a ?kind .
+        ?dom ex:dataProtectionOfficer ?dpo . ?dpo foaf:name ?dpoName .
+      }
+
+  - id: alert
+    type: query
+    graph: work
+    title: Personal data at risk, who owns it, who protects it (OWL over both)
+    profile: OWL
+    sparql: |
+      SELECT DISTINCT ?dataset ?owner ?dpo WHERE {
+        ?ds rdfs:label ?dataset ; prov:qualifiedAttribution ?a .
+        ?a prov:agent/rdfs:label ?owner ; prov:hadRole ?role .
+        FILTER (STRENDS(STR(?role), "/owner"))
+        ?c dct:identifier ?dataset ; a ex:PersonalDataset ;
+           dct:publisher/ex:dataProtectionOfficer/foaf:name ?dpo .
+      }
+      ORDER BY ?dataset

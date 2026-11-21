@@ -8,9 +8,17 @@ README.md is the reference for the format, the checks and the commands; read it 
 
 - The mapping is a separate file from the LPG ontology. The mapping points to the
   ontology, never the reverse. Entries are keyed by spec ids, not labels or types.
-- Build from the ontology spec and n20s only. Do not reuse code or ideas from the
+- Build from the ontology spec and n20s. Do not reuse code or ideas from the
   old noRDF Studio project in the parent folder (app.py, engine.py, frontend/,
   server/, nordf-*). Relate is optional.
+- n20s is a means, not the product (Pierre, 2026-11-20): an example of an RDF
+  engine to learn from, replaceable. Clients probably already run a triple
+  store (Fuseki first): their triples and the Cypher-scoped ones must mix.
+  OWL is needed; stay on Jena for now: proving the flow matters more than
+  proving engine genericity. No explain in the Fuseki integration is fine.
+  Mixing reads their store (remote graphs, construct ... from); writing to it
+  (later) only into our own named graphs, replaced whole: never delete a
+  triple another source may assert.
 - No Neo4j plugin. Sources are reached over Bolt with the official driver: Relate
   (`relate serve --bolt`) during design, Neo4j or Aura in production, same code.
   Row queries stay plain Cypher (no APOC, no GDS) so they run on both.
@@ -46,7 +54,8 @@ README.md is the reference for the format, the checks and the commands; read it 
     workspace.js (projects: sources, targets, mappings, lock, status),
     catalog.js (target vocabularies), introspect.js (LPG ontology from a
     database), design.js (spec, design conversation, spec checks, recipe drafts),
-    follow.js (publications following the database through CDC FULL).
+    follow.js (publications following the database through CDC FULL),
+    remote.js (remote SPARQL graphs: the client's triple store, read only).
     project.js is NOT the project file: it runs a projection plan (project,
     compareSources); projects are workspace.js.
 - `studio/` the page (plain DOM + SVG, no build step): app.js (Mapping tab),
@@ -79,6 +88,7 @@ README.md is the reference for the format, the checks and the commands; read it 
 ```bash
 npm test                      # unit + CLI tests; e2e skipped without RELATE_BIN and N20S_JAR
 RELATE_BIN=/path/to/relate N20S_JAR=../n20s-plugin/n20s-server/target/n20s-server-1.1.0-SNAPSHOT.jar npm test
+# + FUSEKI_JAR=~/bin/fuseki-dl/jena-fuseki-server-6.1.0.jar for the mixed-sources (Fuseki) test
 node bin/n20s-mapping.js compare examples/lineage/lineage-prov.mapping.yaml --dotenv .env --source bolt://neo4j:<pw>@127.0.0.1:7688
 ```
 

@@ -15,7 +15,7 @@ import { randomBytes } from 'node:crypto';
 import YAML from 'yaml';
 import { compile, check, project, compareSources, n20sClient, runOracle, propose, acceptAll, functionProvider } from '../src/index.js';
 import { openSource, splitStatements, sourceValues } from '../src/node.js';
-import { EXAMPLE, baseMapping, baseDoc, prov, lockFor, auraDoc, auraGold, auraBlank, goldAnswer } from './helpers.js';
+import { ROOT, EXAMPLE, baseMapping, baseDoc, prov, lockFor, auraDoc, auraGold, auraBlank, goldAnswer } from './helpers.js';
 
 const { RELATE_BIN, N20S_JAR } = process.env;
 
@@ -342,6 +342,50 @@ test('follow: a transaction on what a publication is built from rebuilds it and 
     assert.equal(follow.state, 'idle');
   } finally {
     await source.run("MATCH (n {id: 'demo:follow:new'}) DETACH DELETE n");
+  }
+});
+
+test('three sources: the taint scoped from Neo4j, owners from the published KG, classification and catalog from a client Fuseki, OWL over all', { skip: skip || (!process.env.FUSEKI_JAR && 'set FUSEKI_JAR to run'), timeout: 180000 }, async () => {
+  const { loadRecipe, recordRecipeRun, publishedResolver } = await import('../src/node.js');
+  const { runRecipe } = await import('../src/recipe.js');
+  const { remoteOf } = await import('../src/remote.js');
+  const os = await import('node:os');
+  const port = await freePort();
+  // FUSEKI_BASE: Fuseki keeps its run files there, not in the working directory.
+  const fuseki = spawn('java', ['-jar', process.env.FUSEKI_JAR, '--port', String(port), '--update', '--file', path.join(ROOT, 'demo/client-kg/client.ttl'), '/client'],
+    { stdio: 'ignore', env: { ...process.env, FUSEKI_BASE: fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-fuseki-')) } });
+  procs.push(fuseki);
+  await waitFor(() => fetch(`http://127.0.0.1:${port}/$/ping`).then((r) => { if (!r.ok) throw new Error(); }), 'fuseki', 60000);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-mixed-'));
+  fs.cpSync(path.join(ROOT, 'demo/project'), dir, { recursive: true });
+  const recipes = path.join(dir, 'lineage/recipes');
+  // The published lineage KG the recipe reads the owners from.
+  const kgFile = path.join(recipes, '5-lineage-kg.recipe.yaml');
+  const kg = await loadRecipe(kgFile);
+  const built = await runRecipe({ ...kg, source, n20s, resolvePublished: publishedResolver(recipes) });
+  assert.ok(built.ok, JSON.stringify(built.steps.filter((x) => x.status !== 'ok')));
+  await recordRecipeRun(kgFile, built, kg, { source: { url: 'test' }, n20s });
+  const f = await loadRecipe(path.join(recipes, '8-personal-data-alert.recipe.yaml'));
+  const env = { CLIENT_KG_SPARQL: `http://127.0.0.1:${port}/client/query` };
+  const alert = async (name) => {
+    const r = await runRecipe({ ...f, params: { name }, source, n20s, remote: (g) => remoteOf(g, env), resolvePublished: publishedResolver(recipes) });
+    assert.ok(r.ok, JSON.stringify(r.steps.filter((x) => x.status !== 'ok')));
+    assert.equal(r.steps.find((x) => x.id === 'classification').statements[0].remote, env.CLIENT_KG_SPARQL, 'the trace says where the triples came from');
+    return r.steps.find((x) => x.id === 'alert').result.rows;
+  };
+  assert.deepEqual(await alert('raw.customers'), [], 'nothing tainted downstream of raw.customers yet');
+  assert.deepEqual(await alert('raw.orders'), [], 'tainted, but the catalog says it holds amounts only: not personal');
+  await source.run("MATCH (v:DatasetVersion {id: 'demo:lineage:v2:dsv:raw.customers@7'}) SET v.invalidatedAt = datetime('2026-11-06T09:30:00Z')");
+  try {
+    // Nobody tagged stg.customers as personal: OWL classifies it from "holds an email address".
+    assert.deepEqual(await alert('raw.customers'), [{ dataset: 'stg.customers', owner: 'Alice', dpo: 'Jane Doe' }]);
+    // The client's store changes without us: the next call sees it.
+    const res = await fetch(`http://127.0.0.1:${port}/client/update`, { method: 'POST', headers: { 'content-type': 'application/sparql-update' },
+      body: 'PREFIX ex: <https://client.example.org/governance#> PREFIX cat: <https://client.example.org/catalog/> INSERT DATA { cat:mart-revenue ex:holds [ a ex:EmailAddress ] }' });
+    assert.ok(res.ok);
+    assert.deepEqual(await alert('raw.orders'), [{ dataset: 'mart.revenue', owner: 'Alice', dpo: 'Omar Haddad' }]);
+  } finally {
+    await source.run("MATCH (v:DatasetVersion {id: 'demo:lineage:v2:dsv:raw.customers@7'}) REMOVE v.invalidatedAt");
   }
 });
 

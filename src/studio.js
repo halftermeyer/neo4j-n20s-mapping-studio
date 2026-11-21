@@ -466,7 +466,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     }),
 
     // Declares, changes or removes a graph of the recipe.
-    'POST /api/recipe/graph': async ({ file, key, lifecycle = 'ephemeral', name, start, versioned = false, endpoint, remove = false }) => editRecipe(file, (doc, steps) => {
+    'POST /api/recipe/graph': async ({ file, key, lifecycle = 'ephemeral', name, start, versioned = false, endpoint, sparql, user, password, remove = false }) => editRecipe(file, (doc, steps) => {
       if (!/^[A-Za-z][\w-]*$/.test(String(key ?? ''))) throw new UsageError('A graph key starts with a letter and has letters, digits, - and _ only.');
       if (remove) {
         const users = steps.filter((x) => (x.graph ?? null) === key).map((x) => x.id);
@@ -485,7 +485,9 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       }
       if (!doc.get('graphs')) doc.set('graphs', doc.createNode({}));
       const g = lifecycle === 'persistent' ? (versioned ? { name, lifecycle, versioned: true } : { name, lifecycle, start: start ?? 'reuse' })
-        : lifecycle === 'published' ? { lifecycle, endpoint } : { lifecycle };
+        : lifecycle === 'published' ? { lifecycle, endpoint }
+        // A remote store: its URL, and the names of the environment variables that hold its credentials.
+        : lifecycle === 'remote' ? { lifecycle, sparql, ...(user ? { user } : {}), ...(password ? { password } : {}) } : { lifecycle };
       const n = doc.createNode(g);
       n.flow = true;
       doc.setIn(['graphs', key], n);

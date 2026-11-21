@@ -13,6 +13,13 @@ A narrated demo, live or as a video, in two acts on one Neo4j database:
    error the checker sees, a meaning error only the oracle sees (Cypher and SPARQL
    answering the same questions), an impact API reasoning over PROV, an incident
    committed as a transaction and seen by the very next call.
+3. **The client's triple store and the graph database, one answer** — a recipe
+   reads three sources: the taint from Neo4j (scoped on each call), the owners
+   from our published lineage endpoint, the client's classification ontology
+   and catalog from their Fuseki. OWL over all three says which tainted
+   datasets hold personal data, who owns them and who is their data protection
+   officer. Then the client's catalog team changes their store, and the next
+   answer follows. Their store is read, never written by us.
 
 The story is the graph database as the system of record — transactions,
 constraints, roles, change data capture — and RDF as a view of it. The script,
@@ -27,6 +34,10 @@ with the talking points and the scenes, is [demo-script.md](demo-script.md).
 - `.env` at the root of the repository: `NEO4J_URI`, `NEO4J_USERNAME`,
   `NEO4J_PASSWORD` (an admin: the demo creates a role and a user), and
   `GEMINI_API_KEY` for recording the AI answers and for the voice-over.
+- For act 3, Apache Jena Fuseki (Apache 2.0): the standalone jar
+  `org.apache.jena:jena-fuseki-server` from Maven Central (`FUSEKI_JAR`, default
+  `~/bin/fuseki-dl/jena-fuseki-server-6.1.0.jar`); `demo.sh` serves
+  `client-kg/client.ttl` with it on port 3031. Without it, act 3 is off.
 - Java 21 and the n20s-server jar (`N20S_JAR`, default
   `../n20s-plugin/n20s-server/target/n20s-server-1.1.0-SNAPSHOT.jar`), a build
   with column-valued IRIs and query terms.
@@ -106,6 +117,8 @@ scene has an English narration (`narration`, the voice-over) and a French one
 | `demo.sh` | start, live, stop. |
 | `aura.mjs` | The database side: reset, status, tx, teardown. |
 | `data/people.cypher` | The member directory. |
+| `client-kg/client.ttl` | Act 3: the client's knowledge graph (classification ontology in OWL, data catalog), the initial content of their Fuseki (updatable; `demo.sh start` reloads it). |
+| `client-kg/client.mjs` | The client's side: `tx revenue-holds-emails` (a SPARQL update their tools would make), `count`. |
 | `project/` | The demo project: two LPG ontologies (Aura exports), FOAF and PROV-O, two mappings, their recipes. Copied to `.work/` on each start. |
 | `project/targets/foaf.ttl` | The FOAF terms of the demo, in Turtle, from the FOAF specification (published as RDF/XML only). |
 | `project/lineage/lineage-prov.mapping.yaml` | Act 2's starting point: the reviewed lineage mapping, with eight relationship types proposed again by the AI. Built by `prepare-lineage.mjs` (recorded in `recordings/lineage-propose.json`, `--replay` rebuilds it). |

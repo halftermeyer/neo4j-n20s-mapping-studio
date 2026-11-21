@@ -391,18 +391,24 @@ graphs:
   work: { lifecycle: ephemeral }                                       # built for the run, dropped at the end
   kg:   { name: lineage-prov-kg, lifecycle: persistent, versioned: true } # a new version per run, to publish
   ref:  { lifecycle: published, endpoint: lineage }                     # read-only: what /sparql/lineage serves now
+  client: { lifecycle: remote, sparql: "${CLIENT_KG_SPARQL}", user: CLIENT_KG_USER, password: CLIENT_KG_PASSWORD }  # the client's triple store
 ```
 
 - **Ephemeral**: a name unique to the run, dropped at the end, even on error (`--keep` keeps it, to look at it). The question is answered in a graph holding only what it needs: nothing else of the LPG is projected.
 - **Persistent**: outlives the run. With `start: rebuild` it is emptied when the run starts, with `start: reuse` taken as it is (to add to it, or only read it). With `versioned: true`, every run builds a new version (`lineage-prov-kg--<run>`): a `publish` step swaps the endpoint to it once it is complete and valid, then the version served before is dropped. A failed run drops its own version; the endpoint never serves a half-built or invalid graph.
 - **Published**: a reference to an endpoint, resolved at run time to the graph it serves. Read it, or `construct … from` it into another graph; a recipe cannot write it.
+- **Remote**: a SPARQL 1.1 endpoint outside, usually the client's own triple store (Fuseki, GraphDB, Neptune…). `construct … from` sends the CONSTRUCT there (with `$params` and `{{…}}` filled in, so it pulls only the slice the question needs) and adds the answer to the step's graph, next to the triples scoped from Neo4j; the reasoning that follows runs over both. Blank nodes are renamed per step. The URL may take `${VAR}` from the environment; `user` and `password` **name** environment variables, the recipe never holds credentials. Nothing is ever written to a remote store; the trace records which endpoint each triple came from.
+
+**Mixing with the client's triple store.** Reading (above) is safe by construction: the mix lives in a working graph rebuilt from both sources on every run, and the reasoning starts from scratch each time, so nothing can go stale. Writing our triples into their store is not done yet; when it is, it follows three rules: one named graph per publication, ours only, replaced as a whole (Graph Store Protocol `PUT`, or a new version then `MOVE`); never a triple-level delete outside that graph (a triple asserted by another of their sources must survive ours being retracted: the union of named graphs keeps it); and reasoning on their side at query time, or with an engine that retracts its inferences (GraphDB, RDFox), since inferences they materialize from our triples would otherwise outlive them.
+
+[`demo/project/lineage/recipes/8-personal-data-alert.recipe.yaml`](demo/project/lineage/recipes/8-personal-data-alert.recipe.yaml) does it with three sources, each for what it does best: the taint scoped from Neo4j on each call (it changes with every transaction), the owners from our published lineage endpoint (stable, precomputed, following the database), and the client's data classification ontology and catalog from their Fuseki ([`demo/client-kg/client.ttl`](demo/client-kg/client.ttl) is its initial content; it is updatable, and changes there show in the next answer). OWL runs over all three: a dataset nobody tagged is classified as personal because the client's ontology says a dataset holding an email address is one.
 
 **What is precomputed, what is computed on demand.** Every recipe has a kind, from its graphs:
 
 | Kind | Graphs | Typical use |
 |---|---|---|
 | `build` | writes a persistent graph | builds and publishes a SPARQL endpoint |
-| `precomputed` | only reads published graphs | a query on the published graph: nothing projected per call |
+| `precomputed` | only reads published graphs (or remote stores) | a query on the published graph: nothing projected per call |
 | `lazy` | only ephemeral graphs | a parametrized question: scoped and reasoned per call, only what it needs |
 | `hybrid` | ephemeral and published | what changes often is scoped per call, what is stable is pulled from the published graph |
 
@@ -548,3 +554,5 @@ await project({ plan, source, n20s: n20sClient(), graph: 'lineage' });
 ```bash
 RELATE_BIN=/path/to/relate N20S_JAR=/path/to/n20s-server-1.1.0-SNAPSHOT.jar npm test
 ```
+
+With `FUSEKI_JAR` (the standalone `org.apache.jena:jena-fuseki-server` jar) as well, the mixed-sources test starts a Fuseki serving `demo/client-kg/client.ttl` and runs the act 3 recipe against it.

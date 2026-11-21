@@ -10,7 +10,10 @@
 //               (<name>--<run>), so that a publish step can swap a published
 //               endpoint to it once it is complete and valid;
 //   published   a read-only reference to what an endpoint serves now: the
-//               precomputed part of a recipe that also scopes lazily.
+//               precomputed part of a recipe that also scopes lazily;
+//   remote      a SPARQL endpoint outside (the client's triple store), read
+//               only with construct ... from: its triples join the Cypher-scoped
+//               ones in a working graph, and are reasoned over with them.
 // Steps run in order. Each one feeds a graph (scope projected through the
 // mapping, rows through a template, static triples, construct from another
 // graph), changes it (forward inference, construct, update), asks it (SPARQL,
@@ -27,6 +30,7 @@
 // passed in.
 import { Parser as N3Parser, Writer as N3Writer } from 'n3';
 import { indexLpg } from './lpg.js';
+import { remoteOf as defaultRemote, isEnvName, shownUrl } from './remote.js';
 import { resolve, isCompiled } from './resolve.js';
 import { expand, shorten, fillTemplate, matchTemplate, parseTemplate } from './iri.js';
 import { formatFromPath } from './targets.js';
@@ -39,7 +43,7 @@ export const STEP_ROLES = {
   query: 'ask', validate: 'ask', explain: 'ask', publish: 'publish',
 };
 export const roleOf = (step) => (step?.type === 'construct' && step.from ? 'feed' : STEP_ROLES[step?.type] ?? null);
-export const LIFECYCLES = ['ephemeral', 'persistent', 'published'];
+export const LIFECYCLES = ['ephemeral', 'persistent', 'published', 'remote'];
 export const PARAM_TYPES = ['string', 'integer', 'number', 'boolean', 'list'];
 const NAME = /^[A-Za-z][\w.-]*$/;
 
@@ -68,7 +72,8 @@ export function recipeKind(recipe) {
   const used = new Set(steps.flatMap((s) => [graphOf(recipe, s), ...(s.from ? [s.from] : [])]));
   const writes = steps.some((s) => ['feed', 'change'].includes(roleOf(s)) && lifecycleOf(graphs[graphOf(recipe, s)]) === 'persistent');
   if (writes) return 'build';
-  const lcs = new Set([...used].map((k) => lifecycleOf(graphs[k])));
+  // A remote store is read like a published graph: precomputed elsewhere.
+  const lcs = new Set([...used].map((k) => (lifecycleOf(graphs[k]) === 'remote' ? 'published' : lifecycleOf(graphs[k]))));
   if (lcs.has('published') && lcs.has('ephemeral')) return 'hybrid';
   if (lcs.has('published')) return 'precomputed';
   return 'lazy';
@@ -99,6 +104,11 @@ export function checkRecipe(recipe, { mapping = null } = {}) {
     } else if (lc === 'published') {
       if (!g.endpoint || !NAME.test(g.endpoint)) err(path, 'A published graph names the endpoint it reads: endpoint: <name>.');
       if (g.name || g.start || g.versioned) err(path, 'A published graph has an endpoint only: it reads whatever the endpoint serves now.');
+    } else if (lc === 'remote') {
+      if (typeof g.sparql !== 'string' || !/^(https?:\/\/|\$\{)/.test(g.sparql)) err(path, 'A remote graph names its SPARQL endpoint: sparql: https://… (${VAR} takes it from the environment).');
+      else if (/\/\/[^/@]*:[^/@]*@/.test(g.sparql)) err(path, 'No credentials in the URL: user and password name environment variables.');
+      for (const f of ['user', 'password']) if (g[f] !== undefined && !isEnvName(g[f])) err(path, `${f} names an environment variable (for instance CLIENT_KG_${f.toUpperCase()}), not a value.`);
+      if (g.name || g.start || g.versioned || g.endpoint) err(path, 'A remote graph has sparql, user and password only.');
     } else if (g?.name || g?.start || g?.versioned || g?.endpoint) {
       err(path, 'An ephemeral graph has no name, start, versioned or endpoint: it lives for one run.');
     }
@@ -122,6 +132,7 @@ export function checkRecipe(recipe, { mapping = null } = {}) {
     if (!(key in graphs)) err(path, `Graph ${key} is not declared in graphs.`);
     const role = roleOf(s);
     if (['feed', 'change'].includes(role) && lifecycleOf(graphs[key]) === 'published') err(path, `Graph ${key} is published: read it, or construct from it into another graph.`);
+    if (lifecycleOf(graphs[key]) === 'remote') err(path, `Graph ${key} is a remote store: nothing runs on it; construct from it into a graph of the recipe.`);
     if (s.from !== undefined) {
       if (s.type !== 'construct') err(path, 'from is for construct steps: they copy from another graph.');
       else if (!(s.from in graphs)) err(path, `Graph ${s.from} is not declared in graphs.`);
@@ -184,6 +195,7 @@ export function recipeOutline(recipe) {
     graphs: Object.entries(graphs).map(([key, g]) => ({
       key, lifecycle: lifecycleOf(g), name: g?.name ?? null, start: g?.versioned ? 'rebuild' : g?.start ?? null,
       versioned: !!g?.versioned, endpoint: g?.endpoint ?? null,
+      ...(lifecycleOf(g) === 'remote' ? { sparql: g.sparql ?? null, user: g.user ?? null, password: g.password ?? null } : {}),
     })),
     steps: (recipe.steps ?? []).map((s) => ({
       id: s.id, type: s.type, role: roleOf(s), graph: graphOf(recipe, s), from: s.from ?? null, title: s.title ?? null,
@@ -382,7 +394,7 @@ async function inspectGraph(n20s, name, P) {
  * @param {string} [a.runId]
  * @param {(e: object) => void} [a.onStep]
  */
-export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, source, n20s, read = null, resolvePublished = null, keep = false, inspect = false, runId = null, onStep = () => {} }) {
+export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, source, n20s, read = null, resolvePublished = null, remote = defaultRemote, keep = false, inspect = false, runId = null, onStep = () => {} }) {
   const found = checkRecipe(recipe, { mapping });
   if (found.length) throw new Error(`The recipe has errors: ${found.map((f) => `${f.path}: ${f.message}`).join('; ')}`);
   const values = {};
@@ -398,6 +410,12 @@ export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, so
   for (const [key, g] of Object.entries(declared)) {
     const lc = lifecycleOf(g);
     let name;
+    if (lc === 'remote') {
+      // Outside n20s: read with construct ... from, never written, never counted.
+      const client = remote(g);
+      graphs[key] = { name: null, lifecycle: lc, remote: client, url: client.url, existed: true, triplesBefore: 0, written: false };
+      continue;
+    }
     if (lc === 'persistent') name = g.versioned ? `${g.name}--${id}` : g.name;
     else if (lc === 'published') {
       name = resolvePublished ? await resolvePublished(g.endpoint) : null;
@@ -593,10 +611,17 @@ async function runStep(step, c) {
 
     case 'construct': {
       const sparql = sparqlOf(step.sparql);
-      // from: the CONSTRUCT reads another graph (a precomputed one) and feeds this one.
-      const from = step.from ? c.graphs[step.from].name : graph;
-      statements.push({ kind: 'sparql', text: sparql, construct: true, ...(step.from ? { from } : {}) });
-      const triples = await n20s.construct(from, sparql);
+      // from: the CONSTRUCT reads another graph (a precomputed one, or a remote store) and feeds this one.
+      const src = step.from ? c.graphs[step.from] : null;
+      let triples;
+      if (src?.lifecycle === 'remote') {
+        statements.push({ kind: 'sparql', text: sparql, construct: true, remote: src.url });
+        triples = await src.remote.construct(sparql, { bnodePrefix: `${step.id}_` });
+      } else {
+        const from = src ? src.name : graph;
+        statements.push({ kind: 'sparql', text: sparql, construct: true, ...(step.from ? { from } : {}) });
+        triples = await n20s.construct(from, sparql);
+      }
       let added = 0;
       if (step.into !== false && triples.length) {
         const res = await n20s.addTriples(graph, triples.map((t) => ({ s: t.subject, p: t.predicate, o: t.object })), 'append');

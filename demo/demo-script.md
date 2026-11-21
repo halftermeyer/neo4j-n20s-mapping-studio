@@ -644,10 +644,142 @@ narration_fr: >
   Et le voilà : reconstruit, vérifié, basculé.
 ```
 
+## Act 3 — your triple store and the graph database, one answer
+
+Talking points: clients already have a triple store, with their ontologies and
+catalogs, maintained by their own teams. We do not replace it and we never write
+to it: a recipe reads it with plain SPARQL. One answer, three sources, each used
+for what it does best: Neo4j for what just changed (scoped by Cypher on each
+call), our published lineage endpoint for what is stable (precomputed, following
+the database), the client's store for their knowledge. The reasoner works on all
+three. A static file would be a copy; their endpoint is their live store.
+
+```scene
+id: s35-act3
+hook: act3_card
+actions:
+  - wait_for: "testid:act-card"
+shot: "testid:act-card"
+narration: >
+  Act three. The client already has a triple store, with its own ontology and
+  data catalog. We keep it too.
+narration_fr: >
+  Troisième acte. Le client a déjà un triple store, avec sa propre ontologie et
+  son catalogue de données. On le garde aussi.
+```
+
+```scene
+id: s36-mixed-recipe
+before:
+  - dismiss: "testid:act-card"
+actions:
+  - click: "testid:recipe-personal-data-alert"
+  - wait_for: "testid:recipe-run"
+shot: "css:#recipes-view .fmain"
+narration: >
+  This recipe reads three sources, each for what it does best. What the incident
+  tainted comes from Neo4j, scoped by Cypher on each call. Who owns those datasets
+  comes from our published lineage endpoint, precomputed. What each dataset holds,
+  and who protects personal data, comes from the client's own triple store,
+  through standard SPARQL. We only read it.
+narration_fr: >
+  Cette recette lit trois sources, chacune pour ce qu'elle fait de mieux. Ce que
+  l'incident a contaminé vient de Neo4j, délimité par Cypher à chaque appel. Qui
+  est responsable de ces jeux de données vient de notre endpoint de lignage
+  publié, précalculé. Ce que contient chaque jeu, et qui protège les données
+  personnelles, vient du triple store du client, en SPARQL standard. On ne fait
+  que le lire.
+```
+
+```scene
+id: s37-alert
+actions:
+  - click: "testid:api-personal-data-alert"
+  - fill: { target: "testid:api-param-name", value: "raw.customers" }
+  - click: "testid:api-call"
+  - fast_begin: true
+  - wait_for: "testid:api-result-3"
+  - fast_end: true
+shot: "testid:api-result-3"
+narration: >
+  After the incident, the compliance question: is personal data at risk, and who
+  must be told? Staging customers: Alice owns it, according to our lineage
+  endpoint, and Jane Doe is its data protection officer, according to the
+  client's catalog. Nobody tagged it as personal. The client's ontology says that a
+  dataset holding an email address is a personal dataset, and the OWL reasoner
+  works it out, over all three sources.
+narration_fr: >
+  Après l'incident, la question de conformité : des données personnelles sont-elles
+  exposées, et qui prévenir ? « Staging customers » : Alice en est responsable,
+  d'après notre endpoint de lignage, et Jane Doe est sa déléguée à la protection des
+  données, d'après le catalogue du client. Personne ne l'a marqué comme personnel.
+  L'ontologie du client dit qu'un jeu contenant une adresse e-mail est un jeu de
+  données personnelles, et le raisonneur OWL le déduit, sur les trois sources.
+```
+
+```scene
+id: s38-not-personal
+actions:
+  - fill: { target: "testid:api-param-name", value: "raw.orders" }
+  - click: "testid:api-call"
+  - fast_begin: true
+  - wait_for: "testid:api-result-4"
+  - fast_end: true
+shot: "testid:api-result-4"
+narration: >
+  The orders pipeline is tainted too: the revenue mart. But the client's catalog
+  says it holds amounts only. Not personal data: no alert.
+narration_fr: >
+  La chaîne des commandes est contaminée elle aussi : le mart de revenus. Mais le
+  catalogue du client dit qu'il ne contient que des montants. Pas de données
+  personnelles : pas d'alerte.
+```
+
+Talking points: the client's store is live and theirs. When their catalog team
+changes it, with their own tools, the next answer follows, without touching
+Neo4j or the project. A file copied into the project would not have seen it.
+
+```scene
+id: s39-client-tx
+hook: tx_client_revenue_emails
+actions:
+  - wait_for: "testid:tx-card-committed"
+shot: "testid:tx-card-committed"
+narration: >
+  Now a change on the client's side, in their own triple store: their catalog
+  team finds email addresses in the revenue mart. Nothing changes in Neo4j, and
+  nothing in the project.
+narration_fr: >
+  Maintenant un changement côté client, dans son propre triple store : son équipe
+  catalogue trouve des adresses e-mail dans le mart de revenus. Rien ne change dans
+  Neo4j, ni dans le projet.
+```
+
+```scene
+id: s40-alert-again
+before:
+  - dismiss: "testid:tx-card-close"
+actions:
+  - click: "testid:api-call"
+  - fast_begin: true
+  - wait_for: "testid:api-result-5"
+  - fast_end: true
+shot: "testid:api-result-5"
+narration: >
+  Same question, asked again: the revenue mart is now personal data, owned by
+  Alice, and Omar Haddad, the finance domain's data protection officer, must be
+  told. The answer follows each source as it is now.
+narration_fr: >
+  Même question, posée à nouveau : le mart de revenus contient désormais des
+  données personnelles, Alice en est responsable, et Omar Haddad, délégué à la
+  protection des données du domaine finance, doit être prévenu. La réponse suit
+  chaque source telle qu'elle est maintenant.
+```
+
 ## Closing
 
 ```scene
-id: s35-closing
+id: s41-closing
 hook: closing_card
 actions:
   - wait_for: "testid:act-card"
@@ -656,11 +788,13 @@ pad_s: 2.5
 narration: >
   So. Neo4j stays the system of record: transactions, constraints, roles, change
   data capture. RDF is a view of it, in standard vocabularies, with reasoning when
-  you need it, always consistent with what was committed. The best of both
-  worlds, and no second copy to keep in sync.
+  you need it, always consistent with what was committed, and it works with the
+  triple store you already have. The best of both worlds, and no second copy to
+  keep in sync.
 narration_fr: >
   En résumé. Neo4j reste la source de vérité : transactions, contraintes, rôles,
   capture des changements. Le RDF en est une vue, dans des vocabulaires standard,
   avec du raisonnement quand il le faut, toujours cohérent avec ce qui a été
-  validé. Le meilleur des deux mondes, sans seconde copie à synchroniser.
+  validé, et compatible avec le triple store que vous avez déjà. Le meilleur des
+  deux mondes, sans seconde copie à synchroniser.
 ```
