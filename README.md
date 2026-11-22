@@ -7,6 +7,9 @@ A mapping format between a Neo4j **Ontology Graph Spec** document (the LPG ontol
 - a **projector** that runs the plan on a Cypher source (Relate or Neo4j, over Bolt) and builds the RDF graph in n20s-server, with no Neo4j plugin;
 - an **oracle** that asks the same questions in Cypher on the LPG and in SPARQL on the projection, and compares the rows.
 
+![The studio: a lineage mapping to PROV-O under review](docs/screenshots/review.png)
+*The studio on the data-lineage example: the LPG ontology as Aura exports it, the AI proposals waiting for review, and a check finding (prov:hadMember needs a prov:Collection).*
+
 The `canonical-bridge` strategy (bridge rules over the canonical LPG snapshot) is checked but not compiled yet.
 
 Design rules:
@@ -255,12 +258,18 @@ checks:
 
 Every oracle run in the studio (or `n20s-mapping oracle … --evidence`) is kept next to the mapping (`<mapping>.oracle.json`: per check its status, fingerprint, whether its Cypher answered, the IRIs its SPARQL uses and what its Cypher reads; per decision its fingerprint and the terms it emits; the sha256 of the oracle file). The review uses it to decide what is safe (see Studio); `n20s-mapping coverage <mapping>` and the **Coverage** button of the Mapping tab show it per decision: the checks that cover it and why the others do not count, the decisions none covers, those in doubt.
 
+![The oracle panel](docs/screenshots/oracle.png)
+*The oracle with DEPENDS_ON mapped to prov:wasDerivedFrom: the checker is satisfied, four questions get a different answer in SPARQL than in Cypher.*
+
 **Competency questions as checks.** A question of the spec drafted as a recipe (Design tab) comes with a direct Cypher answer. **Validate the Cypher** lets the person edit that Cypher, choose two or three parameter cases (**Suggest values** finds values where it answers, and answers differently), and try each case next to the recipe's answer. Then:
 
 - they agree: **Validate** saves an oracle check (`cq-<question>`: the validated Cypher, the recipe's SPARQL with its placeholders, its decode, the cases) into the mapping's oracle file (created next to the mapping, and set in the project, when there is none);
 - they disagree: **Redraft the SPARQL** (the model drafts the recipe again, the validated Cypher kept) when the SPARQL is wrong, or **Keep the check failing** when the mapping is: the check fails and puts the decisions it asks about in doubt.
 
 A validated check records `validated: {by, at, fingerprint, lpg, relies}`: who validated it, a fingerprint of what it asks (edited by hand afterwards, it is to validate again), the LPG ontology's hash (changed, the same), and the decisions its SPARQL relied on then, with their status (what *drafted from this decision* is read from). A question whose query reasons (profile, rules) stays a recipe: a check asks the projection as it is.
+
+![The coverage view](docs/screenshots/coverage.png)
+*The coverage view: the checks that cover each decision (here WAS_INVALIDATED_BY, by a validated competency question), and the decisions no question reaches yet.*
 
 Lineage example, on Relate 1.1.0 and n20s-server, 64 nodes, 445 triples:
 
@@ -281,6 +290,9 @@ Lineage example, on Relate 1.1.0 and n20s-server, 64 nodes, 445 triples:
 With `DEPENDS_ON` mapped to `prov:wasDerivedFrom`, `check` reports no error, and the oracle fails three checks (q33, q34 asserted, q34 disjoint) on `ref.dq_rules@2`, an input the run read but no source asserted. Mapped to `prov:wasInfluencedBy` (a model did it in the propose evaluation) or to a qualified `prov:Influence` alone, it passes those and fails the influence check. `test/e2e.test.js` runs these cases.
 
 ## Project
+
+![The Project tab](docs/screenshots/project.png)
+*The Project tab: LPG sources on the left, target vocabularies on the right, the mappings between them in the middle.*
 
 The head of the pipeline: a project names where the LPG ontologies and the RDF targets come from, and the mappings between them.
 
@@ -303,6 +315,9 @@ mappings:
 - `n20s-mapping studio <project>` opens it: the **Project** tab shows sources, mappings and targets side by side, introspects, fetches, adds sources and targets, creates a mapping (source, targets, base IRI: an empty mapping with its header) and switches the mapping the other tabs work on.
 
 ## Design: the specification, written in conversation
+
+![The Design tab](docs/screenshots/design.png)
+*The Design tab: the AI turns what the person says into specification items (purpose, scope, an exclusion, the target); nothing counts until it is accepted.*
 
 Before proposing a mapping, an AI and a person write its specification together (the **Design** tab). The AI asks what the mapping is for, who will consume the RDF, what must never be asserted, and proposes spec items; the person accepts, rejects (with a reason the AI then sees) or edits each one. Only accepted items count. The spec, `<mapping>.spec.yaml`:
 
@@ -419,6 +434,9 @@ graphs:
 
 **Mixing with the client's triple store.** Reading (above) is safe by construction: the mix lives in a working graph rebuilt from both sources on every run, and the reasoning starts from scratch each time, so nothing can go stale. Writing our triples into their store is not done yet; when it is, it follows three rules: one named graph per publication, ours only, replaced as a whole (Graph Store Protocol `PUT`, or a new version then `MOVE`); never a triple-level delete outside that graph (a triple asserted by another of their sources must survive ours being retracted: the union of named graphs keeps it); and reasoning on their side at query time, or with an engine that retracts its inferences (GraphDB, RDFox), since inferences they materialize from our triples would otherwise outlive them.
 
+![A recipe mixing three sources](docs/screenshots/mixed-sources.png)
+*Recipe 8: the taint scoped from Neo4j, owners from the published lineage endpoint, the classification and catalog from the client's Fuseki, OWL over all three, served as /query/personal-data-alert.*
+
 [`demo/project/lineage/recipes/8-personal-data-alert.recipe.yaml`](demo/project/lineage/recipes/8-personal-data-alert.recipe.yaml) does it with three sources, each for what it does best: the taint scoped from Neo4j on each call (it changes with every transaction), the owners from our published lineage endpoint (stable, precomputed, following the database), and the client's data classification ontology and catalog from their Fuseki ([`demo/client-kg/client.ttl`](demo/client-kg/client.ttl) is its initial content; it is updatable, and changes there show in the next answer). OWL runs over all three: a dataset nobody tagged is classified as personal because the client's ontology says a dataset holding an email address is one.
 
 **What is precomputed, what is computed on demand.** Every recipe has a kind, from its graphs:
@@ -527,6 +545,12 @@ A `write` step puts what reasoning found back into Neo4j, where applications rea
 A row whose node the writer does not find is asked to the read source: if the source sees it, the writer lacks visibility on it (an error, nothing written: grant it `TRAVERSE` and `READ {key}`); if neither sees it, the node is gone (a warning, no write).
 
 **Property values.** For `property:`, the query that the step reads is asked with typed terms (its rows look the same). A value whose datatype does not fit the type the LPG ontology declares is refused; the others are converted by the database to that type (`datetime()`, `date()`, `toInteger()`…) and compared with the stored values as such: an `xsd:dateTime` written to a `ZONED DATETIME` property is a `ZONED DATETIME`, and an unchanged one is not written again. `datatype:` on the step is checked against the declared type (`write.datatype`), as is a type with no conversion (`POINT`, lists).
+
+![A recipe that writes back](docs/screenshots/recipe-write-back.png)
+*Recipe 9: scope, SHACL gate, a Jena rule, then two write steps (+1 −0 written) and the publication of /sparql/taint.*
+
+![A followed endpoint that writes back](docs/screenshots/follow-write-back.png)
+*/sparql/taint following the database: the rebuild after an invalidation and what it wrote back as n20s_writer, its own writes seen and skipped, a manual Re-publish that writes nothing, and what Neo4j holds now.*
 
 **Two connections.** Recipes read their source read-only: read transactions (Neo4j refuses a write in them), and every `scope` and `rows` Cypher is explained first (`EXPLAIN`) and refused unless its query type is `r` (Relate, which does not enforce read transactions, returns the query type too). Write-back has its own user: `N20S_WRITE` (else the source URL), `N20S_WRITE_USER`, `N20S_WRITE_PASSWORD`, in the environment or `.env`, never the read credentials. Give it fine-grained privileges only, for example for recipe 9 (`demo/aura.mjs reset` creates them, `teardown` removes them):
 
