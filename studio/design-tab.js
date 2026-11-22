@@ -15,6 +15,7 @@ let editing = null;     // { pid } or { id } while an item is edited
 let draft = '';
 let scopeFilter = 'all';
 let proposedCount = null;  // calls of the last "Propose the mapping from this spec", for the demo recorder
+let cq = null;             // the question being validated as an oracle check: POST /api/design/cq, plus edits and tries
 
 export async function showDesign(container) {
   root = container;
@@ -41,7 +42,7 @@ function render() {
   fill(root,
     h('aside', { class: 'dspec', 'data-testid': 'design-spec' }, specView()),
     h('section', { class: 'dchat' }, chatView()),
-    h('aside', { class: 'fpanel' }, scopeView()));
+    h('aside', { class: 'fpanel' }, cq ? cqView() : scopeView()));
 }
 
 // The spec: accepted items by kind, rejected ones folded away -------------------------------------
@@ -60,7 +61,9 @@ function specView() {
         list.map((i) => editing?.id === i.id ? itemForm(i, (item) => decide({ id: i.id, action: 'edit', item }, 'Saved')) : h('div', { class: 'ditem' },
           h('div', {}, describe(i)),
           i.kind === 'question' ? h('div', { style: 'margin-top:4px' }, i.recipe
-            ? h('a', { href: '/recipes', class: 'mono' }, `recipe ${i.recipe}`)
+            ? [h('a', { href: '/recipes', class: 'mono' }, `recipe ${i.recipe}`), ' ',
+              i.check ? h('span', { class: 'chip accepted', title: 'A validated oracle check' }, `check ${i.check}`) : null, ' ',
+              h('button', { class: 'mini primary', 'data-testid': `cq-open-${tid(i.id)}`, disabled: busy, title: 'Validate the direct Cypher answer on parameter cases: the question becomes an oracle check', onclick: () => openCq(i.id) }, i.check ? 'Check…' : 'Validate the Cypher')]
             : h('button', { class: 'mini primary', disabled: busy || !data.can.model, title: 'The model writes a recipe (Cypher scope, SPARQL query) that answers it; it is checked, saved as a draft, added to the bench, and tried', onclick: () => draftRecipe(i) }, 'Draft a recipe')) : null,
           h('div', { class: 'dmeta' }, i.by?.kind === 'ai' ? `proposed by ${i.by.model ?? 'AI'}, accepted by ${i.reviewedBy}` : `by ${i.by?.name ?? i.reviewedBy}`,
             h('span', {}, h('button', { class: 'mini', onclick: () => { editing = { id: i.id }; render(); } }, 'edit'),
@@ -220,5 +223,73 @@ function scopeView() {
       h('td', { class: 'act', style: 'white-space:nowrap' },
         e.scope !== 'in' ? h('button', { class: 'mini', title: 'In scope', onclick: () => set(e, 'include') }, 'in') : null,
         e.scope !== 'out' ? h('button', { class: 'mini bad', title: 'Out of scope', onclick: () => set(e, 'exclude') }, 'out') : null)))),
+  ];
+}
+
+// Validating a drafted question as an oracle check --------------------------------------------------
+async function openCq(id) {
+  try {
+    const q = await api('/api/design/cq', { id });
+    cq = { ...q, cases: q.cases ?? [{ params: { ...q.params } }], tried: null };
+  } catch (err) { toast(err.message, true); }
+  render();
+}
+
+async function cqCall(path, extra = {}) {
+  busy = true;
+  render();
+  try { return await api(path, { id: cq.id, cypher: cq.cypher, cases: cq.cases, ...extra }); } catch (err) { toast(err.message, true); return null; } finally { busy = false; }
+}
+
+function cqView() {
+  const names = [...new Set([...Object.keys(cq.params ?? {}), ...cq.cases.flatMap((c) => Object.keys(c.params ?? {}))])];
+  const tried = cq.tried;
+  const disagree = tried?.some((c) => c.compare?.agree === false || c.error);
+  const answers = tried?.some((c) => c.cypherRows > 0);
+  const save = (action, comment) => async () => {
+    const id = cq.id;
+    const r = await cqCall('/api/design/cq/validate', { action, comment });
+    if (r) {
+      data = r;
+      if (r.saved) toast(`${r.saved.kept ? 'Kept failing' : 'Validated'}: check ${r.saved.id} in ${r.saved.oracleFile}${r.saved.created ? ' (created)' : ''}. Run the oracle to see what it covers.`);
+      else toast('Drafted again: try it on the same cases.');
+      cq = null;
+      if (action === 'redraft') await openCq(id);
+    }
+    render();
+  };
+  return [
+    h('div', { class: 'row', style: 'justify-content:space-between' }, h('h2', {}, 'Validate the Cypher'), h('button', { class: 'mini', onclick: () => { cq = null; render(); } }, '×')),
+    h('div', { class: 'desc' }, cq.question),
+    h('div', { class: 'hint' }, 'You validate the direct Cypher answer: it is the truth on the LPG. The recipe\'s SPARQL is what the check tests. Validate on two or three values where the answer is not empty and changes.'),
+    cq.check ? h('div', { class: cq.check.current === false ? 'warnline' : 'okline' }, `Check ${cq.check.id}${cq.check.validated ? `, validated by ${cq.check.validated.by} ${cq.check.validated.at.slice(0, 10)}` : ''}${cq.check.current === false ? ': changed since, to validate again' : ''}`) : null,
+    h('h3', {}, 'Direct Cypher (validated by you)'),
+    h('textarea', { class: 'mono', rows: 6, 'data-testid': 'cq-cypher', oninput: (e) => { cq.cypher = e.target.value; cq.tried = null; } }, cq.cypher),
+    h('h3', {}, 'Cases'),
+    h('table', { class: 'props', 'data-testid': 'cq-cases' },
+      h('tr', {}, names.map((n) => h('th', {}, `$${n}`)), h('th', {}, 'Cypher'), h('th', {}, 'recipe'), h('th', {}, ''), h('th', {}, '')),
+      cq.cases.map((c, i) => {
+        const t = tried?.[i];
+        return h('tr', {},
+          names.map((n) => h('td', {}, h('input', { value: c.params?.[n] ?? '', style: 'width:100%', oninput: (e) => { c.params = { ...c.params, [n]: e.target.value }; cq.tried = null; } }))),
+          h('td', {}, t ? (t.error && t.cypherRows === undefined ? '—' : `${t.cypherRows} rows`) : ''),
+          h('td', {}, t ? (t.recipeRows ?? '—') : ''),
+          h('td', { class: t ? (t.error || t.compare?.agree === false ? 'fail' : t.cypherRows ? 'pass' : 'ne') : '' },
+            t ? (t.error ?? (t.compare?.agree === false ? 'disagree' : t.cypherRows ? 'agree' : 'empty: proves nothing')) : ''),
+          h('td', {}, h('button', { class: 'mini bad', disabled: cq.cases.length < 2, onclick: () => { cq.cases.splice(i, 1); cq.tried = null; render(); } }, '×')));
+      })),
+    h('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
+      h('button', { class: 'mini', onclick: () => { cq.cases.push({ params: { ...cq.params } }); cq.tried = null; render(); } }, '+ case'),
+      h('button', { class: 'mini', 'data-testid': 'cq-suggest', disabled: busy, title: 'Values where the Cypher answers, and answers differently', onclick: async () => { const r = await cqCall('/api/design/cq/suggest'); if (r) { cq.cases = r.cases.map((c) => ({ params: c.params })); cq.tried = null; if (!r.cases.length) toast('No value found where the Cypher answers something.', true); } render(); } }, 'Suggest values'),
+      h('button', { class: 'primary', 'data-testid': 'cq-try', disabled: busy || !cq.can.try, title: cq.can.try ? '' : 'Needs a source and n20s-server', onclick: async () => { const r = await cqCall('/api/design/cq/try'); if (r) cq.tried = r.cases; render(); } }, 'Try')),
+    tried?.some((t) => t.compare && t.compare.agree === false) ? tried.filter((t) => t.compare?.agree === false).map((t) => h('div', { class: 'warnline' },
+      `${JSON.stringify(t.params)}: only in the recipe ${t.compare.onlyRecipe.join(' ') || 'nothing'}; only in the Cypher ${t.compare.onlyCypher.join(' ') || 'nothing'}`)) : null,
+    h('details', {}, h('summary', { style: 'cursor:pointer;color:#666' }, 'SPARQL of the recipe (under test)'), h('pre', { class: 'stmt' }, cq.sparql)),
+    h('div', { class: 'row', style: 'gap:6px;margin-top:10px;flex-wrap:wrap' },
+      !tried ? h('span', { class: 'hint' }, 'Try it on the cases first.')
+        : !answers ? h('span', { class: 'warnline' }, 'The Cypher answers nothing in every case: two empty answers prove nothing. Choose other values.')
+          : !disagree ? h('button', { class: 'primary', 'data-testid': 'cq-validate', disabled: busy, onclick: save('validate') }, 'Validate: save as an oracle check')
+            : [h('button', { 'data-testid': 'cq-redraft', disabled: busy, title: 'The SPARQL is wrong: the model drafts it again, your Cypher is kept', onclick: () => { const why = prompt('What is wrong with the SPARQL? (optional)') ?? null; save('redraft', why)(); } }, 'Redraft the SPARQL'),
+              h('button', { class: 'bad', 'data-testid': 'cq-keep-failing', disabled: busy, title: 'The mapping is wrong: the check is saved and fails, and blames the decisions it asks about', onclick: () => confirm('Save the check as it is? It will fail and put the decisions its SPARQL asks about in doubt.') && save('keep-failing')() }, 'Keep the check failing (the mapping is wrong)')]),
   ];
 }

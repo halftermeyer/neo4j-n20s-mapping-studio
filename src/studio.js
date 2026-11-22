@@ -8,12 +8,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { check } from './check.js';
 import { loadFiles, variantsPathFor, loadRecipe, recordRecipeRun, graphsReport, publishedResolver, republish, unpublishEndpoint, specPathFor, chatPathFor, readSpec, writeSpec, readChat, appendChat, UsageError } from './node.js';
-import { designTurn, decideItem, scopeOf, elementNames, specFindings, specCheckRequest, recipeDraftRequest, recipeFromDraft, draftProblems, compareAnswers } from './design.js';
+import { designTurn, decideItem, scopeOf, elementNames, specFindings, specCheckRequest, recipeDraftRequest, recipeFromDraft, draftProblems, compareAnswers, suggestCases } from './design.js';
+import { createHash } from 'node:crypto';
+import { contentHash } from './lpg.js';
 import { decisionsText } from './propose.js';
 import { CATALOG } from './catalog.js';
 import { readTargetsSummary } from './workspace.js';
 import { endpoints } from './endpoints.js';
-import { readProject, projectStatus, introspectSource, fetchTarget, newMapping, addToProject, addTargetToMapping } from './workspace.js';
+import { readProject, projectStatus, introspectSource, fetchTarget, newMapping, addToProject, addTargetToMapping, setMappingOracle } from './workspace.js';
 import { BENCH_FORMAT, checkBench } from './bench.js';
 import { checkRecipe, recipeOutline, recipeKind, runRecipe, writesBack, RECIPE_FORMAT, STEP_TYPES, LIFECYCLES } from './recipe.js';
 import YAML from 'yaml';
@@ -21,11 +23,11 @@ import { reviewItems, applyDecision, acceptSafe } from './review.js';
 import { proposePasses, EXTRA_TERMS, acceptAll } from './propose.js';
 import { compile } from './compile.js';
 import { project } from './project.js';
-import { runOracle, oracleEvidence } from './oracle.js';
+import { runOracle, oracleEvidence, checkFromDraft, checkFingerprint, reliesOf, coverage } from './oracle.js';
 import { shorten } from './iri.js';
 import { qualifiedSubject } from './prepare.js';
 import { openSource as openBolt } from './source.js';
-import { sourceValues, readRegistry, writerFromEnv, writePatchFiles, freshnessOf } from './node.js';
+import { sourceValues, readRegistry, writerFromEnv, writePatchFiles, freshnessOf, saveCheck, oraclePathFor, evidencePathFor } from './node.js';
 import { resolveWrite } from './writeback.js';
 import { n20sClient } from './n20s.js';
 import { makeProvider, listModels } from './providers.js';
@@ -200,8 +202,15 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
   let active = null;
   const oracleOption = oracleFile;
   const designTargets = (l) => designTargetsOf(l, projectFile);
+  /** The oracle file of the open mapping, parsed, with its sha256 (null when there is none). */
+  async function readOracleFile() {
+    if (!oracleFile) return { oracle: null, sha256: null };
+    let text;
+    try { text = await fs.readFile(oracleFile, 'utf8'); } catch { return { oracle: null, sha256: null }; }
+    return { oracle: YAML.parse(text), sha256: createHash('sha256').update(text).digest('hex') };
+  }
   /** What the last oracle run said about each relationship decision, next to the mapping: the review gates "safe" on it. */
-  const oracleEvidencePath = () => mappingFile.replace(/(\.mapping)?\.(ya?ml|json)$/i, '') + '.oracle.json';
+  const oracleEvidencePath = () => evidencePathFor(mappingFile);
   const specCheckPath = () => specFile.replace(/\.spec\.ya?ml$/i, '') + '.spec-check.json';
   /** The last check of the mapping against the spec, as review reasons. */
   async function aiSpecFindings() {
@@ -256,8 +265,9 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     try { variants = JSON.parse(await fs.readFile(variantsFile, 'utf8')); } catch { /* no passes recorded */ }
     let oracle = null;
     try { oracle = JSON.parse(await fs.readFile(oracleEvidencePath(), 'utf8')); } catch { /* the oracle has not run */ }
+    const { oracle: oracleDoc } = await readOracleFile();
     const spec = await readSpec(specFile, l.mapping.id);
-    const items = reviewItems({ mapping: l.mapping, lpgDoc: l.lpgDoc, result, variants, oracle, specFindings: [...specFindings(spec, l.mapping, l.lpgDoc), ...await aiSpecFindings(l)] });
+    const items = reviewItems({ mapping: l.mapping, lpgDoc: l.lpgDoc, result, variants, oracle, oracleFile: oracleDoc, lpgHash: await contentHash(l.lpgDoc), specFindings: [...specFindings(spec, l.mapping, l.lpgDoc), ...await aiSpecFindings(l)] });
     return { l, result, variants, items, spec };
   }
 
@@ -289,6 +299,49 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       catalog: catalogOf(s.l.targets, s.l.mapping.prefixes ?? {}),
       can: { oracle: !!(oracleFile && openSource && n20s), propose: !!provider, recipes: !!(openSource && n20s) },
     };
+  }
+
+  /** A drafted competency question: its spec item, recipe, query step, direct Cypher and parameter defaults. */
+  async function cqOf(id) {
+    const spec = await readSpec(specFile, (await loadFiles(mappingFile, { lpg })).mapping.id);
+    const item = (spec.items ?? []).find((i) => i.id === id && i.kind === 'question');
+    if (!item?.recipe) throw new UsageError(`Question ${id} has no drafted recipe: draft it first.`);
+    const file = recipePath(item.recipe);
+    const text = await fs.readFile(file, 'utf8');
+    const recipe = YAML.parse(text);
+    const query = [...(recipe.steps ?? [])].reverse().find((x) => x.type === 'query');
+    if (!query) throw new UsageError(`${item.recipe} has no query step.`);
+    // The direct Cypher: validated, else as drafted (in the spec, or in the header of older drafts).
+    const cypher = item.validatedCypher?.cypher ?? item.answerCypher ?? /^# Direct Cypher answer: (.*)$/m.exec(text)?.[1] ?? '';
+    const defaults = Object.fromEntries(Object.entries(recipe.params ?? {}).map(([k, d]) => [k, d?.default ?? null]));
+    return { item, file, recipe, query, cypher, defaults };
+  }
+  /** Each case: the direct Cypher (read only) next to the recipe's answer with the same parameters. */
+  async function tryCases(q, cypher, cases) {
+    if (!openSource || !n20s) throw new UsageError('Trying a question needs a source and n20s-server.');
+    if (!String(cypher ?? '').trim()) throw new UsageError('No Cypher to try.');
+    const source = openSource();
+    try {
+      const f = await loadRecipe(q.file);
+      const out = [];
+      for (const c of cases ?? [{ params: {} }]) {
+        const params = { ...q.defaults, ...(c.params ?? {}) };
+        let cypherRows;
+        try {
+          if (typeof source.queryType === 'function' && await source.queryType(cypher, params) !== 'r') throw new Error('this Cypher writes: a direct answer only reads');
+          cypherRows = await source.run(cypher, params);
+        } catch (err) { out.push({ params: c.params ?? {}, error: `Cypher: ${err.message.split('\n')[0]}` }); continue; }
+        const run = await runRecipe({ ...f, params: Object.fromEntries(Object.entries(c.params ?? {}).filter(([k]) => k in (f.recipe.params ?? {}))), source, n20s, resolvePublished: publishedResolver(recipeDir) });
+        const rows = run.steps.find((x) => x.id === q.query.id)?.result?.rows ?? [];
+        out.push({
+          params: c.params ?? {}, cypherRows: cypherRows.length, sample: cypherRows.slice(0, 8), recipeRows: run.ok ? rows.length : null,
+          ...(run.ok ? { compare: compareAnswers(rows, cypherRows) } : { error: `recipe: ${run.steps.find((x) => x.status === 'error')?.error}` }),
+        });
+      }
+      return out;
+    } finally {
+      await source.close();
+    }
   }
 
   const routes = {
@@ -762,13 +815,16 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     // Asks the model where the mapping departs from the principles, purpose and notes of the spec; kept next to the spec.
     // A competency question of the spec drafted as a recipe: checked, repaired once, written as a draft,
     // added to the bench, and run once when a source and n20s-server are there.
-    'POST /api/design/draft': async ({ id }) => {
+    'POST /api/design/draft': async ({ id, redraft = null }) => {
       if (!provider) throw new UsageError('Drafting needs a model: choose one in the Connections tab.');
       const s = await state();
       const item = (s.spec.items ?? []).find((i) => i.id === id && i.kind === 'question' && i.status === 'accepted');
       if (!item) throw new UsageError(`No accepted question ${id} in the spec.`);
       const model = provider();
-      const request = recipeDraftRequest({ question: item.text, lpgDoc: s.l.lpgDoc, mapping: s.l.mapping, decisions: decisionsText(s.l.mapping, s.l.lpgDoc) });
+      const asked = recipeDraftRequest({ question: item.text, lpgDoc: s.l.lpgDoc, mapping: s.l.mapping, decisions: decisionsText(s.l.mapping, s.l.lpgDoc) });
+      // Drafted again after a person validated the direct Cypher and said the SPARQL is what is wrong.
+      const request = redraft ? { ...asked, user: `${asked.user}\n\n# The direct Cypher answer, validated by a person: keep it as answerCypher\n${redraft.cypher}\n\n# Your previous SPARQL disagreed with it\n${redraft.comment ?? 'The person says the SPARQL is wrong, not the mapping.'}\nWrite the SPARQL again.` } : asked;
+      const keep = (answer) => (redraft && answer ? { ...answer, answerCypher: redraft.cypher } : answer);
       const mappingPath = path.relative(recipeDir, mappingFile);
       await fs.mkdir(recipeDir, { recursive: true });
       const canTry = !!(openSource && n20s);
@@ -801,6 +857,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       };
 
       let res = await model.complete(request);
+      res = { ...res, json: keep(res.json) };
       let a = await assess(res.json);
       const disagrees = (x) => x.tried?.compare && x.tried.compare.agree === false;
       if (a.findings.length || disagrees(a)) {
@@ -808,11 +865,14 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
           : a.tried.compare.error ? `- ${a.tried.compare.error}`
             : `- The recipe and your direct Cypher answer disagree on ${a.tried.compare.columns.join(', ')}: the recipe gives ${a.tried.compare.recipeRows} rows, the Cypher ${a.tried.compare.cypherRows}. Only in the recipe: ${a.tried.compare.onlyRecipe.join(' ') || 'none'}. Only in the Cypher: ${a.tried.compare.onlyCypher.join(' ') || 'none'}. Find which one misreads the question (direction of relationships, what the scope projects, the SPARQL pattern) and fix it.`;
         res = await model.complete({ ...request, user: `${request.user}\n\n# Your draft\n${JSON.stringify(res.json)}\n\n# What went wrong\n${why}\nDraft it again.` });
+        res = { ...res, json: keep(res.json) };
         a = await assess(res.json);
       }
       const { recipe, findings, tried } = a;
       let file = `${recipe.id}.recipe.yaml`;
-      for (let n = 2; await fs.access(path.join(recipeDir, file)).then(() => true, () => false); n++) { recipe.id = `${recipe.id.replace(/-\d+$/, '')}-${n}`; file = `${recipe.id}.recipe.yaml`; }
+      // A redraft replaces the question's draft; a first draft never overwrites a recipe.
+      if (redraft && item.recipe) { file = item.recipe; recipe.id = file.replace(/\.recipe\.ya?ml$/, ''); }
+      else for (let n = 2; await fs.access(path.join(recipeDir, file)).then(() => true, () => false); n++) { recipe.id = `${recipe.id.replace(/-\d+$/, '')}-${n}`; file = `${recipe.id}.recipe.yaml`; }
       const verdict = !tried?.compare ? 'Not cross-checked.'
         : tried.compare.empty ? 'Both it and a direct Cypher answer are empty on the default parameters: not cross-checked.'
           : tried.compare.agree ? `It agrees with a direct Cypher answer (${tried.compare.cypherRows} rows on the default parameters).` : 'It does NOT agree with a direct Cypher answer: check it.';
@@ -820,10 +880,71 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       await fs.writeFile(path.join(recipeDir, file), head + YAML.stringify(recipe, { lineWidth: 0 }));
       // The question remembers its recipe; the bench gets a request for it.
       const spec = structuredClone(s.spec);
-      spec.items.find((i) => i.id === id).recipe = file;
+      const it = spec.items.find((i) => i.id === id);
+      it.recipe = file;
+      // The direct Cypher answer, for the person who validates it (Validate the Cypher).
+      if (res.json?.answerCypher) it.answerCypher = String(res.json.answerCypher).trim();
+      if (redraft) it.validatedCypher = { cypher: redraft.cypher, cases: redraft.cases ?? [] };
       await writeSpec(specFile, spec);
       await routes['POST /api/bench/save']({ request: { id: recipe.id, title: item.text, target: { recipe: recipe.id }, expect: { status: 200, ...(tried?.compare?.agree ? { rows: tried.compare.cypherRows } : {}) } } }).catch(() => null);
       return { ...(await routes['GET /api/design']()), drafted: { file, id: recipe.id, findings, explanation: res.json?.explanation ?? null, tried } };
+    },
+
+    // Validating a drafted question as an oracle check: the person validates the direct Cypher (the truth on the
+    // LPG), on two or three parameter cases where it answers; the recipe's SPARQL is what the check tests.
+    'POST /api/design/cq': async ({ id }) => {
+      const q = await cqOf(id);
+      const { oracle } = await readOracleFile();
+      const existing = oracle?.checks?.find((c) => c.id === `cq-${id}`) ?? null;
+      return {
+        id, question: q.item.text, recipeFile: q.item.recipe, cypher: q.cypher, params: q.defaults, cases: q.item.validatedCypher?.cases ?? (existing?.cases ?? null),
+        sparql: q.query.sparql, decode: q.query.decode ?? {}, oracleFile: oracleFile ? path.relative(path.dirname(mappingFile), oracleFile) : null,
+        check: existing ? { id: existing.id, validated: existing.validated ?? null, current: existing.validated ? existing.validated.fingerprint === checkFingerprint(existing) : null } : null,
+        can: { try: !!(openSource && n20s) },
+      };
+    },
+    'POST /api/design/cq/suggest': async ({ id, cypher }) => {
+      if (!openSource) throw new UsageError('Suggesting values needs a source (Connections tab).');
+      const q = await cqOf(id);
+      const source = openSource();
+      try { return { cases: await suggestCases({ cypher: cypher ?? q.cypher, params: q.defaults, source }) }; } finally { await source.close(); }
+    },
+    'POST /api/design/cq/try': async ({ id, cypher, cases }) => ({ cases: await tryCases(await cqOf(id), cypher, cases) }),
+    // validate: the answers agree; keep-failing: they do not, and the person says the mapping is wrong (the check
+    // fails and blames it); redraft: they do not, and the SPARQL is wrong (drafted again, the Cypher kept).
+    'POST /api/design/cq/validate': async ({ id, cypher, cases, action, comment = null }) => {
+      if (!['validate', 'keep-failing', 'redraft'].includes(action)) throw new UsageError('action: validate, keep-failing or redraft.');
+      if (!Array.isArray(cases) || !cases.length) throw new UsageError('Validate it on parameter cases (Suggest values).');
+      const q = await cqOf(id);
+      if (action === 'redraft') return routes['POST /api/design/draft']({ id, redraft: { cypher, cases, comment } });
+      const tried = await tryCases(q, cypher, cases);
+      if (!tried.some((c) => c.cypherRows > 0)) throw new UsageError('The Cypher answers nothing in every case: two empty answers prove nothing. Choose values where it answers (Suggest values).');
+      const agree = tried.every((c) => c.compare?.agree !== false);
+      if (action === 'validate' && !agree) throw new UsageError('The recipe and the Cypher disagree: redraft the SPARQL, or keep the check failing if the mapping is what is wrong.');
+      const s = await state();
+      const { oracle } = await readOracleFile();
+      const base = checkFromDraft({ recipe: q.recipe, cypher, cases, id: `cq-${id}`, question: q.item.text, mapping: s.l.mapping, oraclePrefixes: oracle?.prefixes ?? '' });
+      const { plan } = await compile(acceptAll(s.l.mapping), s.l.lpgDoc);
+      const check = {
+        ...base,
+        validated: {
+          by: reviewer, at: new Date().toISOString(), fingerprint: checkFingerprint(base), lpg: await contentHash(s.l.lpgDoc),
+          relies: reliesOf(base, { mapping: s.l.mapping, lpgDoc: s.l.lpgDoc, plan, prefixes: oracle?.prefixes ?? '' }),
+          ...(action === 'keep-failing' ? { kept: `The recipe disagreed; ${reviewer} says the mapping is wrong${comment ? `: ${comment}` : ''}.` } : {}),
+        },
+      };
+      // No oracle yet: one next to the mapping, in the project too.
+      if (!oracleFile) {
+        oracleFile = oraclePathFor(mappingFile);
+        if (projectFile && active) await setMappingOracle(await readProject(projectFile), active, path.relative(path.dirname(projectFile), oracleFile));
+      }
+      const { created } = await saveCheck(oracleFile, check, { mappingFile, mapping: s.l.mapping });
+      const spec = structuredClone(s.spec);
+      const it = spec.items.find((i) => i.id === id);
+      it.check = check.id;
+      it.validatedCypher = { cypher, cases };
+      await writeSpec(specFile, spec);
+      return { ...(await routes['GET /api/design']()), saved: { id: check.id, oracleFile: path.relative(path.dirname(mappingFile), oracleFile), created, kept: action === 'keep-failing' } };
     },
 
     // Adds a target the spec chose to the mapping (and to the project, fetched, when it comes from the catalog).
@@ -843,6 +964,21 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       return { ...(await routes['GET /api/design']()), check: { findings } };
     },
 
+    // Which validated checks cover which decision, and the decisions none covers (coverage() in oracle.js).
+    'GET /api/coverage': async () => {
+      const { oracle, sha256 } = await readOracleFile();
+      if (!oracle) return { available: false, message: 'No oracle for this mapping yet: validate a competency question in the Design tab, or start the studio with --oracle.' };
+      const s = await state();
+      let evidence = null;
+      try { evidence = JSON.parse(await fs.readFile(oracleEvidencePath(), 'utf8')); } catch { /* the oracle has not run */ }
+      const { plan } = await compile(acceptAll(s.l.mapping), s.l.lpgDoc);
+      const cov = coverage({ oracle, evidence, mapping: s.l.mapping, lpgDoc: s.l.lpgDoc, plan, lpgHash: await contentHash(s.l.lpgDoc) });
+      return {
+        available: true, oracleFile: path.relative(path.dirname(mappingFile), oracleFile), ...cov,
+        evidence: evidence ? { at: evidence.at, withProposals: evidence.withProposals, current: !evidence.oracle || evidence.oracle === sha256 } : null,
+      };
+    },
+
     'POST /api/oracle': async ({ withProposals = false } = {}) => {
       if (!oracleFile || !openSource || !n20s) throw new UsageError('The oracle needs --oracle, a source and n20s-server.');
       const s = await state();
@@ -854,7 +990,8 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
         const graph = `studio-${withProposals ? 'proposals' : 'accepted'}`;
         const res = await project({ plan, source, n20s, graph });
         const results = await runOracle({ oracle, mapping, lpgDoc: s.l.lpgDoc, source, n20s, graph });
-        await fs.writeFile(oracleEvidencePath(), JSON.stringify(oracleEvidence({ oracle, results, mapping, lpgDoc: s.l.lpgDoc, plan, withProposals }), null, 1) + '\n');
+        const { sha256 } = await readOracleFile();
+        await fs.writeFile(oracleEvidencePath(), JSON.stringify(oracleEvidence({ oracle, results, mapping, lpgDoc: s.l.lpgDoc, plan, withProposals, oracleSha256: sha256 }), null, 1) + '\n');
         return { withProposals, triples: res.triples, problems, results, checks: oracle.checks.map((c) => ({ id: c.id, source: c.source ?? null, reason: c.reason ?? null })) };
       } finally {
         await source.close();

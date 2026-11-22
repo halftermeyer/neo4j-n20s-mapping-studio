@@ -652,3 +652,62 @@ test('write-back: a scope with SET is refused by EXPLAIN; an xsd:dateTime writte
     await writer.close();
   }
 });
+
+test('competency question as a validated oracle check: suggested cases, tried, validated, run, covering USED; kept failing, it puts USED in doubt', { skip, timeout: 120000 }, async () => {
+  const { startStudio } = await import('../src/studio.js');
+  const { functionProvider } = await import('../src/providers.js');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-cq-e2e-'));
+  fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  const provider = () => functionProvider(() => ({ id: 'run-inputs', title: 'Inputs of a run', params: [{ name: 'run', type: 'string', default: 'demo:lineage:v2:run:1002' }],
+    cypher: 'MATCH p = (r:Run {id: $run})-[:USED]->(v:DatasetVersion) RETURN p',
+    sparql: 'SELECT DISTINCT ?input WHERE { {{n:1|$run}} prov:used ?input }', decode: [{ column: 'input', node: 'n:0' }],
+    answerCypher: 'MATCH (:Run {id: $run})-[:USED]->(v:DatasetVersion) RETURN DISTINCT v.id AS input', explanation: '.' }), { model: 'test' });
+  const mappingFile = path.join(dir, 'lineage-prov.aura.mapping.yaml');
+  const studio = await startStudio({ mappingFile, port: 0, reviewer: 'P', provider, n20s, openSource: () => ({ url: 'test', run: (q, p) => source.run(q, p), close: async () => {} }) });
+  const post = async (p, body) => { const r = await fetch(new URL(p, studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, ...(await r.json()) }; };
+  const get = async (p) => (await fetch(new URL(p, studio.url))).json();
+  try {
+    await post('/api/design/decide', { action: 'edit', item: { kind: 'question', text: 'Which versions did a given run read?' } });
+    await post('/api/design/draft', { id: 'i1' });
+    const q = await post('/api/design/cq', { id: 'i1' });
+    assert.match(q.cypher, /RETURN DISTINCT v\.id AS input/);
+    assert.equal(q.oracleFile, null, 'no oracle yet');
+
+    // Values where the direct answer is not empty and changes.
+    const { cases } = await post('/api/design/cq/suggest', { id: 'i1', cypher: q.cypher });
+    assert.ok(cases.length >= 2, JSON.stringify(cases));
+    const tried = (await post('/api/design/cq/try', { id: 'i1', cypher: q.cypher, cases })).cases;
+    assert.ok(tried.every((t) => t.cypherRows > 0 && t.compare.agree), JSON.stringify(tried));
+    const saved = (await post('/api/design/cq/validate', { id: 'i1', cypher: q.cypher, cases, action: 'validate' })).saved;
+    assert.deepEqual([saved.id, saved.created], ['cq-i1', true]);
+    const oracleFile = path.join(dir, saved.oracleFile);
+    const check = YAML.parse(fs.readFileSync(oracleFile, 'utf8')).checks.find((c) => c.id === 'cq-i1');
+    assert.equal(check.cases.length, cases.length);
+    assert.deepEqual(check.validated.relies.map((r) => r.path), ['relationships/r:0']);
+
+    // Before any run, it covers nothing; after one, it covers USED (drafted from it, accepted).
+    let cov = await get('/api/coverage');
+    let used = cov.decisions.find((d) => d.path === 'relationships/r:0');
+    assert.deepEqual(used.counted, []);
+    assert.equal((await post('/api/oracle', { withProposals: false })).results.find((r) => r.id === 'cq-i1').status, 'pass');
+    cov = await get('/api/coverage');
+    used = cov.decisions.find((d) => d.path === 'relationships/r:0');
+    assert.ok(used.counted.includes('cq-i1'), JSON.stringify(used));
+    assert.equal(used.covering.find((c) => c.id === 'cq-i1').draftedFrom, true);
+
+    // A direct Cypher that disagrees (generated instead of used): validate is refused; kept failing, the check fails and blames USED.
+    const wrong = 'MATCH (:Run {id: $run})<-[:WAS_GENERATED_BY]-(v:DatasetVersion) RETURN DISTINCT v.id AS input';
+    const t2 = (await post('/api/design/cq/try', { id: 'i1', cypher: wrong, cases })).cases;
+    assert.ok(t2.some((t) => t.compare?.agree === false), JSON.stringify(t2));
+    const refused = await post('/api/design/cq/validate', { id: 'i1', cypher: wrong, cases, action: 'validate' });
+    assert.equal(refused.status, 400);
+    assert.match(refused.error, /redraft the SPARQL, or keep the check failing/);
+    assert.equal((await post('/api/design/cq/validate', { id: 'i1', cypher: wrong, cases, action: 'keep-failing' })).saved.kept, true);
+    assert.equal((await post('/api/oracle', { withProposals: false })).results.find((r) => r.id === 'cq-i1').status, 'fail');
+    used = (await get('/api/coverage')).decisions.find((d) => d.path === 'relationships/r:0');
+    assert.ok(used.suspects.includes('cq-i1'), JSON.stringify(used));
+  } finally {
+    await studio.close();
+  }
+});

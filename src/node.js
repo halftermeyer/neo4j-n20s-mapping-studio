@@ -377,6 +377,41 @@ export async function adoptStep(recipeFile, stepId, { writer, yes = false, run =
   return adoptLedger({ writer, target, run, yes });
 }
 
+/** Where the last oracle run on a mapping is recorded (its evidence): next to it. */
+export const evidencePathFor = (mappingFile) => mappingFile.replace(/(\.mapping)?\.(ya?ml|json)$/i, '') + '.oracle.json';
+
+/** The oracle file of a mapping when it has none yet: next to it. */
+export const oraclePathFor = (mappingFile) => mappingFile.replace(/(\.mapping)?\.(ya?ml|json)$/i, '') + '.oracle.yaml';
+
+/**
+ * Adds a check to an oracle file, or replaces the check with the same id; the
+ * rest of the file, comments included, is kept. Creates the file (for the
+ * mapping, with its prefixes) when it does not exist. Returns whether it did.
+ */
+export async function saveCheck(oracleFile, check, { mappingFile, mapping }) {
+  let text = null;
+  try { text = await fs.readFile(oracleFile, 'utf8'); } catch (err) { if (err.code !== 'ENOENT') throw err; }
+  const created = text === null;
+  if (created) {
+    const prefixes = Object.entries(mapping.prefixes ?? {}).map(([p, ns]) => `  PREFIX ${p}: <${ns}>`).join('\n');
+    text = `# Competency questions validated in the studio: the same question in Cypher on the\n# LPG (validated by a person) and in SPARQL on the projection (under test).\nmapping: ${path.relative(path.dirname(oracleFile), mappingFile)}\nprefixes: |\n${prefixes}\nchecks: []\n`;
+  }
+  const doc = YAML.parseDocument(text);
+  if (!YAML.isSeq(doc.get('checks', true))) doc.set('checks', doc.createNode([]));
+  const seq = doc.get('checks', true);
+  seq.flow = false;
+  const n = doc.createNode(check);
+  const blocks = (x) => {
+    if (YAML.isScalar(x) && typeof x.value === 'string' && x.value.includes('\n')) x.type = 'BLOCK_LITERAL';
+    if (YAML.isMap(x) || YAML.isSeq(x)) for (const it of x.items) blocks(YAML.isPair(it) ? it.value : it);
+  };
+  blocks(n);
+  const i = seq.items.findIndex((x) => (YAML.isMap(x) ? x.get('id') : x?.id) === check.id);
+  if (i >= 0) seq.items[i] = n; else seq.items.push(n);
+  await fs.writeFile(oracleFile, doc.toString({ lineWidth: 0 }));
+  return { created };
+}
+
 /** The specification of a mapping, and its design conversation, next to it unless the project says otherwise. */
 export const specPathFor = (mappingFile) => mappingFile.replace(/(\.mapping)?\.(ya?ml|json)$/i, '') + '.spec.yaml';
 export const chatPathFor = (specFile) => specFile.replace(/\.spec\.ya?ml$/i, '') + '.chat.jsonl';

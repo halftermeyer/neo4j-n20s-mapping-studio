@@ -14,10 +14,14 @@
 // relationship with its ends ((:Tick)-[:ABOUT]->(:Metric) is not
 // (:Rollup)-[:ABOUT]->(:Metric), though both emit sosa:observedProperty);
 // and leaving an element out is not safe when a check whose Cypher reads that
-// element failed.
+// element failed. Blame is wider than coverage: a failing check whose SPARQL
+// uses a term a decision emits puts that decision in doubt, whatever its
+// Cypher reads (DEPENDS_ON -> prov:wasDerivedFrom fails q33, whose Cypher reads
+// WAS_DERIVED_FROM only). The rule is coverage() in oracle.js, also behind the
+// coverage view.
 import { indexLpg } from './lpg.js';
 import { statusOf } from './resolve.js';
-import { entryFingerprint, readsRelationship } from './oracle.js';
+import { coverage, entryFingerprint } from './oracle.js';
 
 export const SAFE_CONFIDENCE = 0.95;
 const LOW_CONFIDENCE = 0.8;
@@ -25,13 +29,15 @@ const LOW_CONFIDENCE = 0.8;
 const keyOf = (path) => path.split('/').slice(0, 2).join('/');
 
 /**
- * @param {{mapping: object, lpgDoc: object, result: object, variants?: object|null, oracle?: object|null}} input
+ * @param {{mapping: object, lpgDoc: object, result: object, variants?: object|null, oracle?: object|null, oracleFile?: object|null, lpgHash?: string|null}} input
  *        result is check() on the mapping; variants comes from proposePasses();
- *        oracle is oracleEvidence() of the last oracle run
+ *        oracle is oracleEvidence() of the last oracle run; oracleFile the
+ *        oracle it ran (validations, drafted-from), when there is one
  * @returns {Array<object>} one item per node kind and relationship type, the riskiest first
  */
-export function reviewItems({ mapping, lpgDoc, result, variants = null, specFindings = [], oracle = null }) {
+export function reviewItems({ mapping, lpgDoc, result, variants = null, specFindings = [], oracle = null, oracleFile = null, lpgHash = null }) {
   const idx = indexLpg(lpgDoc);
+  const cov = oracle ? new Map(coverage({ oracle: oracleFile, evidence: oracle, mapping, lpgDoc, lpgHash }).decisions.map((d) => [d.path, d])) : new Map();
   const findingsBy = new Map();
   for (const f of result.findings.filter((x) => x.severity !== 'info' && /^(nodes|relationships)\//.test(x.path))) {
     findingsBy.set(keyOf(f.path), [...(findingsBy.get(keyOf(f.path)) ?? []), f]);
@@ -44,24 +50,6 @@ export function reviewItems({ mapping, lpgDoc, result, variants = null, specFind
     typingBy.set(key, [...(typingBy.get(key) ?? []), f]);
   }
   const undecided = result.coverage?.undecided ?? [];
-  // Whether a check's Cypher reads an element or a property (through a label it implies, too).
-  const labelsOf = (nodeId) => {
-    const out = new Set([idx.nodes.get(nodeId)?.label]);
-    for (const n of idx.nodes.values()) if (idx.ancestors(n.id).includes(nodeId)) out.add(n.label);
-    return out;
-  };
-  const readerOf = (path) => {
-    const [section, id, , pid] = path.split('/');
-    if (section === 'relationships') {
-      const r = idx.rels.get(id);
-      return pid ? (reads) => reads.props.includes(`${r?.type}.${r?.props.get(pid)?.name}`) : (reads) => readsRelationship(reads, lpgDoc, id);
-    }
-    const ls = labelsOf(id);
-    if (!pid) return (reads) => reads.labels.some((l) => ls.has(l));
-    const name = idx.nodes.get(id)?.props.get(pid)?.name;
-    return (reads) => [...ls].some((l) => reads.props.includes(`${l}.${name}`));
-  };
-
   const items = [];
   const add = (section, id, label) => {
     const key = `${section}/${id}`;
@@ -100,31 +88,29 @@ export function reviewItems({ mapping, lpgDoc, result, variants = null, specFind
     const confidences = proposed.map((x) => x.entry.meta?.confidence).filter((c) => typeof c === 'number');
     const confidence = confidences.length ? Math.min(...confidences) : null;
     if (confidence !== null && confidence < LOW_CONFIDENCE) reasons.push({ code: 'low-confidence', text: `confidence ${confidence}` });
-    // What the oracle says about these very decisions (a run with the proposals projected).
-    const ran = (c) => ['pass', 'fail', 'error'].includes(c.status);
-    const seen = (path, e) => oracle?.decisions?.[path] && oracle.decisions[path].fingerprint === entryFingerprint(e) ? oracle.decisions[path] : null;
+    // What the oracle says about these very decisions (a run with the proposals projected): coverage() in oracle.js.
     let oraclePassed = false;
     if (section === 'relationships' && entry && !entry.ignore && statusOf(entry) === 'proposed') {
       reasons.push({ code: 'asserts', text: 'maps a relationship: check that the source asserts what the target term means' });
       // Covered: the check's SPARQL uses a predicate or class this decision emits, and its Cypher reads this
       // relationship with its ends (or names it in covers:). Reading the type alone is not enough.
-      const d = seen(key, entry);
-      const emits = new Set(d?.terms ?? []);
-      const covering = d ? oracle.checks.filter((c) => ran(c) && c.terms.some((t) => emits.has(t)) && readsRelationship(c.reads, lpgDoc, id)) : [];
-      const failed = covering.filter((c) => c.status !== 'pass');
-      oraclePassed = covering.length > 0 && !failed.length;
-      if (failed.length) reasons.push({ code: 'oracle', text: `the oracle fails with this decision: ${failed.map((c) => c.id).join(', ')}` });
-      else if (!oraclePassed) {
-        reasons.push({ code: 'unverified', text: !d ? 'not checked by the oracle with this decision yet (Oracle: run with proposals too)'
-          : 'no oracle check reads this relationship (with its ends) and asks the RDF about the terms it emits: only a person can tell whether the source asserts it' });
+      const d = cov.get(key);
+      const ran = oracle?.decisions?.[key]?.fingerprint === entryFingerprint(entry);
+      oraclePassed = !!d && d.counted.length > 0 && !d.suspects.length;
+      if (!oraclePassed && !d?.suspects.length) {
+        const notCounting = (d?.covering ?? []).filter((c) => !c.counts && c.status !== 'not-run');
+        reasons.push({ code: 'unverified', text: !ran ? 'not checked by the oracle with this decision yet (Oracle: run with proposals too)'
+          : notCounting.length ? `covered by ${notCounting.map((c) => `${c.id} (${c.why})`).join(', ')}: not enough to call it safe`
+            : 'no oracle check reads this relationship (with its ends) and asks the RDF about the terms it emits: only a person can tell whether the source asserts it' });
       }
     }
-    // Left out: a failing check whose Cypher reads what is left out says the RDF misses it.
-    for (const x of proposed.filter((y) => y.entry.ignore)) {
-      const d = seen(x.path, x.entry);
+    for (const x of proposed) {
+      const d = cov.get(x.path);
       if (!d) continue;
-      const read = readerOf(x.path);
-      const failed = oracle.checks.filter((c) => ['fail', 'error'].includes(c.status) && read(c.reads));
+      // Mapped: a failing check whose SPARQL uses a term it emits puts it in doubt.
+      if (d.suspects.length) reasons.push({ code: 'oracle', ...(x.path !== key ? { path: x.path } : {}), text: `the oracle fails with this decision: ${d.suspects.join(', ')}` });
+      // Left out: a failing check whose Cypher reads what is left out says the RDF misses it.
+      const failed = d.readBy.filter((c) => ['fail', 'error'].includes(c.status));
       if (failed.length) reasons.push({ code: 'oracle', path: x.path, text: `left out, but ${failed.map((c) => c.id).join(', ')} reads it and fails` });
     }
     const open = undecided.filter((p) => p === key || p.startsWith(`${key}/`));

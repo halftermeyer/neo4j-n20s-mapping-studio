@@ -2,6 +2,7 @@
 // file and replayed later as a source. Lets a machine that cannot reach a
 // database (a CI job, a sandbox, a reviewer) compare, project and run the oracle
 // on its data. Browser-safe: no file access here.
+import { casesOf } from './oracle.js';
 
 export const SNAPSHOT_FORMAT = 'n20s-source-snapshot/0.1';
 
@@ -37,7 +38,7 @@ export function recordingSource(source) {
 export async function takeSnapshot({ plan, source, oracle, params = {} }) {
   const rec = recordingSource(source);
   for (const unit of plan.units) await rec.run(unit.cypher, params);
-  for (const c of oracle?.checks ?? []) if (c.expressible !== false && c.cypher) await rec.run(c.cypher);
+  for (const c of oracle?.checks ?? []) if (c.expressible !== false && c.cypher) for (const p of casesOf(c)) await rec.run(c.cypher, p);
   return {
     format: SNAPSHOT_FORMAT,
     takenAt: new Date().toISOString(),

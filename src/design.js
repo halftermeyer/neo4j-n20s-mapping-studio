@@ -382,3 +382,48 @@ export function recipeFromDraft(answer, { mappingPath, question }) {
     ],
   };
 }
+
+/**
+ * Parameter values worth validating a question on: where the direct Cypher
+ * answers something, and answers differently from one value to the next. The
+ * values come from the property each parameter is compared with ({prop: $p},
+ * or x.prop = $p); the default first when it answers. One parameter varies at
+ * a time, the others keep their default.
+ * @param {{cypher: string, params: object, source: object, max?: number}} a  params: the defaults
+ * @returns {Promise<Array<{params: object, rows: number}>>}
+ */
+export async function suggestCases({ cypher, params = {}, source, max = 3 }) {
+  const run = async (p) => {
+    if (typeof source.queryType === 'function' && await source.queryType(cypher, p) !== 'r') throw new Error('This Cypher writes: a direct answer only reads.');
+    return source.run(cypher, p);
+  };
+  const names = [...new Set([...String(cypher).matchAll(/\$([A-Za-z_]\w*)/g)].map((m) => m[1]))];
+  if (!names.length) return [{ params: {}, rows: (await run({})).length }];
+  const labels = new Map([...String(cypher).matchAll(/\(\s*([A-Za-z_]\w*)\s*:\s*([A-Za-z_]\w*)/g)].map((m) => [m[1], m[2]]));
+  const candidates = async (name) => {
+    const inline = new RegExp(`\\(\\s*\\w*\\s*:\\s*([A-Za-z_]\\w*)[^)]*?\\{[^}]*?\\b([A-Za-z_]\\w*)\\s*:\\s*\\$${name}\\b`).exec(cypher);
+    const where = new RegExp(`\\b([A-Za-z_]\\w*)\\.([A-Za-z_]\\w*)\\s*=\\s*\\$${name}\\b`).exec(cypher);
+    const [label, prop] = inline ? [inline[1], inline[2]] : where && labels.has(where[1]) ? [labels.get(where[1]), where[2]] : [null, null];
+    if (!label) return [];
+    return (await source.run(`MATCH (n:\`${label}\`) WHERE n.\`${prop}\` IS NOT NULL RETURN DISTINCT n.\`${prop}\` AS v ORDER BY v LIMIT 40`)).map((r) => r.v);
+  };
+  const out = [];
+  const seen = new Set();
+  const consider = async (p) => {
+    if (out.length >= max) return;
+    const rows = await run(p);
+    const answer = JSON.stringify(rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => r[k]))).sort());
+    if (!rows.length || seen.has(answer)) return;
+    seen.add(answer);
+    out.push({ params: p, rows: rows.length });
+  };
+  await consider({ ...params });
+  for (const name of names) {
+    for (const v of await candidates(name)) {
+      if (out.length >= max) break;
+      if (v === params[name]) continue;
+      await consider({ ...params, [name]: v });
+    }
+  }
+  return out;
+}

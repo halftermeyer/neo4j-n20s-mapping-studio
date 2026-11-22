@@ -283,6 +283,13 @@ export async function addTargetToMapping(p, mappingId, targetId, { fetch = globa
 }
 
 /** Adds a source or a target to the project file (comments kept). */
+/** Points a mapping of the project at its oracle file (relative to the project). */
+export async function setMappingOracle(p, mappingId, oracleRel) {
+  if (!p.project.mappings?.[mappingId]) throw new UsageError(`No mapping ${mappingId}.`);
+  p.doc.setIn(['mappings', mappingId, 'oracle'], oracleRel);
+  await fs.writeFile(p.file, p.doc.toString({ lineWidth: 0 }));
+}
+
 export async function addToProject(p, section, id, value) {
   if (!['sources', 'targets'].includes(section)) throw new UsageError(`Unknown section ${section}.`);
   if (!NAME.test(id ?? '')) throw new UsageError('An id starts with a letter and has letters, digits, ., - and _ only.');

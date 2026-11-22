@@ -89,9 +89,9 @@ svg.mini { width: 100%; background: #fafbfc; border: 1px solid #eef0f3; border-r
 svg.mini text { font-size: 10.5px; }
 
 /* Oracle */
-#oracle { max-height: 38vh; overflow: auto; background: #fff; border-top: 2px solid var(--line); padding: 8px 14px; }
-#oracle table { border-collapse: collapse; width: 100%; font-size: 12px; }
-#oracle td, #oracle th { border-bottom: 1px solid #eef0f3; padding: 4px 6px; text-align: left; vertical-align: top; }
+#oracle, #coverage { max-height: 38vh; overflow: auto; background: #fff; border-top: 2px solid var(--line); padding: 8px 14px; }
+#oracle table, #coverage table { border-collapse: collapse; width: 100%; font-size: 12px; }
+#oracle td, #oracle th, #coverage td, #coverage th { border-bottom: 1px solid #eef0f3; padding: 4px 6px; text-align: left; vertical-align: top; }
 .pass { color: var(--accepted); font-weight: 600; }
 .fail, .error { color: var(--rejected); font-weight: 600; }
 .ne { color: var(--muted); }
@@ -225,3 +225,10 @@ button.mini { padding: 0 7px; font-size: 11px; margin-left: 3px; }
 /* Remote graphs: a client's SPARQL endpoint */
 .chip.remote { background: #fff3e0; color: #e65100; }
 .gchip.remote { border-color: #ffb74d; }
+
+/* Coverage by validated oracle checks, on the graph */
+.cov-ring { fill: none; stroke-width: 4; }
+.cov-covered { stroke: #2e7d32; }
+.cov-partly { stroke: #f9a825; }
+.cov-uncovered { stroke: #9e9e9e; stroke-dasharray: 5 4; }
+.cov-suspected { stroke: #c62828; stroke-width: 5; }

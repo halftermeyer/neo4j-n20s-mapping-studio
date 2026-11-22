@@ -8,7 +8,7 @@ export { resolve, statusOf, isActive, isCompiled } from './resolve.js';
 export { compile, PLAN_FORMAT } from './compile.js';
 export { project, compareSources } from './project.js';
 export { n20sClient } from './n20s.js';
-export { runOracle, sparqlTerms, cypherReads, readsRelationship, emittedTerms, oracleEvidence, entryFingerprint } from './oracle.js';
+export { runOracle, sparqlTerms, cypherReads, readsRelationship, readsElement, emittedTerms, oracleEvidence, entryFingerprint, checkFingerprint, casesOf, decisionTerms, reliesOf, returnColumns, checkFromDraft, coverage } from './oracle.js';
 export { takeSnapshot, recordingSource, snapshotSource, SNAPSHOT_FORMAT } from './snapshot.js';
 export { formatText } from './report.js';
 export { propose, proposePasses, variantsOf, acceptAll, PROMPT_VERSION, EXTRA_TERMS, VARIANTS_FORMAT } from './propose.js';

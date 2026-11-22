@@ -14,6 +14,8 @@ let filter = 'review';
 let editing = null;      // { path, kind } while an edit form is open
 let view = null;         // graph pan and zoom: { x, y, k }
 let oracle = null;       // last oracle run
+let cov = null;          // GET /api/coverage, while the coverage view is on
+let covOnlyOpen = false; // the coverage table shows the uncovered decisions only
 let tab = { '/recipes': 'recipes', '/bench': 'bench', '/project': 'project', '/design': 'design', '/connections': 'connections' }[location.pathname] ?? 'mapping';
 
 function setTab(t) {
@@ -26,6 +28,7 @@ function setTab(t) {
   $('design-view').hidden = t !== 'design';
   $('connections-view').hidden = t !== 'connections';
   $('oracle').hidden = true;
+  $('coverage').hidden = true;
   renderTop();
   if (t === 'recipes') showRecipes($('recipes-view'));
   if (t === 'bench') showBench($('bench-view'));
@@ -113,6 +116,7 @@ function render() {
   renderGraph();
   renderPanel();
   if (!$('oracle').hidden) renderOracle();
+  if (!$('coverage').hidden) renderCoverage();
 }
 
 function renderTop() {
@@ -145,6 +149,7 @@ function renderTop() {
       onclick: () => confirm(`Accept the ${safe} safe elements?`) && act(() => api('/api/accept-safe', {}), `${safe} elements accepted`),
     }, `Accept safe (${safe})`),
     h('button', { 'data-testid': 'oracle-toggle', onclick: () => { $('oracle').hidden = !$('oracle').hidden; renderOracle(); } }, 'Oracle'),
+    h('button', { class: cov ? 'on' : '', 'data-testid': 'coverage-toggle', title: 'Which validated oracle checks cover each decision, and the decisions none covers', onclick: toggleCoverage }, 'Coverage'),
   );
 }
 
@@ -281,6 +286,7 @@ function renderGraph() {
       g.append(s('g', { class: `edge${selected === key ? ' sel' : ''}`, onclick: (e) => { e.stopPropagation(); select(key); } },
         s('path', { class: 'hit', d }),
         s('path', { class: 'line', d, stroke: color, 'marker-end': `url(#arrow-${cat})`, 'stroke-dasharray': cat === 'ignored' ? '5 4' : null }),
+        coverageOf(key) ? s('rect', { class: `cov-ring cov-${coverageOf(key)}`, x: lx - w / 2 - 4, y: ly - 14, width: w + 8, height: 28, rx: 14, 'data-testid': `cov-${tid(key)}-${coverageOf(key)}` }) : null,
         s('rect', { x: lx - w / 2, y: ly - 10, width: w, height: 20, rx: 10, fill: '#fff', stroke: color }),
         s('text', { x: lx, y: ly + 0.5, fill: cat === 'ignored' ? '#777' : '#1d2530' }, r.type)));
     });
@@ -292,7 +298,9 @@ function renderGraph() {
     const p = pos[id];
     const label = nodeLabel(id);
     const dark = !['undecided', 'ignored'].includes(cat);
+    const ring = coverageOf(key);
     g.append(s('g', { class: `node${selected === key ? ' sel' : ''}`, onclick: (e) => { e.stopPropagation(); select(key); } },
+      ring ? s('circle', { class: `cov-ring cov-${ring}`, cx: p.x, cy: p.y, r: R + 6, 'data-testid': `cov-${tid(key)}-${ring}` }) : null,
       s('circle', { cx: p.x, cy: p.y, r: R, fill: COLORS[cat] }),
       s('text', { x: p.x, y: p.y, fill: dark ? '#fff' : '#1d2530', style: label.length > 11 ? 'font-size:11px' : null }, label)));
   }
@@ -308,7 +316,9 @@ function renderGraph() {
   }
   g.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
   fill($('legend'), ...Object.entries(CAT_TEXT).map(([c, t]) => h('span', {}, h('i', { style: `background:${COLORS[c]}` }), t)),
-    h('span', {}, '- - - implies'));
+    h('span', {}, '- - - implies'),
+    cov?.available ? [['covered', '#2e7d32', 'covered'], ['partly', '#f9a825', 'partly covered'], ['uncovered', '#9e9e9e', 'no check covers it'], ['suspected', '#c62828', 'a failing check puts it in doubt']]
+      .map(([, color, t]) => h('span', {}, h('i', { style: `background:none;border:3px solid ${color}` }), t)) : null);
 }
 
 function setupPanZoom() {
@@ -486,6 +496,8 @@ function renderPanel() {
     // A conflict found on another element that comes from this node kind's typing, with the fix.
     item.reasons.some((r) => r.fix) ? [h('h3', {}, 'Typing'), item.reasons.filter((r) => r.fix).map((r) => h('div', { class: 'finding warning', 'data-testid': 'typing-fix' }, r.text, h('div', { class: 'term' }, `Proposed: ${r.fix}`)))] : null,
 
+    cov?.available ? coveragePanel(selected) : null,
+
     Object.keys(lpgEl.properties ?? {}).length ? [h('h3', {}, 'Properties'),
       h('table', { class: 'props' }, h('tr', {}, h('th', {}, 'property'), h('th', {}, 'decision'), h('th', {}, ''), h('th', {}, '')), propRows(selected))] : null,
 
@@ -624,7 +636,7 @@ function renderOracle() {
     try { oracle = await api('/api/oracle', { withProposals }); } catch (err) { oracle = { error: err.message }; }
     renderOracle();
     // The run decides which relationship proposals are safe: read the queue again.
-    try { S = await api('/api/state'); renderTop(); renderQueue(); renderPanel(); } catch { /* the queue stays as it was */ }
+    try { S = await api('/api/state'); if (cov) cov = await api('/api/coverage'); render(); } catch { /* the queue stays as it was */ }
   };
   const head = h('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:6px' },
     h('b', {}, 'Oracle: the same questions in Cypher on the LPG and in SPARQL on the projection'),
@@ -647,6 +659,62 @@ function renderOracle() {
             ...(r.onlySparql ?? []).slice(0, 4).map((x) => h('div', {}, 'extra in RDF: ', h('code', {}, x))),
             ...(r.inBoth ?? []).slice(0, 4).map((x) => h('div', {}, 'should not be in RDF: ', h('code', {}, x))),
           ]))))));
+}
+
+// Coverage: which validated checks cover which decision -----------------------------------------------
+async function toggleCoverage() {
+  if (cov) { cov = null; $('coverage').hidden = true; render(); return; }
+  try { cov = await api('/api/coverage'); } catch (err) { toast(err.message, true); return; }
+  if (!cov.available) { toast(cov.message, true); cov = null; return; }
+  $('coverage').hidden = false;
+  render();
+}
+
+/** The decisions of an element (its own and its properties'), mapped ones only for the ring. */
+const decisionsOf = (key) => (cov?.decisions ?? []).filter((d) => d.path === key || d.path.startsWith(`${key}/`));
+
+/** covered, partly, uncovered, suspected, or null when nothing of the element is mapped. */
+function coverageOf(key) {
+  if (!cov?.available) return null;
+  const mapped = decisionsOf(key).filter((d) => d.kind === 'mapped');
+  if (!mapped.length) return null;
+  if (mapped.some((d) => d.suspects.length)) return 'suspected';
+  const n = mapped.filter((d) => d.counted.length).length;
+  return n === mapped.length ? 'covered' : n ? 'partly' : 'uncovered';
+}
+
+const checkLine = (c) => h('div', { class: c.counts ? 'okline' : 'hint' }, h('span', { class: 'mono' }, c.id), ` ${c.status}`,
+  c.counts ? (c.draftedFrom ? ' · counts, drafted from this decision' : ' · counts') : ` · does not count: ${c.why}`);
+
+function coveragePanel(key) {
+  const list = decisionsOf(key);
+  if (!list.length) return null;
+  return [h('h3', {}, 'Coverage by the oracle'), list.map((d) => h('div', { style: 'margin:4px 0', 'data-testid': `cov-panel-${tid(d.path)}` },
+    h('div', { class: 'mono', style: 'color:#555' }, `${d.label}${d.kind === 'left-out' ? ' (left out)' : ''}`),
+    d.kind === 'left-out'
+      ? (d.readBy.length ? d.readBy.map((c) => h('div', { class: ['fail', 'error'].includes(c.status) ? 'warnline' : 'hint' }, `read by ${c.id} (${c.status})`)) : h('div', { class: 'hint' }, 'No check reads it: an omission is only tested by a question that needs it.'))
+      : [d.suspects.length ? h('div', { class: 'warnline' }, `In doubt: ${d.suspects.join(', ')} fail${d.suspects.length === 1 ? 's' : ''}, and ask about a term it emits`) : null,
+        d.covering.length ? d.covering.map(checkLine) : h('div', { class: 'hint' }, 'No check covers it: write a competency question that needs it (Design tab).')]))];
+}
+
+function renderCoverage() {
+  const box = $('coverage');
+  if (!cov?.available) return fill(box);
+  const rows = cov.decisions.filter((d) => d.kind === 'mapped' && (!covOnlyOpen || !d.counted.length || d.suspects.length));
+  const ev = cov.evidence;
+  fill(box,
+    h('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:6px' },
+      h('b', {}, `Coverage: ${cov.summary.covered} of ${cov.summary.mapped} mapped decisions covered by a validated check${cov.summary.suspected ? `, ${cov.summary.suspected} in doubt` : ''}`),
+      h('span', { style: 'color:#666' }, `${cov.oracleFile}, ${cov.checks.length} checks; ${ev ? `last run ${ev.at.replace('T', ' ').slice(0, 16)}${ev.withProposals ? ' with proposals' : ''}${ev.current ? '' : ' (with another version of the oracle: run it again)'}` : 'never run: Oracle → Run'}`),
+      h('label', { style: 'margin-left:auto' }, h('input', { type: 'checkbox', checked: covOnlyOpen, onchange: (e) => { covOnlyOpen = e.target.checked; renderCoverage(); } }), ' uncovered or in doubt only'),
+      h('button', { onclick: toggleCoverage }, 'Close')),
+    h('table', { 'data-testid': 'coverage-table' }, h('tr', {}, h('th', {}, 'decision'), h('th', {}, 'status'), h('th', {}, 'covered by'), h('th', {}, 'not counting'), h('th', {}, 'in doubt')),
+      rows.map((d) => h('tr', { style: 'cursor:pointer', onclick: () => select(d.path.split('/').slice(0, 2).join('/')) },
+        h('td', { class: 'mono' }, d.label),
+        h('td', {}, d.status),
+        h('td', { class: d.counted.length ? 'pass' : '' }, d.counted.map((id) => `${id}${d.covering.find((c) => c.id === id)?.draftedFrom ? ' (drafted from it)' : ''}`).join(', ') || '—'),
+        h('td', {}, d.covering.filter((c) => !c.counts).map((c) => `${c.id}: ${c.why}`).join('; ')),
+        h('td', { class: d.suspects.length ? 'fail' : '' }, d.suspects.join(', '))))));
 }
 
 // Start ---------------------------------------------------------------------------------------------

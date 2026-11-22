@@ -1,6 +1,6 @@
 // Oracle: the same question in Cypher on the LPG and in SPARQL on the projection.
 import { indexLpg } from './lpg.js';
-import { resolve, isCompiled } from './resolve.js';
+import { resolve, isCompiled, statusOf } from './resolve.js';
 import { fillTemplate, matchTemplate, parseTemplate, expand } from './iri.js';
 
 function decoders(mapping, lpgDoc) {
@@ -42,7 +42,35 @@ function decoders(mapping, lpgDoc) {
 const norm = (v) => (v === null || v === undefined ? null : String(v));
 const key = (row, columns) => JSON.stringify(columns.map((c) => norm(row[c])));
 
+/** The parameter cases of a check: cases: [{params}], or its params, or none. */
+export const casesOf = (c) => (Array.isArray(c?.cases) && c.cases.length ? c.cases.map((x) => x?.params ?? {}) : [c?.params ?? {}]);
+
+const IRIREF_FORBIDDEN = /[<>"{}|^`\\\u0000- ]/;
+const sparqlLiteral = (v) => `"${String(v).replace(/[\\"]/g, (ch) => `\\${ch}`).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
+
+/** {{<node id>|value}}, {{iri|value}}, {{literal|value}} in a check's SPARQL; a value $name comes from the case's params. */
+function fillPlaceholders(text, params, d) {
+  return String(text).replace(/\{\{([^|}]+)\|([^}]+)\}\}/g, (_, kind, expr) => {
+    const e = expr.trim();
+    let v = e;
+    if (e.startsWith('$')) {
+      if (!(e.slice(1) in params)) throw new Error(`${e} has no value in this case.`);
+      v = params[e.slice(1)];
+    }
+    if (kind === 'literal') return sparqlLiteral(v);
+    if (kind === 'iri') {
+      if (IRIREF_FORBIDDEN.test(String(v))) throw new Error(`${v} cannot be an IRI.`);
+      return String(v);
+    }
+    return d.iriOf(kind, v);
+  });
+}
+
 /**
+ * Runs each check in Cypher on the source and in SPARQL on the projection, once
+ * per parameter case. A check passes when every case does. nonEmpty says
+ * whether the Cypher answered something in at least one case: two empty
+ * answers are equal, and prove nothing.
  * @param {{oracle: object, mapping: object, lpgDoc: object, source: object, n20s: object, graph: string}} args
  */
 export async function runOracle({ oracle, mapping, lpgDoc, source, n20s, graph }) {
@@ -51,25 +79,34 @@ export async function runOracle({ oracle, mapping, lpgDoc, source, n20s, graph }
   for (const c of oracle.checks) {
     if (c.expressible === false) { results.push({ id: c.id, status: 'not-expressible', reason: c.reason }); continue; }
     try {
-      const sparql = (oracle.prefixes ?? '') + c.sparql.replace(/\{\{([^|}]+)\|([^}]+)\}\}/g, (_, nodeId, value) => d.iriOf(nodeId, value));
       const decode = Object.fromEntries(Object.entries(c.decode ?? {}).map(([col, spec]) => [col, d.decoder(spec)]));
-      const [cy, sp] = await Promise.all([source.run(c.cypher), n20s.query(graph, sparql)]);
-      const spDecoded = sp.map((row) => Object.fromEntries(c.columns.map((col) => [col, decode[col] ? decode[col](row[col]) : row[col]])));
-      const a = [...new Set(cy.map((r) => key(r, c.columns)))].sort();
-      const b = [...new Set(spDecoded.map((r) => key(r, c.columns)))].sort();
-      let ok;
-      let detail;
-      if (c.mode === 'disjoint') {
-        const both = a.filter((x) => b.includes(x));
-        ok = a.length > 0 && both.length === 0;
-        detail = { cypherRows: a.length, sparqlRows: b.length, inBoth: both };
-      } else {
-        const onlyCypher = a.filter((x) => !b.includes(x));
-        const onlySparql = b.filter((x) => !a.includes(x));
-        ok = onlyCypher.length === 0 && onlySparql.length === 0;
-        detail = { rows: a.length, onlyCypher, onlySparql };
+      const cases = [];
+      for (const params of casesOf(c)) {
+        const sparql = (oracle.prefixes ?? '') + fillPlaceholders(c.sparql, params, d);
+        const [cy, sp] = await Promise.all([source.run(c.cypher, params), n20s.query(graph, sparql)]);
+        const spDecoded = sp.map((row) => Object.fromEntries(c.columns.map((col) => [col, decode[col] ? decode[col](row[col]) : row[col]])));
+        const a = [...new Set(cy.map((r) => key(r, c.columns)))].sort();
+        const b = [...new Set(spDecoded.map((r) => key(r, c.columns)))].sort();
+        let ok;
+        let detail;
+        if (c.mode === 'disjoint') {
+          const both = a.filter((x) => b.includes(x));
+          ok = a.length > 0 && both.length === 0;
+          detail = { cypherRows: a.length, sparqlRows: b.length, inBoth: both };
+        } else {
+          const onlyCypher = a.filter((x) => !b.includes(x));
+          const onlySparql = b.filter((x) => !a.includes(x));
+          ok = onlyCypher.length === 0 && onlySparql.length === 0;
+          detail = { rows: a.length, onlyCypher, onlySparql };
+        }
+        cases.push({ params, status: ok ? 'pass' : 'fail', empty: a.length === 0, ...detail });
       }
-      results.push({ id: c.id, status: ok ? 'pass' : 'fail', mode: c.mode ?? 'equal', ...detail, notExported: c.notExported });
+      const failed = cases.find((x) => x.status !== 'pass');
+      const { params: _p, status: _s, empty: _e, ...first } = failed ?? cases[0];
+      results.push({
+        id: c.id, status: failed ? 'fail' : 'pass', mode: c.mode ?? 'equal', ...first, notExported: c.notExported,
+        nonEmpty: cases.some((x) => !x.empty), ...(c.cases ? { cases } : {}),
+      });
     } catch (err) {
       results.push({ id: c.id, status: 'error', error: err.message });
     }
@@ -211,7 +248,7 @@ export const entryFingerprint = (e) => (e ? JSON.stringify(decisionOf(e)) : null
  * @param {{oracle: object, results: Array<object>, mapping: object, lpgDoc: object, plan: object, withProposals: boolean, at?: string}} o
  *        mapping and plan are the ones projected (accepted entries, or proposals too)
  */
-export function oracleEvidence({ oracle, results, mapping, lpgDoc, plan, withProposals, at = new Date().toISOString() }) {
+export function oracleEvidence({ oracle, results, mapping, lpgDoc, plan, withProposals, at = new Date().toISOString(), oracleSha256 = null }) {
   const status = new Map(results.map((r) => [r.id, r.status]));
   const live = (e) => e && (withProposals ? e.meta?.status !== 'rejected' : (e.meta?.status ?? 'accepted') === 'accepted');
   const emitted = emittedTerms(plan);
@@ -224,9 +261,221 @@ export function oracleEvidence({ oracle, results, mapping, lpgDoc, plan, withPro
       for (const [pid, pe] of Object.entries(e?.properties ?? {})) if (live(pe)) decisions[`${key}/properties/${pid}`] = { fingerprint: entryFingerprint(pe) };
     }
   }
+  const byId = new Map(results.map((r) => [r.id, r]));
   return {
-    format: 'n20s-oracle-evidence/0.2', at, withProposals,
-    checks: oracle.checks.map((c) => ({ id: c.id, status: status.get(c.id) ?? 'not-run', terms: c.expressible === false ? [] : [...sparqlTerms(c, oracle.prefixes)], reads: cypherReads(c) })),
+    format: 'n20s-oracle-evidence/0.3', at, withProposals, ...(oracleSha256 ? { oracle: oracleSha256 } : {}),
+    checks: oracle.checks.map((c) => ({
+      id: c.id, status: status.get(c.id) ?? 'not-run', fingerprint: checkFingerprint(c), nonEmpty: byId.get(c.id)?.nonEmpty ?? null,
+      terms: c.expressible === false ? [] : [...sparqlTerms(c, oracle.prefixes)], reads: cypherReads(c),
+    })),
     decisions,
+  };
+}
+
+// Validated checks and coverage ---------------------------------------------------------------
+
+/** FNV-1a, 64 bits as hex: a fingerprint, not a secret. Browser-safe and synchronous. */
+function fnv(text) {
+  let h = 0xcbf29ce484222325n;
+  for (const b of new TextEncoder().encode(text)) { h ^= BigInt(b); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; }
+  return h.toString(16).padStart(16, '0');
+}
+const sorted = (v) => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v);
+
+/** What a check asks, fingerprinted: a check edited after its validation is to validate again. */
+export const checkFingerprint = (c) => fnv(JSON.stringify(sorted({
+  mode: c.mode ?? 'equal', columns: c.columns ?? [], decode: c.decode ?? {}, cypher: String(c.cypher ?? '').trim(),
+  sparql: String(c.sparql ?? '').trim(), params: c.params ?? null, cases: c.cases ?? null,
+})));
+
+/** Whether what a check's Cypher reads includes an element of the LPG ontology (a label it implies counts), or a property of one. */
+export function readsElement(reads, lpgDoc, path) {
+  const idx = indexLpg(lpgDoc);
+  const [section, id, , pid] = path.split('/');
+  if (section === 'relationships') {
+    const r = idx.rels.get(id);
+    return pid ? reads.props.includes(`${r?.type}.${r?.props.get(pid)?.name}`) : readsRelationship(reads, lpgDoc, id);
+  }
+  const ls = new Set([idx.nodes.get(id)?.label]);
+  for (const n of idx.nodes.values()) if (idx.ancestors(n.id).includes(id)) ls.add(n.label);
+  if (!pid) return reads.labels.some((l) => ls.has(l));
+  const name = idx.findNodeProperty(id, pid)?.prop.name;
+  return [...ls].some((l) => reads.props.includes(`${l}.${name}`));
+}
+
+/**
+ * Every decision of a mapping (element and property entries, not rejected),
+ * with the terms it puts in the RDF: classes of a node kind, the predicate of a
+ * property, what the compiled plan emits for a relationship (qualified forms
+ * included). Left-out decisions have none.
+ * @param {object} plan  compiled from the mapping as projected (proposals accepted, to see them)
+ */
+export function decisionTerms(mapping, lpgDoc, plan = null, evidence = null) {
+  const P = mapping.prefixes ?? {};
+  const iri = (x) => (x ? expand(x, P).iri : null);
+  // Without a plan, what the last oracle run says the decision emitted (when it ran with this very decision).
+  const emitted = plan ? emittedTerms(plan) : Object.fromEntries(Object.entries(evidence?.decisions ?? {}).filter(([, d]) => d.terms).map(([k, d]) => [k, d.terms]));
+  const out = new Map();
+  const add = (path, entry, status, terms) => out.set(path, { path, section: path.split('/')[0], entry, status, kind: entry.ignore ? 'left-out' : 'mapped', terms: new Set(entry.ignore ? [] : terms.filter(Boolean)) });
+  for (const section of ['nodes', 'relationships']) {
+    for (const [id, e] of Object.entries(mapping[section] ?? {})) {
+      if (!e || statusOf(e) === 'rejected') continue;
+      const path = `${section}/${id}`;
+      const fresh = evidence?.decisions?.[path]?.fingerprint === undefined || plan || evidence.decisions[path].fingerprint === entryFingerprint(e);
+      const own = section === 'nodes' ? (e.classes ?? []).map(iri) : ((fresh && emitted[path]) || [iri(e.predicate), iri(e.qualified?.class), iri(e.qualified?.link), iri(e.qualified?.target)]);
+      if (e.ignore || own.length || section === 'relationships' || e.classes) add(path, e, statusOf(e), own);
+      if (e.ignore) continue;
+      for (const [pid, pe] of Object.entries(e.properties ?? {})) {
+        if (!pe || statusOf(pe) === 'rejected') continue;
+        add(`${path}/properties/${pid}`, pe, pe.meta?.status ?? statusOf(e), [iri(pe.predicate)]);
+      }
+    }
+  }
+  return out;
+}
+
+/** The decisions a check's SPARQL relies on: those that emit a term it uses, with their fingerprint and status now. */
+export function reliesOf(check, { mapping, lpgDoc, plan, prefixes = '' }) {
+  const terms = sparqlTerms(check, prefixes);
+  return [...decisionTerms(mapping, lpgDoc, plan).values()]
+    .filter((d) => [...d.terms].some((t) => terms.has(t)))
+    .map((d) => ({ path: d.path, fingerprint: entryFingerprint(d.entry), status: d.status }));
+}
+
+/** Column names a Cypher statement returns (its last RETURN): aliases, and plain variables. */
+export function returnColumns(cypher) {
+  const text = String(cypher ?? '').replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''");
+  const i = text.search(/\bRETURN\b(?![\s\S]*\bRETURN\b)/i);
+  if (i < 0) return [];
+  const body = text.slice(i).replace(/^RETURN\s+(DISTINCT\s+)?/i, '').split(/\b(ORDER\s+BY|SKIP|LIMIT)\b/i)[0];
+  const parts = [];
+  let depth = 0;
+  let cur = '';
+  for (const ch of body) {
+    if ('([{'.includes(ch)) depth++;
+    if (')]}'.includes(ch)) depth--;
+    if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch;
+  }
+  parts.push(cur);
+  return parts.map((x) => x.trim()).map((x) => /\bAS\s+`?([A-Za-z_]\w*)`?\s*$/i.exec(x)?.[1] ?? (/^[A-Za-z_]\w*$/.test(x) ? x : null)).filter(Boolean);
+}
+
+/**
+ * An oracle check from a competency question drafted as a recipe, with the
+ * direct Cypher a person validated. The SPARQL is the recipe's question:
+ * {{kind|$param}} placeholders stay, filled per case; prefixes it needs that the
+ * oracle does not declare are added to it. Throws when it cannot be a check.
+ * @param {{recipe: object, cypher: string, cases: Array<{params: object}>, id: string, question: string, mapping: object, oraclePrefixes?: string}} a
+ */
+export function checkFromDraft({ recipe, cypher, cases = [], id, question, mapping, oraclePrefixes = '' }) {
+  const q = [...(recipe.steps ?? [])].reverse().find((s) => s.type === 'query');
+  if (!q) throw new Error('The recipe has no query step: nothing to compare with the Cypher.');
+  if (q.profile || q.rules || q.rulesFiles) throw new Error(`Step ${q.id} reasons (profile or rules): an oracle check asks the projection as it is. Write the question without reasoning, or keep it as a recipe.`);
+  const selected = [...String(q.sparql).replace(/WHERE[\s\S]*$/i, '').matchAll(/[?$](\w+)/g)].map((m) => m[1]);
+  const columns = returnColumns(cypher).filter((c) => selected.includes(c));
+  if (!columns.length) throw new Error(`The Cypher returns ${returnColumns(cypher).join(', ') || 'nothing named'} and the SPARQL selects ${selected.join(', ') || 'nothing'}: they need a column in common.`);
+  const decode = {};
+  for (const col of columns) {
+    const spec = q.decode?.[col];
+    if (spec === 'any') throw new Error(`decode ${col}: any is not a check decoder; decode it as node:<node id>.`);
+    if (spec) decode[col] = spec;
+  }
+  const used = new Set([...String(cypher).matchAll(/\$([A-Za-z_]\w*)/g), ...String(q.sparql).matchAll(/\{\{[^|}]+\|\s*\$([A-Za-z_]\w*)/g)].map((m) => m[1]));
+  for (const p of used) {
+    if (recipe.params?.[p]?.type === 'list') throw new Error(`$${p} is a list: an oracle case takes single values.`);
+    for (const c of cases) if (!(p in (c.params ?? {}))) throw new Error(`A case has no value for $${p}.`);
+  }
+  // Placeholders: node and iri ones inside <…>, as the oracle writes them; literal ones as they are.
+  const body = String(q.sparql).trim().replace(/<?\{\{([^|}]+)\|([^}]+)\}\}>?/g, (_, kind, expr) => (kind === 'literal' ? `{{literal|${expr}}}` : `<{{${kind}|${expr}}}>`));
+  const declared = new Set([...String(oraclePrefixes).matchAll(/PREFIX\s+([\w.-]*):/gi)].map((m) => m[1]));
+  const P = { ...(mapping?.prefixes ?? {}), ...(recipe.prefixes ?? {}) };
+  const need = Object.entries(P).filter(([p]) => !declared.has(p) && new RegExp(`(?<![\\w?$:<])${p.replace(/[.-]/g, '\\$&')}:`).test(body.replace(/<[^>]*>/g, ' ')));
+  const sparql = `${need.map(([p, ns]) => `PREFIX ${p}: <${ns}>`).join('\n')}${need.length ? '\n' : ''}${body}\n`;
+  const kept = cases.map((c) => ({ params: Object.fromEntries(Object.entries(c.params ?? {}).filter(([k]) => used.has(k))) }));
+  return {
+    id, source: question, mode: 'equal', columns, ...(Object.keys(decode).length ? { decode } : {}),
+    cypher: `${String(cypher).trim()}\n`, sparql,
+    ...(used.size ? { cases: kept } : {}),
+  };
+}
+
+/**
+ * Which validated checks cover which decision, from the oracle file and the
+ * evidence of its last run.
+ *   covered   the check's SPARQL uses a term the decision emits AND its Cypher
+ *             reads the element (a relationship with its ends); it counts when
+ *             it passed with this very decision, its Cypher answered something,
+ *             it is validated as it is (or written by hand), and it was not
+ *             drafted from this decision while the decision was only proposed
+ *             (shown as drafted from it once accepted);
+ *   suspected a check whose SPARQL uses a term the decision emits failed with
+ *             it: blame is wider than coverage;
+ *   read by   for a decision to leave something out: the checks whose Cypher reads it.
+ * @param {{oracle: object|null, evidence: object|null, mapping: object, lpgDoc: object, plan?: object|null, lpgHash?: string|null}} a
+ */
+export function coverage({ oracle, evidence = null, mapping, lpgDoc, plan = null, lpgHash = null }) {
+  const idx = indexLpg(lpgDoc);
+  const byId = new Map((evidence?.checks ?? []).map((c) => [c.id, c]));
+  // Without the oracle file, the checks as the evidence recorded them (written by hand, as far as it knows).
+  const raw = oracle ? oracle.checks.filter((c) => c.expressible !== false)
+    : (evidence?.checks ?? []).filter((c) => c.status !== 'not-expressible').map((ev) => ({ id: ev.id, fromEvidence: ev }));
+  const checks = raw.map((c) => {
+    const fingerprint = c.fromEvidence ? null : checkFingerprint(c);
+    const ev = byId.get(c.id);
+    const same = !!ev && (!ev.fingerprint || !fingerprint || ev.fingerprint === fingerprint);
+    const validation = !c.validated ? 'by hand'
+      : c.validated.fingerprint !== fingerprint ? 'to revalidate: changed since it was validated'
+        : lpgHash && c.validated.lpg && c.validated.lpg !== lpgHash ? 'to revalidate: the LPG ontology changed' : 'validated';
+    return {
+      id: c.id, source: c.source ?? null, check: c,
+      terms: c.fromEvidence ? new Set(c.fromEvidence.terms ?? []) : sparqlTerms(c, oracle.prefixes), reads: c.fromEvidence ? c.fromEvidence.reads : cypherReads(c),
+      status: same ? ev.status : 'not-run', nonEmpty: same ? ev.nonEmpty ?? null : null, validation,
+      relies: new Map((c.validated?.relies ?? []).map((r) => [r.path, r])),
+    };
+  });
+  const label = (path) => {
+    const [section, id, , pid] = path.split('/');
+    const base = section === 'nodes' ? idx.nodes.get(id)?.label : (() => { const r = idx.rels.get(id); return r ? `(${idx.nodes.get(r.from)?.label})-[:${r.type}]->(${idx.nodes.get(r.to)?.label})` : id; })();
+    if (!pid) return base;
+    const p = section === 'nodes' ? idx.findNodeProperty(id, pid)?.prop : idx.rels.get(id)?.props.get(pid);
+    return `${base}.${p?.name ?? pid}`;
+  };
+  const decisions = [];
+  for (const d of decisionTerms(mapping, lpgDoc, plan, evidence).values()) {
+    // Statuses count only from a run that projected this very decision.
+    const ev = evidence?.decisions?.[d.path];
+    const ranWith = !!ev && ev.fingerprint === entryFingerprint(d.entry);
+    const covering = [];
+    const suspects = [];
+    const readBy = [];
+    for (const k of checks) {
+      const status = ranWith ? k.status : 'not-run';
+      const reads = readsElement(k.reads, lpgDoc, d.path);
+      if (d.kind === 'left-out') { if (reads) readBy.push({ id: k.id, status }); continue; }
+      const uses = [...k.terms].some((t) => d.terms.has(t));
+      if (uses && ['fail', 'error'].includes(status)) suspects.push(k.id);
+      if (!uses || !reads) continue;
+      const r = k.relies.get(d.path);
+      const draftedFrom = !!r && r.fingerprint === entryFingerprint(d.entry);
+      const why = status === 'not-run' ? (ev ? 'not run with this decision' : 'not run yet')
+        : status !== 'pass' ? (status === 'fail' ? 'fails' : 'error')
+          : k.nonEmpty === false ? 'its Cypher answers nothing: two empty answers prove nothing'
+            : k.validation.startsWith('to revalidate') ? k.validation
+              : draftedFrom && d.status === 'proposed' ? 'drafted from this decision while it is proposed: accept it first' : null;
+      covering.push({ id: k.id, status, counts: !why, why, draftedFrom });
+    }
+    decisions.push({
+      path: d.path, section: d.section, label: label(d.path), kind: d.kind, status: d.status, terms: [...d.terms],
+      covering, counted: covering.filter((c) => c.counts).map((c) => c.id), suspects, readBy,
+    });
+  }
+  return {
+    decisions,
+    checks: checks.map((k) => ({ id: k.id, source: k.source, status: k.status, nonEmpty: k.nonEmpty, validation: k.validation, cases: k.check.cases?.length ?? 1, terms: [...k.terms] })),
+    summary: {
+      mapped: decisions.filter((d) => d.kind === 'mapped').length,
+      covered: decisions.filter((d) => d.kind === 'mapped' && d.counted.length).length,
+      suspected: decisions.filter((d) => d.suspects.length).length,
+    },
   };
 }

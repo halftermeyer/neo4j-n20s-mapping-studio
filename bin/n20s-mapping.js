@@ -4,8 +4,9 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   checkFiles, lockFiles, compileFiles, proposeFiles, sourceValues, variantsPathFor, loadRecipe, recordRecipeRun, graphsReport, registryPathFor, publishedResolver, republish, unpublishEndpoint, readOracle, readQueryArg, UsageError,
-  openSource, splitStatements, defaultSource, writerFromEnv, writePatchFiles, adoptStep, freshnessOf,
+  openSource, splitStatements, defaultSource, writerFromEnv, writePatchFiles, adoptStep, freshnessOf, evidencePathFor, oraclePathFor, loadFiles,
 } from '../src/node.js';
+import { createHash } from 'node:crypto';
 import YAML from 'yaml';
 import { recordingProvider, replayProvider, makeProvider, aiSettingsFromEnv, PROVIDERS } from '../src/providers.js';
 import { connectionSettings } from '../src/settings.js';
@@ -18,7 +19,10 @@ import { readProject, projectStatus, introspectSource, fetchTarget, PROJECT_FORM
 import { formatText } from '../src/report.js';
 import { n20sClient } from '../src/n20s.js';
 import { project, compareSources } from '../src/project.js';
-import { runOracle } from '../src/oracle.js';
+import { runOracle, oracleEvidence, coverage } from '../src/oracle.js';
+import { acceptAll } from '../src/propose.js';
+import { compile } from '../src/compile.js';
+import { contentHash } from '../src/lpg.js';
 import { takeSnapshot } from '../src/snapshot.js';
 
 const USAGE = `Usage:
@@ -50,7 +54,8 @@ const USAGE = `Usage:
   n20s-mapping load    <file.cypher>... [--source <url>]
   n20s-mapping query   <sparql | file> --graph <name> [--n20s <url>] [--json]
   n20s-mapping oracle  <oracle.yaml> [--mapping <file>] [--source <url>] [--n20s <url>]
-                       [--graph <name>] [--skip-project] [--json]
+                       [--graph <name>] [--skip-project] [--proposals] [--evidence] [--json]
+  n20s-mapping coverage <mapping> [--oracle <oracle.yaml>] [--uncovered] [--json]
 
 check    Validates the mapping against its LPG ontology, its target ontologies
          and its lock file, and reports coverage.
@@ -146,7 +151,15 @@ snapshot Saves the rows of every row query, and of the Cypher side of the
 load     Runs a Cypher script on the source (statements end with ; at end of line).
 query    Runs a SPARQL SELECT on an n20s graph.
 oracle   Projects, then runs each check of the oracle file in Cypher on the
-         source and in SPARQL on the projection, and compares the rows.
+         source and in SPARQL on the projection, and compares the rows (once
+         per parameter case). --proposals projects proposed entries too;
+         --evidence records the run next to the mapping (<mapping>.oracle.json),
+         as the studio does: the review and coverage read it.
+coverage Which validated oracle checks cover each decision of a mapping (the
+         check's SPARQL uses a term the decision emits, and its Cypher reads
+         the element), which decisions none covers, and which a failing check
+         puts in doubt. Reads the oracle file (--oracle, else the one next to
+         the mapping) and the last recorded run.
 
 Sources are reached over Bolt, the same way for Relate (relate serve --bolt)
 and for Neo4j or Aura: bolt://host:port, neo4j://, neo4j+s://... A path to a
@@ -165,7 +178,7 @@ n20s-server: --n20s, default N20S_URL, else http://localhost:7474.
 
 Exit codes: 0 ok, 1 errors or failed checks (or warnings with --strict), 2 usage, I/O or connection error.`;
 
-const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'write-patch', 'adopt', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'follow', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle'];
+const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'write-patch', 'adopt', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'follow', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle', 'coverage'];
 
 /** Explicit --source options first, then the default source when more are needed. */
 function sourceUrls(values, count) {
@@ -264,6 +277,8 @@ async function main() {
       repin: { type: 'boolean', default: false },
       off: { type: 'boolean', default: false },
       'mask-hosts': { type: 'boolean', default: false },
+      evidence: { type: 'boolean', default: false },
+      uncovered: { type: 'boolean', default: false },
       title: { type: 'string' },
       recipes: { type: 'string' },
       proposals: { type: 'boolean', default: false },
@@ -716,18 +731,47 @@ async function main() {
     return 0;
   }
 
+  if (command === 'coverage') {
+    const l = await loadFiles(first);
+    const oracleFile = values.oracle ?? oraclePathFor(first);
+    let text;
+    try { text = await fs.readFile(oracleFile, 'utf8'); } catch { throw new UsageError(`No oracle file ${oracleFile}: --oracle <file>.`); }
+    const oracle = YAML.parse(text);
+    let evidence = null;
+    try { evidence = JSON.parse(await fs.readFile(evidencePathFor(first), 'utf8')); } catch { /* never run */ }
+    const { plan } = await compile(acceptAll(l.mapping), l.lpgDoc);
+    const cov = coverage({ oracle, evidence, mapping: l.mapping, lpgDoc: l.lpgDoc, plan, lpgHash: await contentHash(l.lpgDoc) });
+    if (values.json) { console.log(JSON.stringify(cov, null, 2)); return 0; }
+    const sha = createHash('sha256').update(text).digest('hex');
+    console.log(`${oracleFile}: ${cov.checks.length} checks. ${evidence ? `Last run ${evidence.at}${evidence.withProposals ? ' (with proposals)' : ''}${evidence.oracle && evidence.oracle !== sha ? ', with another version of this file: run it again' : ''}.` : 'Never run: n20s-mapping oracle <file> --evidence.'}\n`);
+    const rows = cov.decisions.filter((d) => d.kind === 'mapped' && (!values.uncovered || !d.counted.length || d.suspects.length));
+    printTable(rows.map((d) => ({
+      decision: d.label, status: d.status, 'covered by': d.counted.map((id) => `${id}${d.covering.find((c) => c.id === id)?.draftedFrom ? ' (drafted from it)' : ''}`).join(', '),
+      'not counting': d.covering.filter((c) => !c.counts).map((c) => `${c.id}: ${c.why}`).join('; '), 'in doubt': d.suspects.join(', '),
+    })));
+    console.log(`\n${cov.summary.covered} of ${cov.summary.mapped} mapped decisions covered by a check that counts; ${cov.summary.suspected} in doubt.`);
+    return 0;
+  }
+
   // oracle
   const { oracle, mappingFile: fromOracle } = await readOracle(first);
   const mappingFile = values.mapping ?? fromOracle;
   if (!mappingFile) throw new UsageError('No mapping: set `mapping` in the oracle file or pass --mapping.');
   const c = await compiled(mappingFile, values);
   if (!c) return 1;
+  // --proposals: proposed entries projected too, as the studio's "Run with proposals too".
+  if (values.proposals) { const m = acceptAll(c.mapping); Object.assign(c, { mapping: m, plan: (await compile(m, c.lpgDoc)).plan }); }
   const graph = values.graph ?? c.mapping.id;
-  const source = openSource(sourceUrls(values, 1)[0]);
+  const source = openSource(sourceUrls(values, 1)[0], { readOnly: true });
   try {
     const n20s = n20sClient(values.n20s);
     if (!values['skip-project']) await project({ plan: c.plan, source, n20s, graph });
     const results = await runOracle({ oracle, mapping: c.mapping, lpgDoc: c.lpgDoc, source, n20s, graph });
+    if (values.evidence) {
+      const sha = createHash('sha256').update(await fs.readFile(first, 'utf8')).digest('hex');
+      await fs.writeFile(evidencePathFor(mappingFile), JSON.stringify(oracleEvidence({ oracle, results, mapping: c.mapping, lpgDoc: c.lpgDoc, plan: c.plan, withProposals: !!values.proposals, oracleSha256: sha }), null, 1) + '\n');
+      if (!values.json) console.error(`Recorded in ${evidencePathFor(mappingFile)}.`);
+    }
     if (values.json) console.log(JSON.stringify(results, null, 2));
     else {
       printTable(results.map((r) => ({

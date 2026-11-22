@@ -114,6 +114,12 @@ test('a mapped relationship is safe only when a check whose SPARQL uses a term i
   assert.ok(item.reasons.some((r) => r.code === 'oracle' && /q34-potential-not-asserted/.test(r.text)));
   assert.ok(item.risk >= 5, 'ranked with the errors');
 
+  // Blame is wider than coverage: q33's Cypher reads WAS_DERIVED_FROM only, but its SPARQL asks about
+  // prov:wasDerivedFrom, which DEPENDS_ON now emits too. It fails, and DEPENDS_ON gets the reason.
+  item = await r2(await evidence(mapping, status(['q33-upstream-asserted-sources'])));
+  assert.equal(item.safe, false);
+  assert.ok(item.reasons.some((r) => r.code === 'oracle' && /q33-upstream-asserted-sources/.test(r.text)), JSON.stringify(item.reasons));
+
   // Evidence about another decision does not count; nor does a run on accepted entries only.
   const ev = await evidence(mapping, status([]));
   decide('prov:wasInfluencedBy');
@@ -385,10 +391,16 @@ test('the ends of a relationship count: two ABOUT emit sosa:observedProperty, a 
   assert.equal(r.tick.safe, true);
   assert.equal(r.rollup.safe, false);
   assert.ok(r.rollup.reasons.some((x) => x.code === 'unverified'));
-  // s11 reads (:Rollup)-[:ABOUT]->(:Metric): it covers the other one, and its failure is the rollup's only.
+  // s11 reads (:Rollup)-[:ABOUT]->(:Metric): it covers the other one. Blame is wider than coverage: when it fails,
+  // both ABOUT are in doubt, since its SPARQL asks about sosa:observedProperty, which both emit.
   r = await run([byId('s7-observed-on-rig'), byId('s11-rollup-result-times')], (id) => (id === 's11-rollup-result-times' ? 'fail' : 'pass'));
-  assert.equal(r.tick.safe, true);
   assert.ok(r.rollup.reasons.some((x) => x.code === 'oracle' && /s11-rollup-result-times/.test(x.text)));
+  assert.equal(r.tick.safe, false);
+  assert.ok(r.tick.reasons.some((x) => x.code === 'oracle' && /s11-rollup-result-times/.test(x.text)));
+  // When it passes, it covers the rollup's ABOUT only.
+  r = await run([byId('s11-rollup-result-times')], () => 'pass');
+  assert.equal(r.rollup.safe, true);
+  assert.equal(r.tick.safe, false);
   // A Cypher that does not say which ABOUT covers neither; covers: says it.
   const vague = { id: 'vague', cypher: 'MATCH (x)-[:ABOUT]->(m:Metric) RETURN count(x) AS n', sparql: 'SELECT (COUNT(*) AS ?n) WHERE { ?x sosa:observedProperty ?m }', columns: ['n'], mode: 'equal' };
   r = await run([vague], () => 'pass');

@@ -41,7 +41,8 @@ README.md is the reference for the format, the checks and the commands; read it 
     through implied labels, entry status), compile.js (template strategy ->
     projection plan), source.js (Bolt + temporal -> XSD), snapshot.js (record and
     replay a source), project.js (plan -> n20s-server, compareSources),
-    oracle.js (Cypher vs SPARQL), iri.js (templates, n20s-identical encoding),
+    oracle.js (Cypher vs SPARQL, parameter cases, checks from drafted
+    questions, coverage(): what covers, what is in doubt; review.js uses it), iri.js (templates, n20s-identical encoding),
     prepare.js (deterministic part of proposals: subjects, qualified and value
     IRIs), propose.js (AI proposals, passes, variants), providers.js (Gemini,
     Anthropic, OpenAI-compatible, record, replay; PROVIDERS, makeProvider,
