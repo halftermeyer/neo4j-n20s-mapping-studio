@@ -1,0 +1,1029 @@
+{
+ "format": "n20s-propose-recording/0.1",
+ "provider": "gemini",
+ "model": "gemini-2.5-flash",
+ "calls": [
+  {
+   "key": "c05608cabeb72745be8849c59d16748e6070bea816d1908eb938758026bd8735",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Entity"
+    ],
+    "rationale": "The `Entity` node kind directly corresponds to the `prov:Entity` class, representing any kind of thing with fixed aspects.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8592,
+    "output": 67,
+    "thinking": 248,
+    "cached": 8184
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "85c73e4dd5109f095aef880af0baa40bd38661478986a0009a6cd302a95f2cd4",
+   "element": "nodes/n:1",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Activity"
+    ],
+    "rationale": "The `Activity` node kind directly corresponds to the `prov:Activity` class, representing something that occurs over time and acts upon entities.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8594,
+    "output": 64,
+    "thinking": 152,
+    "cached": 8184
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "4f8d714be499e262f1e81ebff270bd92ece300f7046b6da9feecdbf5407d608d",
+   "element": "nodes/n:2",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Agent"
+    ],
+    "rationale": "The Agent node kind directly corresponds to the prov:Agent class in PROV-O, which represents something that bears responsibility.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:3",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable label for the agent, which maps directly to rdfs:label.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 8709,
+    "output": 153,
+    "thinking": 393,
+    "cached": 8299
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "cf0a148cda9b3d9bf8b02cebd34f9d5fa816ea759d51bcdb18706676e6c47748",
+   "element": "nodes/n:3",
+   "json": {
+    "decision": "map",
+    "rationale": "A Dataset is a collection of data, which aligns well with prov:Collection. Its properties are mapped to standard PROV terms where appropriate.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:5",
+      "decision": "ignore",
+      "rationale": "The 'namespace' property is organizational metadata and does not have a direct equivalent in PROV-O.",
+      "confidence": 0.75,
+      "reason": "The 'namespace' property is organizational metadata and does not have a direct equivalent in PROV-O."
+     },
+     {
+      "id": "p:6",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property serves as a human-readable label for the dataset.",
+      "confidence": 0.95
+     },
+     {
+      "id": "p:7",
+      "decision": "ignore",
+      "rationale": "The 'system' property is organizational metadata and does not have a direct equivalent in PROV-O.",
+      "confidence": 0.75,
+      "reason": "The 'system' property is organizational metadata and does not have a direct equivalent in PROV-O."
+     },
+     {
+      "id": "p:8",
+      "decision": "ignore",
+      "rationale": "The 'kind' property describes a classification of the dataset itself, for which there is no direct equivalent in PROV-O.",
+      "confidence": 0.7,
+      "reason": "The 'kind' property describes a classification of the dataset itself, for which there is no direct equivalent in PROV-O."
+     },
+     {
+      "id": "p:9",
+      "decision": "map",
+      "predicate": "prov:invalidatedAtTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'retiredAt' property indicates the time when the dataset became inactive, which directly corresponds to prov:invalidatedAtTime.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 8879,
+    "output": 412,
+    "thinking": 934,
+    "cached": 8313
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3f478da3ad9948f0d8b39d6d570bc85139444929983e3b4d20343cef61ffe09e",
+   "element": "nodes/n:4",
+   "json": {
+    "decision": "map",
+    "rationale": "DatasetVersion is a specific kind of Entity, inheriting prov:Entity. No additional PROV-O classes directly apply to a versioned dataset beyond its entity nature.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:11",
+      "decision": "ignore",
+      "reason": "PROV-O does not have a direct property for a generic version string. While important for the source system, it doesn't map cleanly to a PROV-O concept without misinterpretation.",
+      "rationale": "The 'version' property is a specific identifier for the dataset version, but PROV-O lacks a direct predicate for such a generic version string on an entity.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:12",
+      "decision": "map",
+      "predicate": "prov:generatedAtTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'generatedAt' property directly corresponds to the PROV-O concept of when an entity was generated, expressed by prov:generatedAtTime.",
+      "confidence": 1
+     },
+     {
+      "id": "p:13",
+      "decision": "ignore",
+      "reason": "PROV-O does not have a direct property for a 'published at' timestamp on an entity. Publishing is an activity, not a direct property of the entity itself in PROV-O.",
+      "rationale": "While publishing is a provenance activity, PROV-O does not provide a direct 'publishedAt' property for an entity. This would typically be modeled through a 'Publish' activity.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:14",
+      "decision": "ignore",
+      "reason": "PROV-O does not have direct properties to represent the 'valid from' period of an entity. This concept is outside the core PROV-O model for entities.",
+      "rationale": "The 'validFrom' property describes a temporal validity period for the entity, which is not directly supported by PROV-O's event-based temporal properties.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:15",
+      "decision": "ignore",
+      "reason": "PROV-O does not have direct properties to represent the 'valid to' period of an entity. This concept is outside the core PROV-O model for entities.",
+      "rationale": "The 'validTo' property describes a temporal validity period for the entity, which is not directly supported by PROV-O's event-based temporal properties.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:16",
+      "decision": "map",
+      "predicate": "prov:invalidatedAtTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'invalidatedAt' property directly corresponds to the PROV-O concept of when an entity was invalidated, expressed by prov:invalidatedAtTime.",
+      "confidence": 1
+     },
+     {
+      "id": "p:17",
+      "decision": "ignore",
+      "reason": "PROV-O does not have a specific property for a schema hash. It is a technical identifier that does not directly map to a PROV-O concept.",
+      "rationale": "The 'schemaHash' is a technical identifier or checksum for the schema, for which PROV-O does not provide a direct predicate.",
+      "confidence": 0.8
+     }
+    ]
+   },
+   "usage": {
+    "input": 9078,
+    "output": 841,
+    "thinking": 1147,
+    "cached": 8338
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "2697b5a1df930617f8e80432c57587eedaeff8e826d8aa9b41f22f9a931c3d1d",
+   "element": "nodes/n:5",
+   "json": {
+    "decision": "map",
+    "rationale": "The Column node kind is a specific type of Entity, and 'prov:Entity' is already inherited. No more specific PROV class is available or necessary.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:19",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable label for the column, which directly maps to rdfs:label.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 8787,
+    "output": 115,
+    "thinking": 125,
+    "cached": 8317
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "91f2a9f3104f49e178c2ace919689d687d542ef7d1e9bf47a656d856d0eb6bf5",
+   "element": "nodes/n:6",
+   "json": {
+    "decision": "map",
+    "rationale": "ColumnVersion is a specific kind of Entity, inheriting prov:Entity. No more specific PROV class is available.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:21",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable label for the ColumnVersion.",
+      "confidence": 0.95
+     },
+     {
+      "id": "p:22",
+      "decision": "ignore",
+      "reason": "No suitable predicate in the target ontology for 'dataType' of an entity.",
+      "rationale": "The PROV ontology does not provide a specific predicate to describe the data type of an entity like a column version.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:23",
+      "decision": "ignore",
+      "reason": "No suitable predicate in the target ontology for 'ordinal' of an entity.",
+      "rationale": "The PROV ontology does not provide a specific predicate to describe the ordinal position of an entity like a column version.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:24",
+      "decision": "ignore",
+      "reason": "No suitable predicate in the target ontology for 'nullable' of an entity.",
+      "rationale": "The PROV ontology does not provide a specific predicate to describe the nullability constraint of an entity like a column version.",
+      "confidence": 0.8
+     }
+    ]
+   },
+   "usage": {
+    "input": 8929,
+    "output": 310,
+    "thinking": 789,
+    "cached": 8327
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "774ff6b5e0b187b0d590a22b1a1cd7f29aabddbcf40815c2dcef7346a94a2814",
+   "element": "nodes/n:7",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Plan"
+    ],
+    "rationale": "A Job represents a plan or specification for an activity, which aligns with the definition of prov:Plan.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:26",
+      "decision": "ignore",
+      "reason": "Bookkeeping, internal to the source system, or computed from other elements.",
+      "rationale": "The 'namespace' property is likely an internal identifier for grouping jobs within the source system and does not have a direct equivalent in PROV-O.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:27",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable label for the Job, which maps directly to rdfs:label.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 8849,
+    "output": 242,
+    "thinking": 271,
+    "cached": 8324
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "04f347a885c8d11fc190743fb468b4f46fe9ccdf82d14a25f1557685fa2a5464",
+   "element": "nodes/n:8",
+   "json": {
+    "decision": "map",
+    "rationale": "JobVersion represents a specific version of a Job, which is a Plan. Therefore, JobVersion is also a Plan.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:29",
+      "decision": "map",
+      "predicate": "prov:value",
+      "datatype": "xsd:string",
+      "rationale": "The code reference is a key identifier for this specific version of the job plan, representing a part of its defining value.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:30",
+      "decision": "map",
+      "predicate": "prov:value",
+      "datatype": "xsd:string",
+      "rationale": "The definition hash directly represents the integrity and content of the job version's definition.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:31",
+      "decision": "map",
+      "predicate": "prov:value",
+      "datatype": "xsd:string",
+      "rationale": "The artifact reference is a key identifier for this specific version of the job plan, representing a part of its defining value.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:32",
+      "decision": "map",
+      "predicate": "prov:value",
+      "datatype": "xsd:string",
+      "rationale": "The configuration reference is a key identifier for this specific version of the job plan, representing a part of its defining value.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 8944,
+    "output": 394,
+    "thinking": 3454,
+    "cached": 8330
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "5ee160dd4c7d8ed19ab18a44c769cd9d74ef08d4b7ab6ebe6ef1afd52152456c",
+   "element": "nodes/n:9",
+   "json": {
+    "decision": "map",
+    "rationale": "The Run node kind directly corresponds to a PROV Activity, inheriting its class. Its properties can be mapped to standard PROV activity timestamps.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:34",
+      "decision": "map",
+      "predicate": "prov:startedAtTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'startedAt' property directly maps to the time an activity began.",
+      "confidence": 1
+     },
+     {
+      "id": "p:35",
+      "decision": "map",
+      "predicate": "prov:endedAtTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'endedAt' property directly maps to the time an activity concluded.",
+      "confidence": 1
+     },
+     {
+      "id": "p:36",
+      "decision": "ignore",
+      "reason": "The PROV ontology does not provide a direct predicate for the operational status of an activity.",
+      "rationale": "The 'status' property describes an operational state of the run, which is not a core provenance concept in PROV-O.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:37",
+      "decision": "ignore",
+      "reason": "This property appears to be an internal bookkeeping or computed attribute, not directly expressible in PROV.",
+      "rationale": "The 'lastEventType' property seems to be an internal detail about the run's lifecycle, not a direct provenance attribute.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:38",
+      "decision": "ignore",
+      "reason": "This property appears to be an internal bookkeeping or computed attribute, not directly expressible in PROV.",
+      "rationale": "The 'lastEventTime' property is an internal detail about the run's lifecycle, not a direct provenance attribute.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:39",
+      "decision": "ignore",
+      "reason": "This property describes when the run was observed, which is metadata about the observation process, not a core provenance attribute of the run itself.",
+      "rationale": "The 'observedAt' property indicates when the run was recorded or observed, which is external to the run's provenance.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:40",
+      "decision": "ignore",
+      "reason": "PROV-O does not have a direct predicate for literal parameters of an activity.",
+      "rationale": "While parameters are inputs to an activity, PROV-O models inputs as entities via 'prov:used', not as literal properties on the activity itself.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:41",
+      "decision": "ignore",
+      "reason": "PROV-O does not have a direct predicate for a reference to parameters of an activity.",
+      "rationale": "A reference to parameters would typically be an entity that the activity 'prov:used', not a direct property of the activity itself.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 9214,
+    "output": 781,
+    "thinking": 1494,
+    "cached": 8362
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "05ad11361206015f0f9fe8983b13f9d3f15955e33767d4d6876e04ac6d69b424",
+   "element": "nodes/n:10",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Person"
+    ],
+    "rationale": "The 'Person' node kind directly corresponds to the prov:Person class, which is a sub-class of prov:Agent.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8824,
+    "output": 53,
+    "thinking": 360,
+    "cached": 8208
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "448ee0a93d272785118615bc95d52d983948f57a805906f1861157fe91806d23",
+   "element": "nodes/n:11",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:SoftwareAgent"
+    ],
+    "rationale": "The node kind 'SoftwareAgent' directly corresponds to the 'prov:SoftwareAgent' class in the PROV ontology, which is a subclass of 'prov:Agent'.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8829,
+    "output": 63,
+    "thinking": 136,
+    "cached": 8209
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a575f5d87e5be3a93422347fe32918e045c4820767ed2d1cb1a6989fe199dc00",
+   "element": "nodes/n:12",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "prov:Organization"
+    ],
+    "rationale": "The Organization node kind directly corresponds to the prov:Organization class in the PROV ontology, which is a subclass of prov:Agent.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8833,
+    "output": 70,
+    "thinking": 176,
+    "cached": 8209
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "54b9a58389ff4809540b0732ec1da0012fc70a42659f08c2b9f6cb575f768125",
+   "element": "relationships/r:0",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:used",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Usage",
+     "link": "prov:qualifiedUsage",
+     "target": "prov:entity"
+    },
+    "rationale": "The `USED` relationship directly corresponds to `prov:used`, which describes an activity utilizing an entity. The `role` property can be mapped using the qualified form `prov:Usage`.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:48",
+      "decision": "map",
+      "predicate": "prov:hadRole",
+      "datatype": "xsd:string",
+      "asIris": true,
+      "rationale": "The `role` property on the `USED` relationship describes the function of the used entity within the activity, which maps directly to `prov:hadRole` on the qualified `prov:Usage` instance. The string value will be used to identify an instance of `prov:Role`.",
+      "confidence": 0.95
+     }
+    ]
+   },
+   "usage": {
+    "input": 8901,
+    "output": 185,
+    "thinking": 1482,
+    "cached": 8429
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "4e3ceb566228b360bc46df70961b1afe1a094062144104067984b5099148a501",
+   "element": "relationships/r:1",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasGeneratedBy",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Generation",
+     "link": "prov:qualifiedGeneration",
+     "target": "prov:activity"
+    },
+    "rationale": "The relationship 'WAS_GENERATED_BY' directly corresponds to the PROV predicate prov:wasGeneratedBy, indicating an entity was generated by an activity. The qualified form prov:Generation allows for additional properties like 'role'.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:49",
+      "decision": "map",
+      "predicate": "prov:hadRole",
+      "asIris": true,
+      "rationale": "The 'role' property on the generation relationship can be mapped to prov:hadRole on the qualified prov:Generation instance, representing the role played in the generation.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 8918,
+    "output": 237,
+    "thinking": 780,
+    "cached": 8436
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "f4ea7e809003577c8f6649e30f5c7168fef78e32c4b8a53758320e24a90e2520",
+   "element": "relationships/r:2",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasDerivedFrom",
+    "qualified": {
+     "class": "prov:Derivation",
+     "link": "prov:qualifiedDerivation",
+     "target": "prov:entity"
+    },
+    "rationale": "The DEPENDS_ON relationship indicates that one DatasetVersion is derived from another, which directly aligns with the definition of prov:wasDerivedFrom.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:50",
+      "decision": "defer",
+      "reason": "Mapping this property would require a join with the 'Run' node to link the derivation to the activity that caused it, which is beyond a direct property mapping.",
+      "rationale": "The 'runId' property refers to an activity (Run) that caused the derivation, which could be mapped to prov:hadActivity on the qualified prov:Derivation instance, but requires a join.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:51",
+      "decision": "ignore",
+      "reason": "There is no direct predicate in PROV-O to represent the time of a prov:Derivation instance itself.",
+      "rationale": "The 'computedAt' property represents a timestamp for the derivation, but prov:Derivation is not an InstantaneousEvent, so prov:atTime is not directly applicable.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 8981,
+    "output": 345,
+    "thinking": 1147,
+    "cached": 8453
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "ab5b5423c21ba76ec4b048836ed9ec8cc28a6a8a3a6a6e6eda7fdc763cbe4482",
+   "element": "relationships/r:3",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasDerivedFrom",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Derivation",
+     "link": "prov:qualifiedDerivation",
+     "target": "prov:entity"
+    },
+    "rationale": "The WAS_DERIVED_FROM relationship directly corresponds to the PROV-O prov:wasDerivedFrom predicate, which describes a derivation between two entities. The qualified form prov:Derivation allows for attaching properties to the derivation event.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:52",
+      "decision": "map",
+      "predicate": "prov:hadActivity",
+      "rationale": "The runId identifies the activity (Run node) that performed the derivation, which can be linked to the prov:Derivation instance using prov:hadActivity.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:53",
+      "decision": "ignore",
+      "reason": "No direct predicate in PROV-O for a job version on a derivation.",
+      "rationale": "The jobVersionId refers to a plan (JobVersion node), but prov:Derivation does not have a prov:hadPlan property. This information would require a more complex pattern involving the Run activity, which is beyond a direct property mapping.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:54",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'source' property provides a descriptive string about the origin or context of the derivation, which fits well with rdfs:comment.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:55",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:anyURI",
+      "valueIsIri": true,
+      "rationale": "The 'evidenceRef' property provides a reference to external evidence, which can be represented as a URI and described using rdfs:comment.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:56",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'transformationType' property describes the nature of the transformation, which is suitable for rdfs:comment.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:57",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'transformationSubtype' property provides further descriptive detail about the transformation, fitting rdfs:comment.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:58",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'expression' property likely contains detailed descriptive text or code related to the transformation, which can be captured by rdfs:comment.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:59",
+      "decision": "ignore",
+      "reason": "No direct predicate in PROV-O for the assertion time of a derivation.",
+      "rationale": "The 'assertedAt' property refers to the time the provenance assertion was made, not a temporal aspect of the derivation event itself. PROV-O does not have a direct predicate for this on prov:Derivation.",
+      "confidence": 0.8
+     }
+    ]
+   },
+   "usage": {
+    "input": 9242,
+    "output": 896,
+    "thinking": 2215,
+    "cached": 8513
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "d2207b1566ff1bc147c1aec798b34ad49ff275c7878d4ea689d63e12d120a0df",
+   "element": "relationships/r:4",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasDerivedFrom",
+    "qualified": {
+     "class": "prov:Derivation",
+     "link": "prov:qualifiedDerivation",
+     "target": "prov:entity"
+    },
+    "rationale": "The relationship indicates that one column version is derived from another, which directly corresponds to the PROV-O concept of derivation between entities.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:60",
+      "decision": "defer",
+      "reason": "This property identifies the 'Run' activity responsible for the derivation. It needs to be mapped as a link (prov:hadActivity) from the qualified Derivation instance to the Run instance, which requires resolving the runId to an IRI for the Run node.",
+      "rationale": "The 'runId' refers to the activity that performed the derivation, which should be linked via prov:hadActivity on the qualified derivation. This requires a join to the Run node.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:61",
+      "decision": "defer",
+      "reason": "This property identifies the 'JobVersion' (plan) associated with the derivation. While a Run (activity) can have a plan, a Derivation (entity influence) does not directly link to a plan in PROV-O. This likely requires a more complex pattern involving the associated activity.",
+      "rationale": "The 'jobVersionId' refers to the plan used for the derivation. PROV-O links plans to associations (activities), not directly to derivations. This requires a more complex mapping pattern.",
+      "confidence": 0.7
+     },
+     {
+      "id": "p:62",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "datatype": "xsd:string",
+      "rationale": "The 'source' provides a general description of the derivation, which can be captured by rdfs:label on the qualified Derivation instance.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:63",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:anyURI",
+      "valueIsIri": true,
+      "rationale": "The 'evidenceRef' is a reference to external evidence. If it's a URL/IRI, it can be mapped as a comment with valueIsIri=true, linking to the evidence resource.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:64",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "datatype": "xsd:string",
+      "rationale": "The 'transformationType' describes the nature of the derivation, suitable for mapping to rdfs:label on the qualified Derivation instance.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:65",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'transformationSubtype' provides additional descriptive detail about the derivation, which can be mapped to rdfs:comment on the qualified Derivation instance.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:66",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'expression' provides the specific logic or formula of the derivation, which can be stored as a descriptive comment on the qualified Derivation instance.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:67",
+      "decision": "ignore",
+      "reason": "The 'assertedAt' property indicates when the derivation statement was recorded, which is metadata about the provenance assertion itself, not a property of the derivation event in PROV-O.",
+      "rationale": "PROV-O does not provide a direct property for the assertion time of a derivation event. It's metadata about the provenance record.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 9262,
+    "output": 988,
+    "thinking": 2711,
+    "cached": 8520
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "b2a893bcc193b27f2ab117313127c5b73385fc2f75c25c460de6a3e562aaf86f",
+   "element": "relationships/r:5",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A DatasetVersion is a specific instance or specialization of a more general Dataset.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 8954,
+    "output": 50,
+    "thinking": 379,
+    "cached": 8360
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a101d35f1295d346e99deab4be63231f52c17193f420b42111fd691a4753940b",
+   "element": "relationships/r:6",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:hadMember",
+    "direction": "forward",
+    "rationale": "A Dataset can be considered a collection, and a Column is a member of that collection. The prov:hadMember predicate expresses this relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 8964,
+    "output": 69,
+    "thinking": 444,
+    "cached": 8363
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a76ebb350ab220aa5dc10c0d3173ed66ffdfc3ea0f975694e6f0d9a63582081a",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:hadMember",
+    "rationale": "A DatasetVersion is composed of ColumnVersions, making it a collection of its column versions. The prov:hadMember property expresses this relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 8978,
+    "output": 66,
+    "thinking": 1245,
+    "cached": 8367
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "b420fd65ae375d8abc847a65204d5b44bc75ac40dc826d890b656fd6fe76fa8b",
+   "element": "relationships/r:8",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "rationale": "A ColumnVersion is a specific version, and thus a specialization, of a Column. The prov:specializationOf property accurately captures this relationship between two entities.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 8989,
+    "output": 71,
+    "thinking": 221,
+    "cached": 0
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a28ad4c7183716bd31657637795dda2f904b093c5950ba49dfceb8ceeead6abd",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:specializationOf",
+    "direction": "forward",
+    "rationale": "A JobVersion is a specific version, and thus a specialization, of a Job. The prov:specializationOf property correctly captures this relationship.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9009,
+    "output": 64,
+    "thinking": 276,
+    "cached": 8376
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "c49bd95ffaf0f6016eb558513d3fb1b7c6c7e22a9f8a562858ae1f53f569894b",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "defer",
+    "reason": "The target ontology expresses an activity having a plan through a qualified association involving an agent, which is a more complex pattern than a direct relationship.",
+    "rationale": "The 'RUN_OF' relationship links an Activity (Run) to a Plan (Job). In PROV-O, an Activity is linked to a Plan via a prov:Association, which also involves an Agent, making it a pattern spanning several elements.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9020,
+    "output": 113,
+    "thinking": 2541,
+    "cached": 8379
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "8502bba7a2e520db5c1f176bb46ef34b45589a4f622d7a8cc990f926b6120f4c",
+   "element": "relationships/r:11",
+   "json": {
+    "decision": "defer",
+    "reason": "The target property prov:hadPlan is a property of prov:Association, not directly of an Activity. This relationship needs to be expressed in the context of an association between the Run (Activity) and an Agent.",
+    "rationale": "The `prov:hadPlan` property is designed to link a `prov:Association` instance to a `prov:Plan`. The source relationship `(Run)-[:HAD_PLAN]->(JobVersion)` implies that the `JobVersion` (which is a `Plan`) is associated with the `Run` (Activity) through an agent's association with that activity. Therefore, this mapping requires a qualified association to properly express the plan.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 9020,
+    "output": 162,
+    "thinking": 506,
+    "cached": 8379
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3fbc0e624b8da120deda633f65a2f7ea6b2156a3df72e86cbd5b070c4006131f",
+   "element": "relationships/r:12",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasInformedBy",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Communication",
+     "link": "prov:qualifiedCommunication",
+     "target": "prov:activity"
+    },
+    "rationale": "The relationship 'WAS_INFORMED_BY' between two 'Run' nodes (activities) directly corresponds to 'prov:wasInformedBy' in the PROV ontology, which describes one activity being informed by another.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9028,
+    "output": 131,
+    "thinking": 133,
+    "cached": 8382
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "db7bbfdf86af404d2b831159f1013e538f7db5dee8e80bb7ba47b7d357e8750c",
+   "element": "relationships/r:13",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasAssociatedWith",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Association",
+     "link": "prov:qualifiedAssociation",
+     "target": "prov:agent"
+    },
+    "rationale": "The WAS_ASSOCIATED_WITH relationship directly corresponds to prov:wasAssociatedWith, which links an Activity to an Agent. The qualified form prov:Association also fits.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:68",
+      "decision": "map",
+      "predicate": "prov:hadRole",
+      "asIris": true,
+      "rationale": "The 'role' property of an association directly maps to prov:hadRole on the prov:Association class, specifying the role of the agent in the activity.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 9089,
+    "output": 175,
+    "thinking": 669,
+    "cached": 1214
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "12357295cf64f5a1ef0553060180b01eba66cfe4ff52e3780dd58868f0569524",
+   "element": "relationships/r:14",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasAttributedTo",
+    "qualified": {
+     "class": "prov:Attribution",
+     "link": "prov:qualifiedAttribution",
+     "target": "prov:agent"
+    },
+    "rationale": "The prov:wasAttributedTo property directly represents the attribution of an entity to an agent, matching the relationship's meaning and structure.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:69",
+      "decision": "map",
+      "predicate": "prov:hadRole",
+      "asIris": true,
+      "rationale": "The 'role' property can be mapped to prov:hadRole on the prov:Attribution qualified resource, with the string value converted to an IRI representing the specific role.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 9109,
+    "output": 169,
+    "thinking": 672,
+    "cached": 1215
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "f83a39c307e52ebebda3b3f3ab994893ec92bca579964227a0f3c3de1b381fd1",
+   "element": "relationships/r:15",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:actedOnBehalfOf",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Delegation",
+     "link": "prov:qualifiedDelegation",
+     "target": "prov:agent"
+    },
+    "rationale": "The relationship 'ACTED_ON_BEHALF_OF' directly corresponds to the 'prov:actedOnBehalfOf' predicate, which also has a qualified form 'prov:Delegation'.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 9092,
+    "output": 132,
+    "thinking": 134,
+    "cached": 8400
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "70b907e7b511442522ea4b83a8f188d1a540ab3500d7da253315fd2f5875f237",
+   "element": "relationships/r:16",
+   "json": {
+    "decision": "map",
+    "predicate": "prov:wasInvalidatedBy",
+    "direction": "forward",
+    "qualified": {
+     "class": "prov:Invalidation",
+     "link": "prov:qualifiedInvalidation",
+     "target": "prov:activity"
+    },
+    "rationale": "The relationship directly corresponds to prov:wasInvalidatedBy, which links an Entity to an Activity that invalidated it. The qualified form prov:Invalidation allows for additional properties.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:70",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "datatype": "xsd:string",
+      "rationale": "The 'reason' property provides a descriptive comment about the invalidation event, which maps well to rdfs:comment on the qualified Invalidation instance.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 9156,
+    "output": 179,
+    "thinking": 443,
+    "cached": 1218
+   },
+   "model": "gemini-2.5-flash"
+  }
+ ]
+}

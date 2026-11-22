@@ -1,0 +1,5947 @@
+{
+ "set": "lineage",
+ "name": "Data lineage to PROV-O",
+ "model": "gemini-2.5-flash",
+ "promptVersion": "propose/4",
+ "date": "2026-11-22T15:26:26.695Z",
+ "fingerprints": {
+  "set": "lineage",
+  "files": {
+   "lpg": {
+    "file": "aura-export.json",
+    "sha256": "690ece6966b05061793d802fa5b0ee2d364f7a743e0a1f2f1da1db18a5537d5c"
+   },
+   "gold": {
+    "file": "lineage-prov.aura.mapping.yaml",
+    "sha256": "441bd992512be99c26be36dfb162f550af3ec56e4dfd1250090001d0cb8829ad"
+   },
+   "oracle": {
+    "file": "oracle.aura.yaml",
+    "sha256": "cedb8baec10b756428ab63c9c4b4d0d11581c442e655ed25ae56bef9bf456ece"
+   },
+   "seed": {
+    "file": "seed.cypher",
+    "sha256": "95dbe0525cfc895f6fa3bb1a8fa4d87096b01b6e1a550cffaee951a42cd55044"
+   },
+   "target": {
+    "file": "targets/prov.nq",
+    "sha256": "95bc4a976f6ba48bbabc45724f88bc8461540920b6e6764884416e23119e8790"
+   }
+  },
+  "src": {
+   "sha256": "f749d5e8682521d69960efe9e66631022d86164a06a9f88fb608b88c251150aa",
+   "files": 33
+  },
+  "promptVersion": "propose/4",
+  "model": "gemini-2.5-flash",
+  "commit": {
+   "hash": "0ce718eeedb077881cf3998fa0ef3c3c6d69dc4d",
+   "branch": "eval/campaign-1",
+   "dirty": false,
+   "changed": []
+  }
+ },
+ "withOracle": true,
+ "runs": [
+  {
+   "condition": "full",
+   "pass": 1,
+   "ms": 177859,
+   "tokens": {
+    "input": 289110,
+    "output": 7170,
+    "thinking": 25875
+   },
+   "calls": 31,
+   "invalid": [
+    {
+     "element": "nodes/n:2",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:2",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 7,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.kind-mismatch nodes/n:7/properties/p:26/predicate",
+     "warning target.domain relationships/r:16/qualified/link",
+     "warning target.range relationships/r:16/qualified/link",
+     "warning target.kind-mismatch relationships/r:3/properties/p:52/predicate",
+     "warning target.kind-mismatch relationships/r:4/properties/p:60/predicate",
+     "warning target.domain relationships/r:6/predicate",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "map",
+     "proposedTerms": "prov:hadMember",
+     "outcome": "false-map",
+     "check": [
+      "target.domain"
+     ]
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "pass"
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "pass"
+    },
+    {
+     "id": "q35-owners",
+     "status": "pass"
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.7,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.6,
+     "proposedTerms": "prov:atLocation"
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:invalidatedAtTime"
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:atLocation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.8,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInvalidatedBy qualified prov:Invalidation",
+     "proposedTerms": "prov:wasInvalidatedBy qualified prov:Invalidation"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "label": "Dataset.system",
+     "outcome": "false-map",
+     "proposed": "prov:atLocation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "label": "Dataset.retiredAt",
+     "outcome": "false-map",
+     "proposed": "prov:invalidatedAtTime",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "label": "DatasetVersion.publishedAt",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "label": "Job.namespace",
+     "outcome": "false-map",
+     "proposed": "prov:atLocation",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "label": "WAS_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "label": "COLUMN_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "label": "COLUMN_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:16",
+     "label": "WAS_INVALIDATED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInvalidatedBy qualified prov:Invalidation",
+     "check": [
+      "target.domain",
+      "target.range"
+     ],
+     "oracle": [],
+     "caught": "check"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 7,
+    "entries": 9,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "full",
+   "pass": 2,
+   "ms": 182484,
+   "tokens": {
+    "input": 298358,
+    "output": 7232,
+    "thinking": 25723
+   },
+   "calls": 32,
+   "invalid": [
+    {
+     "element": "nodes/n:2",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    },
+    {
+     "element": "relationships/r:14",
+     "errors": [
+      "(element): map without predicate or qualified"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:2",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    },
+    {
+     "element": "relationships/r:14",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 2,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.domain relationships/r:10/qualified/target",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "pass"
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"dash.revenue\",\"demo:lineage:v2:dsv:dash.revenue@31\",\"false\"]",
+      "[\"mart.revenue\",\"demo:lineage:v2:dsv:mart.revenue@8\",\"true\"]",
+      "[\"mart.revenue\",\"demo:lineage:v2:dsv:mart.revenue@9\",\"false\"]",
+      "[\"stg.orders\",\"demo:lineage:v2:dsv:stg.orders@16\",\"false\"]",
+      "[\"stg.orders\",\"demo:lineage:v2:dsv:stg.orders@16-backfill-1\",\"false\"]",
+      "[\"stg.orders\",\"demo:lineage:v2:dsv:stg.orders@17\",\"false\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "q35-owners",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"dash.revenue\",\"Carol\",\"owner\"]",
+      "[\"mart.revenue\",\"Alice\",\"owner\"]",
+      "[\"mart.revenue\",\"Data Platform team\",\"steward\"]",
+      "[\"stg.orders\",\"Alice\",\"owner\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "ignore",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "ignore",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:wasInfluencedBy qualified prov:Influence"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.8,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "label": "Dataset.name",
+     "outcome": "false-ignore",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [
+      "q35-downstream-impact",
+      "q35-owners"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "label": "DatasetVersion.publishedAt",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "label": "Job.name",
+     "outcome": "false-ignore",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "label": "JobVersion.definitionHash",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "label": "WAS_DERIVED_FROM.runId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "label": "WAS_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "label": "COLUMN_DERIVED_FROM.runId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "label": "COLUMN_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "RUN_OF",
+     "outcome": "false-map",
+     "proposed": "prov:wasInfluencedBy qualified prov:Influence",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 9,
+    "entries": 11,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "full",
+   "pass": 3,
+   "ms": 194334,
+   "tokens": {
+    "input": 280357,
+    "output": 7180,
+    "thinking": 28963
+   },
+   "calls": 30,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 5,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.kind-mismatch nodes/n:7/properties/p:26/predicate",
+     "warning target.domain relationships/r:10/predicate",
+     "warning target.kind-mismatch relationships/r:4/properties/p:60/predicate",
+     "warning target.domain relationships/r:6/predicate",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "map",
+     "proposedTerms": "prov:wasInfluencedBy",
+     "outcome": "false-map",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "map",
+     "proposedTerms": "prov:hadMember",
+     "outcome": "false-map",
+     "check": [
+      "target.domain"
+     ]
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "pass"
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "pass"
+    },
+    {
+     "id": "q35-owners",
+     "status": "pass"
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.7,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.6,
+     "proposedTerms": "prov:atLocation"
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:invalidatedAtTime"
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "(none)",
+     "proposedTerms": "prov:Plan"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:atLocation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.8,
+     "proposedTerms": "prov:wasInfluencedBy"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 1,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 1,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 1,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:hadPlan"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "label": "Dataset.system",
+     "outcome": "false-map",
+     "proposed": "prov:atLocation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "label": "Dataset.retiredAt",
+     "outcome": "false-map",
+     "proposed": "prov:invalidatedAtTime",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "label": "DatasetVersion.publishedAt",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "Job",
+     "outcome": "different",
+     "proposed": "prov:Plan",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "label": "Job.namespace",
+     "outcome": "false-map",
+     "proposed": "prov:atLocation",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "label": "JobVersion.codeRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "label": "JobVersion.definitionHash",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "label": "JobVersion.artifactRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "label": "JobVersion.configRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "outcome": "false-map",
+     "proposed": "prov:wasInfluencedBy",
+     "check": [],
+     "oracle": [
+      "q34-potential-no-influence"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "label": "WAS_DERIVED_FROM.runId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "label": "WAS_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "label": "WAS_DERIVED_FROM.evidenceRef",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "label": "WAS_DERIVED_FROM.assertedAt",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "label": "COLUMN_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "RUN_OF",
+     "outcome": "false-map",
+     "proposed": "prov:hadPlan",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 8,
+    "entries": 10,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 1,
+   "ms": 191265,
+   "tokens": {
+    "input": 268619,
+    "output": 7415,
+    "thinking": 27952
+   },
+   "calls": 30,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 5,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.domain relationships/r:15/qualified/link",
+     "warning target.range relationships/r:15/qualified/link",
+     "warning target.domain relationships/r:15/qualified/target",
+     "warning target.domain relationships/r:6/predicate",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "map",
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation",
+     "outcome": "false-map",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "map",
+     "proposedTerms": "prov:hadMember",
+     "outcome": "false-map",
+     "check": [
+      "target.domain"
+     ]
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "pass"
+    },
+    {
+     "id": "q35-owners",
+     "status": "pass"
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:invalidatedAtTime"
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "(none)",
+     "proposedTerms": "prov:Plan"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.95,
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "label": "Dataset.retiredAt",
+     "outcome": "false-map",
+     "proposed": "prov:invalidatedAtTime",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "Job",
+     "outcome": "different",
+     "proposed": "prov:Plan",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "label": "Run.parameters",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "label": "Run.parametersRef",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "outcome": "false-map",
+     "proposed": "prov:wasDerivedFrom qualified prov:Derivation",
+     "check": [],
+     "oracle": [
+      "q34-asserted-inputs",
+      "q34-potential-not-asserted",
+      "q34-potential-no-influence"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "label": "COLUMN_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "RUN_OF",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [
+      "target.domain",
+      "target.range",
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 7,
+    "entries": 8,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 2,
+   "ms": 166773,
+   "tokens": {
+    "input": 268583,
+    "output": 7214,
+    "thinking": 24414
+   },
+   "calls": 30,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 11,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.domain relationships/r:1/qualified/link",
+     "warning target.range relationships/r:1/qualified/link",
+     "warning target.domain relationships/r:10/qualified/target",
+     "warning target.domain relationships/r:2/qualified/link",
+     "warning target.range relationships/r:2/qualified/link",
+     "warning target.domain relationships/r:2/qualified/target",
+     "warning target.kind-mismatch relationships/r:3/properties/p:52/predicate",
+     "warning target.kind-mismatch relationships/r:3/properties/p:53/predicate",
+     "warning target.domain relationships/r:3/properties/p:53/predicate",
+     "warning target.domain relationships/r:6/predicate",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "map",
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation",
+     "outcome": "false-map",
+     "check": [
+      "target.domain",
+      "target.range",
+      "target.domain"
+     ]
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "map",
+     "proposedTerms": "prov:hadMember",
+     "outcome": "false-map",
+     "check": [
+      "target.domain"
+     ]
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "pass"
+    },
+    {
+     "id": "q35-owners",
+     "status": "pass"
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:invalidatedAtTime"
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasGeneratedBy qualified prov:Generation",
+     "proposedTerms": "prov:wasGeneratedBy qualified prov:Generation"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadPlan"
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.6,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.6
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:wasInfluencedBy qualified prov:Influence"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "label": "Dataset.retiredAt",
+     "outcome": "false-map",
+     "proposed": "prov:invalidatedAtTime",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "label": "DatasetVersion.publishedAt",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:1",
+     "label": "WAS_GENERATED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasGeneratedBy qualified prov:Generation",
+     "check": [
+      "target.domain",
+      "target.range"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "outcome": "false-map",
+     "proposed": "prov:wasDerivedFrom qualified prov:Derivation",
+     "check": [
+      "target.domain",
+      "target.range",
+      "target.domain"
+     ],
+     "oracle": [
+      "q34-asserted-inputs",
+      "q34-potential-not-asserted",
+      "q34-potential-no-influence"
+     ],
+     "caught": "both"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "label": "WAS_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "label": "WAS_DERIVED_FROM.jobVersionId",
+     "outcome": "false-map",
+     "proposed": "prov:hadPlan",
+     "check": [
+      "target.kind-mismatch",
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "label": "COLUMN_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "RUN_OF",
+     "outcome": "false-map",
+     "proposed": "prov:wasInfluencedBy qualified prov:Influence",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 7,
+    "entries": 8,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 3,
+   "ms": 179588,
+   "tokens": {
+    "input": 268773,
+    "output": 7597,
+    "thinking": 25677
+   },
+   "calls": 30,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 3,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.kind-mismatch relationships/r:3/properties/p:52/predicate",
+     "warning target.domain relationships/r:6/predicate",
+     "warning target.domain relationships/r:7/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "proposed": "map",
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation",
+     "outcome": "false-map",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "proposed": "map",
+     "proposedTerms": "prov:hadMember",
+     "outcome": "false-map",
+     "check": [
+      "target.domain"
+     ]
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "q32-upstream-runs-and-agents",
+     "status": "pass"
+    },
+    {
+     "id": "q33-upstream-asserted-sources",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-asserted-inputs",
+     "status": "fail",
+     "onlyCypher": [],
+     "onlySparql": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-not-asserted",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q34-potential-no-influence",
+     "status": "fail",
+     "inBoth": [
+      "[\"demo:lineage:v2:dsv:ref.dq_rules@2\"]"
+     ]
+    },
+    {
+     "id": "q35-downstream-impact",
+     "status": "pass"
+    },
+    {
+     "id": "q35-owners",
+     "status": "pass"
+    },
+    {
+     "id": "q36-point-in-time",
+     "status": "not-expressible"
+    },
+    {
+     "id": "q37-column-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q38-column-versions-and-sources",
+     "status": "pass"
+    },
+    {
+     "id": "q39-runs-per-job-version",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:3",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:6",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:7",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:3/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:invalidatedAtTime"
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:12",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:11",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:13",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:17",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:19",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:21",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:6/properties/p:22",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:23",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6/properties/p:24",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "(none)",
+     "proposedTerms": "prov:Plan"
+    },
+    {
+     "path": "nodes/n:7/properties/p:27",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:7/properties/p:26",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "prov:Plan",
+     "proposedTerms": "(none)"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.8,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "prov:value"
+    },
+    {
+     "path": "nodes/n:9",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:34",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:35",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:9/properties/p:36",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:37",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:38",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:39",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:9/properties/p:40",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:9/properties/p:41",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:10",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:11",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:12",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:0/properties/p:48",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1/properties/p:49",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "prov:wasDerivedFrom qualified prov:Derivation"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadActivity"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "ignore",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:3/properties/p:54",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:55",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:56",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:57",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:58",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:3/properties/p:59",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4/properties/p:60",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:4/properties/p:61",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:4/properties/p:62",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:4/properties/p:63",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:64",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "relationships/r:4/properties/p:65",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.9,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:66",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "relationships/r:4/properties/p:67",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "prov:hadMember"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:12",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:wasInformedBy",
+     "proposedTerms": "prov:wasInformedBy qualified prov:Communication"
+    },
+    {
+     "path": "relationships/r:13",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:13/properties/p:68",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:14/properties/p:69",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:15",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "related",
+     "confidence": 1,
+     "terms": "related",
+     "goldTerms": "prov:actedOnBehalfOf",
+     "proposedTerms": "prov:actedOnBehalfOf qualified prov:Delegation"
+    },
+    {
+     "path": "relationships/r:16",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:16/properties/p:70",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:3/properties/p:9",
+     "label": "Dataset.retiredAt",
+     "outcome": "false-map",
+     "proposed": "prov:invalidatedAtTime",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "Job",
+     "outcome": "different",
+     "proposed": "prov:Plan",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "JobVersion",
+     "outcome": "different",
+     "proposed": "(none)",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:29",
+     "label": "JobVersion.codeRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:30",
+     "label": "JobVersion.definitionHash",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:31",
+     "label": "JobVersion.artifactRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8/properties/p:32",
+     "label": "JobVersion.configRef",
+     "outcome": "false-map",
+     "proposed": "prov:value",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:2",
+     "label": "DEPENDS_ON",
+     "outcome": "false-map",
+     "proposed": "prov:wasDerivedFrom qualified prov:Derivation",
+     "check": [],
+     "oracle": [
+      "q34-asserted-inputs",
+      "q34-potential-not-asserted",
+      "q34-potential-no-influence"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:3/properties/p:52",
+     "label": "WAS_DERIVED_FROM.runId",
+     "outcome": "false-map",
+     "proposed": "prov:hadActivity",
+     "check": [
+      "target.kind-mismatch"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:3/properties/p:53",
+     "label": "WAS_DERIVED_FROM.jobVersionId",
+     "outcome": "ignore-vs-defer",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "HAS_COLUMN",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "HAS_COLUMN_VERSION",
+     "outcome": "false-map",
+     "proposed": "prov:hadMember",
+     "check": [
+      "target.domain"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "RUN_OF",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:12",
+     "label": "WAS_INFORMED_BY",
+     "outcome": "related",
+     "proposed": "prov:wasInformedBy qualified prov:Communication",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:15",
+     "label": "ACTED_ON_BEHALF_OF",
+     "outcome": "related",
+     "proposed": "prov:actedOnBehalfOf qualified prov:Delegation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 9,
+    "entries": 12,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  }
+ ]
+}

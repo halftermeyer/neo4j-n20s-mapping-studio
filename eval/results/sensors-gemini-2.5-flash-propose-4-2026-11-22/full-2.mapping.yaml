@@ -1,0 +1,445 @@
+format: n20s-mapping/0.1
+id: sensors-sosa
+name: Plant telemetry to SOSA
+lpgOntology:
+  id: Plant telemetry
+  version: "1"
+  location: aura-export.json
+targets:
+  - namespace: http://www.w3.org/ns/sosa/
+    location: targets/sosa.ttl
+strategy: template
+prefixes:
+  sosa: http://www.w3.org/ns/sosa/
+  xsd: http://www.w3.org/2001/XMLSchema#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  pl: https://plant.example.org/id/
+nodes:
+  n:0:
+    subject: pl:rig/{p:0}
+    classes:
+      - sosa:Platform
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: "A drilling rig is a physical entity that can host various devices like gauges, fitting the definition of a sosa:Platform. (Subject: From the uniqueness of rigId on Rig.)"
+    properties:
+      p:1:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The 'name' property provides a human-readable identifier for the rig, which maps well to rdfs:label.
+      p:2:
+        ignore:
+          reason: No suitable predicate in the target ontology for a commissioning date of a platform.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.8
+          rationale: The 'commissioned' property describes a lifecycle event of the rig itself, which doesn't align with the observation/actuation/sampling focus of SOSA properties.
+  n:1:
+    subject: pl:gauge/{p:3}
+    classes:
+      - sosa:Sensor
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: "A Gauge is a device that measures or indicates, fitting the definition of a SOSA Sensor. (Subject: From the uniqueness of tag on Gauge.)"
+    properties:
+      p:4:
+        ignore:
+          reason: No suitable predicate in the target ontology for a device model.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The target ontology does not provide a specific predicate for the model of a sensor.
+      p:5:
+        ignore:
+          reason: No suitable predicate in the target ontology for a device serial number.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The target ontology does not provide a specific predicate for the serial number of a sensor.
+  n:2:
+    subject: pl:metric/{p:6}
+    classes:
+      - sosa:ObservableProperty
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: "A Metric represents a quality or characteristic that can be observed by a sensor (Gauge), aligning with the definition of sosa:ObservableProperty. (Subject: From the uniqueness of code on Metric.)"
+    properties:
+      p:7:
+        predicate: rdfs:label
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: The 'label' property provides a human-readable name for the metric, which directly maps to rdfs:label.
+      p:8:
+        ignore:
+          reason: No suitable predicate in the target ontology to represent the unit of measurement for an observable property.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The SOSA ontology does not provide a direct property to specify the unit of an ObservableProperty.
+  n:3:
+    subject: pl:tick/{p:9}
+    classes:
+      - sosa:Observation
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: "A Tick represents a single reading from a gauge, which directly aligns with the definition of an Observation in SOSA. (Subject: From the uniqueness of tickId on Tick.)"
+    properties:
+      p:10:
+        predicate: sosa:hasSimpleResult
+        datatype: xsd:float
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: This property stores the actual numerical reading, which is the simple result of the observation.
+      p:11:
+        predicate: sosa:resultTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: This property records the timestamp when the observation was completed.
+      p:12:
+        ignore:
+          reason: No direct equivalent in SOSA for observation quality.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.8
+          rationale: The SOSA ontology does not provide a specific property to capture the quality of an observation result (e.g., GOOD, SUSPECT, BAD).
+  n:4:
+    subject: pl:rollup/{p:13}
+    classes:
+      - sosa:Observation
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: "A Rollup represents a calculated value (average) of an observable property over a time window, which aligns with the definition of an Observation. (Subject: From the uniqueness of rollupId on Rollup.)"
+    properties:
+      p:14:
+        predicate: sosa:hasSimpleResult
+        datatype: xsd:float
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.95
+          rationale: The 'mean' property directly represents the calculated value of the rollup, fitting sosa:hasSimpleResult.
+      p:15:
+        ignore:
+          reason: The property describes a time interval, but sosa:phenomenonTime is an object property expecting a temporal entity resource, not a literal. Expressing the interval requires creating a new resource for the temporal entity, which is not supported for direct property mapping.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The 'windowStart' property, along with 'windowEnd', defines a time interval. sosa:phenomenonTime is an object property expecting a resource representing a temporal entity, not a literal datetime.
+      p:16:
+        ignore:
+          reason: The property describes a time interval, but sosa:phenomenonTime is an object property expecting a temporal entity resource, not a literal. Expressing the interval requires creating a new resource for the temporal entity, which is not supported for direct property mapping.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The 'windowEnd' property, along with 'windowStart', defines a time interval. sosa:phenomenonTime is an object property expecting a resource representing a temporal entity, not a literal datetime.
+  n:5:
+    subject: pl:method/{p:17}
+    classes:
+      - sosa:Procedure
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: "A Method describes how a Rollup (an Observation) is computed, which aligns with sosa:Procedure as a computational method for observations. (Subject: From the uniqueness of name on Method.)"
+    properties:
+      p:18:
+        ignore:
+          reason: There is no direct equivalent for a 'version' property of a Procedure in the SOSA ontology.
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.75
+          rationale: There is no direct equivalent for a 'version' property of a Procedure in the SOSA ontology.
+  n:6:
+    ignore:
+      reason: The SOSA ontology does not provide a direct class for an 'alarm limit' or 'threshold' as a distinct entity. This concept is typically expressed as a condition on an ObservableProperty or within a Procedure, which would require a more complex mapping pattern.
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.8
+      rationale: The SOSA ontology does not provide a direct class for an 'alarm limit' or 'threshold' as a distinct entity. This concept is typically expressed as a condition on an ObservableProperty or within a Procedure, which would require a more complex mapping pattern.
+  n:7:
+    subject: pl:work-order/{p:22}
+    classes:
+      - sosa:Actuation
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.8
+      rationale: "A WorkOrder represents a record of work performed to change the state of a rig, which aligns with the definition of an Actuation. (Subject: From the uniqueness of woNumber on WorkOrder.)"
+    properties:
+      p:23:
+        ignore:
+          reason: Represents the start of a time interval, which is best expressed in conjunction with the 'closed' property as a temporal entity, not directly supported by a single literal predicate in the catalog.
+          deferred: true
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 0.9
+          rationale: The 'opened' property indicates the start of the work order, which, along with 'closed', forms a time interval. The target ontology's 'phenomenonTime' expects a resource for a temporal entity, and 'resultTime' is for completion.
+      p:24:
+        predicate: sosa:resultTime
+        datatype: xsd:dateTime
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: The 'closed' property directly corresponds to the completion time of the actuation activity.
+      p:25:
+        predicate: rdfs:comment
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: The 'summary' property provides a human-readable description of the work order, fitting the definition of rdfs:comment.
+  n:8:
+    subject: pl:crew/{p:26}
+    classes:
+      - sosa:Actuator
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: "A maintenance crew acts as an agent performing actuations (maintenance work orders) to change the state of the world, aligning with the definition of an Actuator. (Subject: From the uniqueness of crewId on Crew.)"
+    properties:
+      p:27:
+        predicate: rdfs:label
+        datatype: xsd:string
+        meta:
+          status: proposed
+          proposedBy:
+            kind: ai
+            model: gemini-2.5-flash
+            promptVersion: propose/4
+          confidence: 1
+          rationale: The 'name' property provides a human-readable identifier for the crew, which directly corresponds to rdfs:label.
+relationships:
+  r:0:
+    predicate: sosa:isHostedBy
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'BOLTED_TO' relationship indicates that a Gauge (Sensor) is installed on a Rig (Platform), which directly corresponds to the 'isHostedBy' predicate.
+  r:1:
+    predicate: sosa:madeObservation
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'EMITS' relationship from a Gauge (Sensor) to a Tick (Observation) directly corresponds to a Sensor making an Observation.
+  r:2:
+    predicate: sosa:observedProperty
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'ABOUT' relationship from an Observation (Tick) to a Metric (ObservableProperty) directly corresponds to sosa:observedProperty, which links an Observation to the property that was observed.
+  r:3:
+    ignore:
+      reason: The relationship expresses a spatial context (observation occurred on a platform) which is typically inferred in SOSA through the sensor's hosting relationship, requiring a join.
+      deferred: true
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: The 'ON' relationship links an observation to the platform where it occurred. In SOSA, this spatial context is usually derived by linking the observation to the sensor that made it, and then linking that sensor to the platform it is hosted on.
+  r:4:
+    predicate: sosa:observes
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'TRACKS' relationship from Gauge (Sensor) to Metric (ObservableProperty) directly corresponds to a Sensor observing an ObservableProperty.
+  r:5:
+    ignore:
+      reason: The SOSA ontology does not provide a direct predicate to express that one observation is an aggregation or rollup of other observations.
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: The relationship describes that a Rollup observation is composed of Tick observations, for which no direct predicate exists in SOSA.
+  r:6:
+    predicate: sosa:observedProperty
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'ABOUT' relationship from a Rollup (Observation) to a Metric (ObservableProperty) directly corresponds to an Observation being about an observed property.
+  r:7:
+    predicate: sosa:usedProcedure
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'COMPUTED_WITH' relationship indicates that a Rollup (Observation) uses a Method (Procedure), which directly aligns with sosa:usedProcedure.
+  r:8:
+    ignore:
+      reason: The target node kind 'Threshold' has been ignored, so relationships to it cannot be mapped.
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'Threshold' node kind was previously ignored, making it impossible to map relationships that connect to it.
+  r:9:
+    predicate: sosa:hasFeatureOfInterest
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: The WorkOrder (Actuation) is performed for the Rig (Platform), making the Rig the FeatureOfInterest of the Actuation.
+  r:10:
+    predicate: sosa:madeByActuator
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 1
+      rationale: The 'SERVICED_BY' relationship indicates that a WorkOrder (Actuation) is performed by a Crew (Actuator), which directly maps to sosa:madeByActuator.
+  r:11:
+    ignore:
+      reason: The SOSA ontology does not provide a direct predicate to express one sensor replacing another. This relationship describes a lifecycle event rather than an observation, actuation, or sampling event.
+    meta:
+      status: proposed
+      proposedBy:
+        kind: ai
+        model: gemini-2.5-flash
+        promptVersion: propose/4
+      confidence: 0.9
+      rationale: The SOSA ontology does not provide a direct predicate to express one sensor replacing another. This relationship describes a lifecycle event rather than an observation, actuation, or sampling event.

@@ -1,0 +1,609 @@
+{
+ "format": "n20s-propose-recording/0.1",
+ "provider": "gemini",
+ "model": "gemini-2.5-flash",
+ "calls": [
+  {
+   "key": "fb5153c00bdfc8c76f82f643425e64b6163c889c73e59109cb0805fe7467ce2e",
+   "element": "nodes/n:0",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Platform"
+    ],
+    "rationale": "A drilling rig is a physical entity that can host various devices like gauges, fitting the definition of a sosa:Platform.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:1",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable identifier for the rig, which maps well to rdfs:label.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:2",
+      "decision": "ignore",
+      "reason": "No suitable predicate in the target ontology for a commissioning date of a platform.",
+      "rationale": "The 'commissioned' property describes a lifecycle event of the rig itself, which doesn't align with the observation/actuation/sampling focus of SOSA properties.",
+      "confidence": 0.8
+     }
+    ]
+   },
+   "usage": {
+    "input": 2912,
+    "output": 243,
+    "thinking": 391,
+    "cached": 2406
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "3570fd9afa3e05b25e57e9ecf391dae322da2ec4136a45ebb2fd80858156bf32",
+   "element": "nodes/n:1",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Sensor"
+    ],
+    "rationale": "A 'Gauge' is a device that performs measurements, which directly corresponds to the definition of a SOSA Sensor.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:4",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The model of a gauge serves as a human-readable identifier or description for the device.",
+      "confidence": 0.8
+     },
+     {
+      "id": "p:5",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The serial number provides a unique identifier for the gauge, which can be represented as a label.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 2905,
+    "output": 210,
+    "thinking": 637,
+    "cached": 2403
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "75d3b5a50c710438061a11fa6fec119cea1832fa1e64d81bc87b02771c458f66",
+   "element": "nodes/n:2",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:ObservableProperty"
+    ],
+    "rationale": "A Metric represents a quality or characteristic that a gauge (sensor) measures, aligning with the definition of sosa:ObservableProperty.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:7",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'label' property provides a human-readable name for the metric, which directly maps to rdfs:label.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:8",
+      "decision": "ignore",
+      "reason": "The target ontology does not provide a direct predicate for the unit of an ObservableProperty.",
+      "rationale": "SOSA does not offer a direct property to associate a unit with an ObservableProperty. While units are crucial, they are not directly representable on the ObservableProperty itself in this schema.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 2940,
+    "output": 203,
+    "thinking": 442,
+    "cached": 2415
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "125459f30d58dc1e0c4e7664ca559a25c033cba7dd38412fff39c871645fd609",
+   "element": "nodes/n:3",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Observation"
+    ],
+    "rationale": "A 'Tick' represents a single reading from a gauge, which directly corresponds to the definition of a sosa:Observation as an act of carrying out a procedure to estimate a value of a property.",
+    "confidence": 1,
+    "properties": [
+     {
+      "id": "p:10",
+      "decision": "map",
+      "predicate": "sosa:hasSimpleResult",
+      "datatype": "xsd:float",
+      "rationale": "The 'value' property represents the actual reading, which is the simple result of the observation.",
+      "confidence": 1
+     },
+     {
+      "id": "p:11",
+      "decision": "map",
+      "predicate": "sosa:resultTime",
+      "datatype": "xsd:dateTime",
+      "rationale": "The 'measuredAt' property indicates the time when the reading was taken, which aligns with sosa:resultTime, the completion time of the observation activity.",
+      "confidence": 1
+     },
+     {
+      "id": "p:12",
+      "decision": "ignore",
+      "reason": "No direct SOSA property exists to represent the quality of an observation as a literal string. Mapping to rdfs:comment would lose specific semantics.",
+      "rationale": "The 'quality' property describes the validity of the reading, but there is no specific SOSA property for this attribute of an observation.",
+      "confidence": 0.8
+     }
+    ]
+   },
+   "usage": {
+    "input": 3028,
+    "output": 375,
+    "thinking": 653,
+    "cached": 2437
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "8baf61ba1f03ccb34eb8e773d7bf878cf517e02745bbb5c6c62dd496b97b5800",
+   "element": "nodes/n:4",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Result"
+    ],
+    "rationale": "A Rollup represents a computed average value derived from multiple observations, fitting the definition of a sosa:Result.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:14",
+      "decision": "map",
+      "predicate": "sosa:hasSimpleResult",
+      "datatype": "xsd:float",
+      "rationale": "The 'mean' property is the primary numerical value of this computed result.",
+      "confidence": 0.95
+     },
+     {
+      "id": "p:15",
+      "decision": "map",
+      "predicate": "sosa:phenomenonTime",
+      "datatype": "xsd:dateTimeStamp",
+      "rationale": "The 'windowStart' indicates the beginning of the time period to which the rollup result applies, aligning with sosa:phenomenonTime.",
+      "confidence": 0.85
+     },
+     {
+      "id": "p:16",
+      "decision": "defer",
+      "reason": "The 'windowEnd' property, together with 'windowStart', defines a temporal interval. Representing this interval in RDF typically requires a qualified pattern (e.g., a blank node for the interval with start and end properties), which cannot be directly mapped by a single property predicate in this schema.",
+      "rationale": "The 'windowEnd' property completes the definition of a time interval when combined with 'windowStart', requiring a more complex mapping pattern.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 3034,
+    "output": 387,
+    "thinking": 1248,
+    "cached": 2439
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "c84298e4128c7b1c012cc0df629cd597a238a141bb9737c54cf039ce3ed85c33",
+   "element": "nodes/n:5",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Procedure"
+    ],
+    "rationale": "The 'Method' node represents a computational method used for rollups, which aligns well with the definition of sosa:Procedure as a workflow, protocol, plan, algorithm, or computational method.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:18",
+      "decision": "map",
+      "predicate": "rdfs:comment",
+      "rationale": "The 'version' property provides descriptive information about the method, which can be captured by rdfs:comment.",
+      "confidence": 0.7
+     }
+    ]
+   },
+   "usage": {
+    "input": 2943,
+    "output": 129,
+    "thinking": 520,
+    "cached": 2420
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "80b996c62d1fa104dce8bf740480ebac8c89215a8ef638550d45826f332c9610",
+   "element": "nodes/n:6",
+   "json": {
+    "decision": "ignore",
+    "rationale": "There is no direct class in SOSA to represent an 'alarm limit' or 'threshold' as a primary entity. It functions more as a condition or parameter related to an observation or an actuation procedure.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:20",
+      "decision": "ignore",
+      "rationale": "The parent node 'Threshold' is ignored as there is no suitable SOSA class.",
+      "confidence": 0.9,
+      "reason": "The parent node 'Threshold' is ignored as there is no suitable SOSA class."
+     },
+     {
+      "id": "p:21",
+      "decision": "ignore",
+      "rationale": "The parent node 'Threshold' is ignored as there is no suitable SOSA class.",
+      "confidence": 0.9,
+      "reason": "The parent node 'Threshold' is ignored as there is no suitable SOSA class."
+     }
+    ],
+    "reason": "There is no direct class in SOSA to represent an 'alarm limit' or 'threshold' as a primary entity. It functions more as a condition or parameter related to an observation or an actuation procedure."
+   },
+   "usage": {
+    "input": 3013,
+    "output": 153,
+    "thinking": 995,
+    "cached": 2438
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a9def45afe7a19022d6dc8a2695e4707b86274b5845d6f3f80dcfbd2c99ac539",
+   "element": "nodes/n:7",
+   "json": {
+    "decision": "ignore",
+    "reason": "The 'WorkOrder' node represents an administrative concept for managing maintenance tasks, which does not directly align with the core SOSA ontology focused on observations, actuations, and sampling.",
+    "rationale": "SOSA is primarily concerned with the sensing and actuation aspects of systems, not with administrative or management processes like work orders.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:23",
+      "decision": "ignore",
+      "reason": "The parent element 'WorkOrder' is ignored as it does not fit the SOSA ontology.",
+      "rationale": "Properties of an ignored element should also be ignored.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:24",
+      "decision": "ignore",
+      "reason": "The parent element 'WorkOrder' is ignored as it does not fit the SOSA ontology.",
+      "rationale": "Properties of an ignored element should also be ignored.",
+      "confidence": 0.9
+     },
+     {
+      "id": "p:25",
+      "decision": "ignore",
+      "reason": "The parent element 'WorkOrder' is ignored as it does not fit the SOSA ontology.",
+      "rationale": "Properties of an ignored element should also be ignored.",
+      "confidence": 0.9
+     }
+    ]
+   },
+   "usage": {
+    "input": 3058,
+    "output": 239,
+    "thinking": 709,
+    "cached": 2446
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "2aa0c4132368d36fb4614db7e8ea3f25f070c1350033e9ae98e0ff6e1c438a4f",
+   "element": "nodes/n:8",
+   "json": {
+    "decision": "map",
+    "rationale": "A Crew is a maintenance team, which acts as an agent implementing procedures to change the state of the world through maintenance, aligning with the definition of sosa:Actuator.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:27",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable identifier for the Crew, which directly maps to rdfs:label.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 2975,
+    "output": 118,
+    "thinking": 1003,
+    "cached": 2431
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "263aa36fc069f15b6a27a645418482bff1c3fbf2214fe69e5e83a3a6345d8a99",
+   "element": "nodes/n:8",
+   "json": {
+    "decision": "map",
+    "classes": [
+     "sosa:Actuator"
+    ],
+    "rationale": "A Crew is a maintenance team, which acts as an agent implementing procedures to change the state of the world through maintenance, aligning with the definition of sosa:Actuator.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:27",
+      "decision": "map",
+      "predicate": "rdfs:label",
+      "rationale": "The 'name' property provides a human-readable identifier for the Crew, which directly maps to rdfs:label.",
+      "confidence": 1
+     }
+    ]
+   },
+   "usage": {
+    "input": 3131,
+    "output": 110,
+    "thinking": 421,
+    "cached": 2481
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "393ef238e0d5ccfbd051b031bb3212f05d39b13650c3e96ce11064ff91df0399",
+   "element": "relationships/r:0",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:isHostedBy",
+    "direction": "forward",
+    "rationale": "The BOLTED_TO relationship indicates that a Gauge (Sensor) is installed on a Rig (Platform), which directly corresponds to the sosa:isHostedBy predicate.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 2980,
+    "output": 70,
+    "thinking": 325,
+    "cached": 2452
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "1a61b9260c957637bbdaf162811373182afe368cfdb0984fbb9db543a7a270e7",
+   "element": "relationships/r:1",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:madeObservation",
+    "direction": "forward",
+    "rationale": "The 'EMITS' relationship from Gauge (Sensor) to Tick (Observation) directly corresponds to a Sensor making an Observation.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 2980,
+    "output": 60,
+    "thinking": 188,
+    "cached": 2452
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a1a8201f0f90cb0c6578ad3cdb424e403909838b20eb113d4db4ff427faef975",
+   "element": "relationships/r:2",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:observedProperty",
+    "direction": "forward",
+    "rationale": "The 'ABOUT' relationship from a Tick (Observation) to a Metric (ObservableProperty) directly corresponds to sosa:observedProperty, which links an Observation to the property that was observed.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 2990,
+    "output": 85,
+    "thinking": 144,
+    "cached": 2455
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "ff51944f9b4e4aa64fbb80ce3c753d9a7b70a30590d69ea2a2b42ca50ae2b31b",
+   "element": "relationships/r:3",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:hasFeatureOfInterest",
+    "direction": "forward",
+    "rationale": "The Rig is the entity whose property (Metric) is being observed by the Tick (Observation). This aligns with the definition of sosa:hasFeatureOfInterest.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 2998,
+    "output": 60,
+    "thinking": 1125,
+    "cached": 2458
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "a2166717b9e3f09a8ca6beedaa747f9e0ef2ec4cd16aff5a1d17b76e1f968da3",
+   "element": "relationships/r:4",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:observes",
+    "direction": "forward",
+    "rationale": "The 'TRACKS' relationship describes what a Gauge (Sensor) is configured to read, which directly aligns with a Sensor observing an ObservableProperty.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 3023,
+    "output": 64,
+    "thinking": 214,
+    "cached": 2466
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "d3fd01dd1fe1acabc293755cc945cfb6775972bb3ce56ee1bab58ad4438c13ef",
+   "element": "relationships/r:5",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:isResultOf",
+    "direction": "forward",
+    "rationale": "The Rollup (sosa:Result) is derived from the Tick (sosa:Observation), which aligns with the definition of sosa:isResultOf linking a Result to the Observation that created it.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 3033,
+    "output": 70,
+    "thinking": 577,
+    "cached": 2469
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "b898f62a421cac22299551bbefb4cd4d405f86820b86c19ab1d5d3176196a13f",
+   "element": "relationships/r:6",
+   "json": {
+    "decision": "defer",
+    "reason": "The relationship can be expressed as a path through other mapped elements: a Rollup (Result) is a result of a Tick (Observation), and that Tick has the Metric (ObservableProperty) as its observed property.",
+    "rationale": "The target ontology does not provide a direct predicate from sosa:Result to sosa:ObservableProperty. The information is conveyed by linking the Rollup to the Observation it aggregates, and then linking that Observation to the ObservableProperty.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 3033,
+    "output": 107,
+    "thinking": 1803,
+    "cached": 2469
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "1ae69b670fd9893d847d70be01877b0dc4e9bb86d5bdd8da8449e0207aeb3b83",
+   "element": "relationships/r:7",
+   "json": {
+    "decision": "defer",
+    "reason": "The target predicate sosa:usedProcedure applies to the Observation (Tick) that produced the Result (Rollup), not directly to the Result itself. This requires a pattern involving the ROLLUP_OF relationship.",
+    "rationale": "The 'COMPUTED_WITH' relationship links a Rollup (sosa:Result) to a Method (sosa:Procedure). In SOSA, the sosa:usedProcedure property links an Observation (Tick) to a Procedure, not a Result directly. This mapping requires traversing from the Rollup back to the Tick it is a rollup of, and then applying sosa:usedProcedure from the Tick to the Method.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 3040,
+    "output": 162,
+    "thinking": 1472,
+    "cached": 2472
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "95775cc988950fe3d78bb82bd00c8152bfe54238abd95c6d553e3d7ac1b56259",
+   "element": "relationships/r:8",
+   "json": {
+    "decision": "ignore",
+    "reason": "The target node 'Threshold' is ignored, making this relationship unmappable.",
+    "rationale": "The 'TRIPPED' relationship links an Observation to a Threshold, but Thresholds are not represented in the SOSA ontology.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 3034,
+    "output": 65,
+    "thinking": 164,
+    "cached": 2470
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "4cff510847476456c283706ff3aa809b83c977bf56c1a0b6434a3b7404b2a621",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:hasFeatureOfInterest",
+    "direction": "forward",
+    "rationale": "The 'FOR_RIG' relationship links a WorkOrder (representing an actuation) to the Rig (the feature of interest). 'sosa:hasFeatureOfInterest' connects an Actuation to the entity whose property was modified.",
+    "confidence": 0.9
+   },
+   "usage": {
+    "input": 3041,
+    "output": 93,
+    "thinking": 545,
+    "cached": 2472
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "49c1968e456e15822e1528bd4fd2021b3f417bd0193f91f74bb6123ce8c3b179",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "map",
+    "predicate": "sosa:madeByActuator",
+    "direction": "forward",
+    "rationale": "Assuming WorkOrder implicitly represents an Actuation for the purpose of its relationships, this maps directly to the predicate linking an Actuation to the Actuator that performed it.",
+    "confidence": 0.8
+   },
+   "usage": {
+    "input": 3057,
+    "output": 82,
+    "thinking": 2684,
+    "cached": 2477
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "fdfd92d1d0a0db26ef0c25f1b59f09551d8e8570282e56f7a8430b47a7d5940c",
+   "element": "relationships/r:11",
+   "json": {
+    "decision": "ignore",
+    "rationale": "The SOSA ontology does not provide a direct predicate to represent a 'replacement' relationship between two sensors. SOSA focuses on observation, actuation, and sampling activities, not lifecycle events like replacement.",
+    "confidence": 0.9,
+    "properties": [
+     {
+      "id": "p:28",
+      "decision": "ignore",
+      "rationale": "The relationship 'REPLACED' itself is ignored, so its property 'on' cannot be mapped.",
+      "confidence": 0.9,
+      "reason": "The relationship 'REPLACED' itself is ignored, so its property 'on' cannot be mapped."
+     }
+    ],
+    "reason": "The SOSA ontology does not provide a direct predicate to represent a 'replacement' relationship between two sensors. SOSA focuses on observation, actuation, and sampling activities, not lifecycle events like replacement."
+   },
+   "usage": {
+    "input": 3133,
+    "output": 110,
+    "thinking": 468,
+    "cached": 2483
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "d368407a86be74acb3d77b7f4cde73b67efcd2f902913097a2a75c382687c2ce",
+   "element": "relationships/r:10",
+   "json": {
+    "decision": "ignore",
+    "reason": "The start node kind 'WorkOrder' was previously ignored and thus has no subject in the target ontology.",
+    "rationale": "Since the 'WorkOrder' node kind was previously ignored, it cannot serve as the subject of any relationship in the target ontology.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 3200,
+    "output": 65,
+    "thinking": 649,
+    "cached": 2522
+   },
+   "model": "gemini-2.5-flash"
+  },
+  {
+   "key": "43b4d6b3607d4620c4f323460bddd9878ac588c00a3f04261d530c8c3e0d7378",
+   "element": "relationships/r:9",
+   "json": {
+    "decision": "ignore",
+    "reason": "The start node kind 'WorkOrder' was previously ignored and therefore has no subject in the target ontology. A relationship originating from a node without a subject cannot be mapped.",
+    "rationale": "The previous decision for 'WorkOrder' was to ignore it, meaning it does not map to any RDF subject. Consequently, this relationship cannot be emitted.",
+    "confidence": 1
+   },
+   "usage": {
+    "input": 3199,
+    "output": 83,
+    "thinking": 1688,
+    "cached": 2521
+   },
+   "model": "gemini-2.5-flash"
+  }
+ ]
+}

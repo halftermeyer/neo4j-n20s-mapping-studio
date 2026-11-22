@@ -1,0 +1,5604 @@
+{
+ "set": "sensors",
+ "name": "Plant telemetry to SOSA",
+ "model": "gemini-2.5-flash",
+ "promptVersion": "propose/4",
+ "date": "2026-11-22T15:08:12.010Z",
+ "fingerprints": {
+  "set": "sensors",
+  "files": {
+   "lpg": {
+    "file": "aura-export.json",
+    "sha256": "f1cce5c8bf892693ad3aafca13f4b06c019c07f4f44254a54aa9ce43beaad661"
+   },
+   "gold": {
+    "file": "sensors-sosa.gold.yaml",
+    "sha256": "2487b8f56d15344322b8de728d4864fa0637e7a5276a84fb647a416e456efbd4"
+   },
+   "alternatives": {
+    "file": "alternatives.yaml",
+    "sha256": "e78f6826af4ebfbf53882a574fdf509422cdb1f9d856c51fa1052fe8decd0d3a"
+   },
+   "oracle": {
+    "file": "oracle.yaml",
+    "sha256": "5cca42b9c1bcb6ccf31dc364e79a1f9816ee96542cf26b680c32fd4259ea2dfd"
+   },
+   "seed": {
+    "file": "seed.cypher",
+    "sha256": "9daf98095a6d096ae615a9cd0a256cfeef67b927d44432499a29c6bc558a177a"
+   },
+   "target": {
+    "file": "targets/sosa.ttl",
+    "sha256": "c70b0d1c843c0047e4c98e0a89392e46a05752ff6365bda7f7f55303905a0392"
+   }
+  },
+  "src": {
+   "sha256": "f749d5e8682521d69960efe9e66631022d86164a06a9f88fb608b88c251150aa",
+   "files": 33
+  },
+  "promptVersion": "propose/4",
+  "model": "gemini-2.5-flash",
+  "commit": {
+   "hash": "0ce718eeedb077881cf3998fa0ef3c3c6d69dc4d",
+   "branch": "eval/campaign-1",
+   "dirty": false,
+   "changed": []
+  }
+ },
+ "withOracle": true,
+ "runs": [
+  {
+   "condition": "full",
+   "pass": 1,
+   "ms": 118840,
+   "tokens": {
+    "input": 69550,
+    "output": 3386,
+    "thinking": 20916
+   },
+   "calls": 23,
+   "invalid": [
+    {
+     "element": "nodes/n:4",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    },
+    {
+     "element": "nodes/n:8",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:4",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    },
+    {
+     "element": "nodes/n:8",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 1,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.range-includes relationships/r:3/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "pass"
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.7,
+     "proposedTerms": "sosa:Procedure"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Sensor"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "WorkOrder",
+     "outcome": "false-map",
+     "proposed": "sosa:Procedure",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Sensor",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:9",
+     "label": "FOR_RIG",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "SERVICED_BY",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 4,
+    "entries": 4,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "full",
+   "pass": 2,
+   "ms": 86790,
+   "tokens": {
+    "input": 63110,
+    "output": 3124,
+    "thinking": 14122
+   },
+   "calls": 21,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 1,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.range-includes relationships/r:9/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.75
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.8,
+     "proposedTerms": "sosa:Actuation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuator"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "sosa:madeByActuator"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "WorkOrder",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:9",
+     "label": "FOR_RIG",
+     "outcome": "false-map",
+     "proposed": "sosa:hasFeatureOfInterest",
+     "check": [
+      "target.range-includes"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "SERVICED_BY",
+     "outcome": "false-map",
+     "proposed": "sosa:madeByActuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 3,
+    "entries": 3,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "full",
+   "pass": 3,
+   "ms": 112633,
+   "tokens": {
+    "input": 72680,
+    "output": 3343,
+    "thinking": 19065
+   },
+   "calls": 24,
+   "invalid": [
+    {
+     "element": "nodes/n:8",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:8",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    },
+    {
+     "element": "relationships/r:10",
+     "findings": [
+      "rel.endpoint-no-subject"
+     ],
+     "flippedToIgnore": true
+    },
+    {
+     "element": "relationships/r:9",
+     "findings": [
+      "rel.endpoint-no-subject"
+     ],
+     "flippedToIgnore": true
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 4,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.domain-includes nodes/n:4/properties/p:14/predicate",
+     "warning target.kind-mismatch nodes/n:4/properties/p:15/predicate",
+     "warning target.domain-includes nodes/n:4/properties/p:15/predicate",
+     "warning target.range-includes relationships/r:3/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "map",
+     "proposedTerms": "sosa:isResultOf",
+     "outcome": "false-map",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "false-ignore",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "pass"
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"mean-10min\"]",
+      "[\"FT-203-W1\",\"mean-10min\"]",
+      "[\"FT-203-W2\",\"mean-10min\"]",
+      "[\"FT-203-W3\",\"mean-10min\"]",
+      "[\"FT-203-W4\",\"mean-10min\"]",
+      "[\"FT-203-W5\",\"mean-10min\"]",
+      "[\"FT-203-W6\",\"mean-10min\"]",
+      "[\"FT-203-W7\",\"mean-10min\"]",
+      "[\"PT-101-W0\",\"mean-10min\"]",
+      "[\"PT-101-W1\",\"mean-10min\"]",
+      "[\"PT-101-W2\",\"mean-10min\"]",
+      "[\"PT-101-W3\",\"mean-10min\"]",
+      "[\"PT-101-W4\",\"mean-10min\"]",
+      "[\"PT-101-W5\",\"mean-10min\"]",
+      "[\"PT-101-W6\",\"mean-10min\"]",
+      "[\"PT-101-W7\",\"mean-10min\"]",
+      "[\"PT-201-W0\",\"mean-10min\"]",
+      "[\"PT-201-W1\",\"mean-10min\"]",
+      "[\"PT-201-W2\",\"mean-10min\"]",
+      "[\"PT-201-W3\",\"mean-10min\"]",
+      "[\"PT-201-W4\",\"mean-10min\"]",
+      "[\"PT-201-W5\",\"mean-10min\"]",
+      "[\"PT-201-W6\",\"mean-10min\"]",
+      "[\"PT-201-W7\",\"mean-10min\"]",
+      "[\"PT-301-W0\",\"mean-10min\"]",
+      "[\"PT-301-W1\",\"mean-10min\"]",
+      "[\"PT-301-W2\",\"mean-10min\"]",
+      "[\"PT-301-W3\",\"mean-10min\"]",
+      "[\"PT-301-W4\",\"mean-10min\"]",
+      "[\"PT-301-W5\",\"mean-10min\"]",
+      "[\"PT-301-W6\",\"mean-10min\"]",
+      "[\"PT-301-W7\",\"mean-10min\"]",
+      "[\"ST-103-W0\",\"mean-10min\"]",
+      "[\"ST-103-W1\",\"mean-10min\"]",
+      "[\"ST-103-W2\",\"mean-10min\"]",
+      "[\"ST-103-W3\",\"mean-10min\"]",
+      "[\"ST-103-W4\",\"mean-10min\"]",
+      "[\"ST-103-W5\",\"mean-10min\"]",
+      "[\"ST-103-W6\",\"mean-10min\"]",
+      "[\"ST-103-W7\",\"mean-10min\"]",
+      "[\"TT-102-W0\",\"mean-10min\"]",
+      "[\"TT-102-W1\",\"mean-10min\"]",
+      "[\"TT-102-W2\",\"mean-10min\"]",
+      "[\"TT-102-W3\",\"mean-10min\"]",
+      "[\"TT-102-W4\",\"mean-10min\"]",
+      "[\"TT-102-W5\",\"mean-10min\"]",
+      "[\"TT-102-W6\",\"mean-10min\"]",
+      "[\"TT-102-W7\",\"mean-10min\"]",
+      "[\"TT-202-W0\",\"mean-10min\"]",
+      "[\"TT-202-W1\",\"mean-10min\"]",
+      "[\"TT-202-W2\",\"mean-10min\"]",
+      "[\"TT-202-W3\",\"mean-10min\"]",
+      "[\"TT-202-W4\",\"mean-10min\"]",
+      "[\"TT-202-W5\",\"mean-10min\"]",
+      "[\"TT-202-W6\",\"mean-10min\"]",
+      "[\"TT-202-W7\",\"mean-10min\"]",
+      "[\"TT-302-W0\",\"mean-10min\"]",
+      "[\"TT-302-W1\",\"mean-10min\"]",
+      "[\"TT-302-W2\",\"mean-10min\"]",
+      "[\"TT-302-W3\",\"mean-10min\"]",
+      "[\"TT-302-W4\",\"mean-10min\"]",
+      "[\"TT-302-W5\",\"mean-10min\"]",
+      "[\"TT-302-W6\",\"mean-10min\"]",
+      "[\"TT-302-W7\",\"mean-10min\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "fail",
+     "inBoth": [
+      "[\"PT-101-0\"]",
+      "[\"PT-101-1\"]",
+      "[\"PT-101-10\"]",
+      "[\"PT-101-11\"]",
+      "[\"PT-101-12\"]",
+      "[\"PT-101-13\"]",
+      "[\"PT-101-14\"]",
+      "[\"PT-101-15\"]",
+      "[\"PT-101-16\"]",
+      "[\"PT-101-17\"]",
+      "[\"PT-101-18\"]",
+      "[\"PT-101-19\"]",
+      "[\"PT-101-2\"]",
+      "[\"PT-101-20\"]",
+      "[\"PT-101-21\"]",
+      "[\"PT-101-22\"]",
+      "[\"PT-101-23\"]",
+      "[\"PT-101-24\"]",
+      "[\"PT-101-25\"]",
+      "[\"PT-101-26\"]",
+      "[\"PT-101-27\"]",
+      "[\"PT-101-28\"]",
+      "[\"PT-101-29\"]",
+      "[\"PT-101-3\"]",
+      "[\"PT-101-30\"]",
+      "[\"PT-101-31\"]",
+      "[\"PT-101-32\"]",
+      "[\"PT-101-33\"]",
+      "[\"PT-101-34\"]",
+      "[\"PT-101-35\"]",
+      "[\"PT-101-36\"]",
+      "[\"PT-101-37\"]",
+      "[\"PT-101-38\"]",
+      "[\"PT-101-39\"]",
+      "[\"PT-101-4\"]",
+      "[\"PT-101-40\"]",
+      "[\"PT-101-41\"]",
+      "[\"PT-101-42\"]",
+      "[\"PT-101-43\"]",
+      "[\"PT-101-44\"]",
+      "[\"PT-101-45\"]",
+      "[\"PT-101-46\"]",
+      "[\"PT-101-47\"]",
+      "[\"PT-101-48\"]",
+      "[\"PT-101-49\"]",
+      "[\"PT-101-5\"]",
+      "[\"PT-101-50\"]",
+      "[\"PT-101-51\"]",
+      "[\"PT-101-52\"]",
+      "[\"PT-101-53\"]",
+      "[\"PT-101-54\"]",
+      "[\"PT-101-55\"]",
+      "[\"PT-101-56\"]",
+      "[\"PT-101-57\"]",
+      "[\"PT-101-58\"]",
+      "[\"PT-101-59\"]",
+      "[\"PT-101-6\"]",
+      "[\"PT-101-7\"]",
+      "[\"PT-101-8\"]",
+      "[\"PT-101-9\"]"
+     ]
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.8,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Observation",
+     "proposedTerms": "sosa:Result"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.85,
+     "proposedTerms": "sosa:phenomenonTime"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:comment"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuator"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "sosa:isResultOf"
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:observedProperty"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:usedProcedure"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4",
+     "label": "Rollup",
+     "outcome": "different",
+     "proposed": "sosa:Result",
+     "check": [],
+     "oracle": [
+      "s10-rollup-inputs-not-related"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "label": "Rollup.windowStart",
+     "outcome": "false-map",
+     "proposed": "sosa:phenomenonTime",
+     "check": [
+      "target.kind-mismatch",
+      "target.domain-includes"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "outcome": "false-map",
+     "proposed": "sosa:isResultOf",
+     "check": [],
+     "oracle": [
+      "s10-rollup-inputs-not-related"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:7",
+     "label": "COMPUTED_WITH",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s9-rollup-procedure"
+     ],
+     "caught": "oracle"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 3,
+    "entries": 3,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 1,
+   "ms": 106115,
+   "tokens": {
+    "input": 68370,
+    "output": 3534,
+    "thinking": 17053
+   },
+   "calls": 23,
+   "invalid": [
+    {
+     "element": "nodes/n:0",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    },
+    {
+     "element": "nodes/n:5",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:0",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    },
+    {
+     "element": "nodes/n:5",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 0,
+     "infos": 1
+    },
+    "findings": []
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "alternative",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "ignore-vs-defer",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "alternative",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:8",
+     "label": "TRIPPED",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 5,
+    "entries": 5,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 2,
+   "ms": 90567,
+   "tokens": {
+    "input": 65379,
+    "output": 3391,
+    "thinking": 13015
+   },
+   "calls": 22,
+   "invalid": [
+    {
+     "element": "nodes/n:3",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:3",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 0,
+     "infos": 1
+    },
+    "findings": []
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.8,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "ignore",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 4,
+    "entries": 4,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "no-descriptions",
+   "pass": 3,
+   "ms": 85806,
+   "tokens": {
+    "input": 65379,
+    "output": 3572,
+    "thinking": 12932
+   },
+   "calls": 22,
+   "invalid": [
+    {
+     "element": "nodes/n:3",
+     "errors": [
+      "(element): a node kind mapped without a class (it implies no kind that gives one): give its classes"
+     ]
+    }
+   ],
+   "completed": [],
+   "repaired": [
+    {
+     "element": "nodes/n:3",
+     "findings": [
+      "answer.invalid"
+     ],
+     "flippedToIgnore": false
+    }
+   ],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 0,
+     "infos": 1
+    },
+    "findings": []
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "alternative",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"PT-101-0\",\"202.4\"]",
+      "[\"PT-101-10\",\"218.4\"]",
+      "[\"PT-101-12\",\"189.6\"]",
+      "[\"PT-101-13\",\"195.2\"]",
+      "[\"PT-101-14\",\"200.8\"]",
+      "[\"PT-101-15\",\"206.4\"]",
+      "[\"PT-101-17\",\"217.6\"]",
+      "[\"PT-101-18\",\"183.2\"]",
+      "[\"PT-101-19\",\"188.8\"]",
+      "[\"PT-101-2\",\"213.6\"]",
+      "[\"PT-101-3\",\"219.2\"]",
+      "[\"PT-101-4\",\"184.8\"]",
+      "[\"PT-101-5\",\"190.4\"]",
+      "[\"PT-101-7\",\"201.6\"]",
+      "[\"PT-101-8\",\"207.2\"]",
+      "[\"PT-101-9\",\"212.8\"]"
+     ],
+     "onlySparql": [
+      "[\"PT-101-0\",\"202.39999389648438\"]",
+      "[\"PT-101-10\",\"218.39999389648438\"]",
+      "[\"PT-101-12\",\"189.60000610351562\"]",
+      "[\"PT-101-13\",\"195.1999969482422\"]",
+      "[\"PT-101-14\",\"200.8000030517578\"]",
+      "[\"PT-101-15\",\"206.39999389648438\"]",
+      "[\"PT-101-17\",\"217.60000610351562\"]",
+      "[\"PT-101-18\",\"183.1999969482422\"]",
+      "[\"PT-101-19\",\"188.8000030517578\"]",
+      "[\"PT-101-2\",\"213.60000610351562\"]",
+      "[\"PT-101-3\",\"219.1999969482422\"]",
+      "[\"PT-101-4\",\"184.8000030517578\"]",
+      "[\"PT-101-5\",\"190.39999389648438\"]",
+      "[\"PT-101-7\",\"201.60000610351562\"]",
+      "[\"PT-101-8\",\"207.1999969482422\"]",
+      "[\"PT-101-9\",\"212.8000030517578\"]"
+     ]
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "acceptable",
+     "confidence": 0.7,
+     "proposedTerms": "rdfs:label"
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "alternative",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 4,
+    "entries": 4,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "open-terms",
+   "pass": 1,
+   "ms": 96037,
+   "tokens": {
+    "input": 63158,
+    "output": 2886,
+    "thinking": 15425
+   },
+   "calls": 21,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 2,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.range-includes relationships/r:3/predicate",
+     "warning target.range-includes relationships/r:9/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "pass"
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "pass"
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.6,
+     "proposedTerms": "sosa:Actuation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuator"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 1
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "sosa:madeByActuator"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "WorkOrder",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:9",
+     "label": "FOR_RIG",
+     "outcome": "false-map",
+     "proposed": "sosa:hasFeatureOfInterest",
+     "check": [
+      "target.range-includes"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "SERVICED_BY",
+     "outcome": "false-map",
+     "proposed": "sosa:madeByActuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 5,
+    "entries": 5,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "open-terms",
+   "pass": 2,
+   "ms": 98188,
+   "tokens": {
+    "input": 63110,
+    "output": 3028,
+    "thinking": 15238
+   },
+   "calls": 21,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 1,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.range-includes relationships/r:9/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "ignore-vs-defer",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "pass"
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 1,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuator"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "ignore",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "sosa:madeByActuator"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "WorkOrder",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:8",
+     "label": "TRIPPED",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:9",
+     "label": "FOR_RIG",
+     "outcome": "false-map",
+     "proposed": "sosa:hasFeatureOfInterest",
+     "check": [
+      "target.range-includes"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "SERVICED_BY",
+     "outcome": "false-map",
+     "proposed": "sosa:madeByActuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 4,
+    "entries": 4,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  },
+  {
+   "condition": "open-terms",
+   "pass": 3,
+   "ms": 94571,
+   "tokens": {
+    "input": 63110,
+    "output": 3109,
+    "thinking": 14800
+   },
+   "calls": 21,
+   "invalid": [],
+   "completed": [],
+   "repaired": [],
+   "dropped": [],
+   "notes": [],
+   "check": {
+    "summary": {
+     "errors": 0,
+     "warnings": 1,
+     "infos": 1
+    },
+    "findings": [
+     "warning target.range-includes relationships/r:9/predicate"
+    ]
+   },
+   "traps": [
+    {
+     "path": "relationships/r:5",
+     "label": "ROLLUP_OF",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "label": "Metric.unit",
+     "proposed": "ignore",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "label": "Tick.measuredAt",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "proposed": "defer",
+     "proposedTerms": null,
+     "outcome": "ignore-vs-defer",
+     "check": []
+    },
+    {
+     "path": "relationships/r:6",
+     "label": "ABOUT (Rollup)",
+     "proposed": "map",
+     "proposedTerms": null,
+     "outcome": "agree",
+     "check": []
+    }
+   ],
+   "compileProblems": [],
+   "oracle": [
+    {
+     "id": "s1-platforms",
+     "status": "pass"
+    },
+    {
+     "id": "s2-hosted-sensors",
+     "status": "pass"
+    },
+    {
+     "id": "s3-observations-per-sensor",
+     "status": "pass"
+    },
+    {
+     "id": "s4-results",
+     "status": "pass"
+    },
+    {
+     "id": "s5-tick-values",
+     "status": "pass"
+    },
+    {
+     "id": "s6-result-times",
+     "status": "pass"
+    },
+    {
+     "id": "s7-observed-on-rig",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"R1\",\"PRESS\"]",
+      "[\"R1\",\"RPM\"]",
+      "[\"R1\",\"TEMP\"]",
+      "[\"R2\",\"FLOW\"]",
+      "[\"R2\",\"PRESS\"]",
+      "[\"R2\",\"TEMP\"]",
+      "[\"R3\",\"PRESS\"]",
+      "[\"R3\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s8-sensors-observe",
+     "status": "pass"
+    },
+    {
+     "id": "s9-rollup-procedure",
+     "status": "pass"
+    },
+    {
+     "id": "s10-rollup-inputs-not-related",
+     "status": "pass"
+    },
+    {
+     "id": "s11-rollup-result-times",
+     "status": "fail",
+     "onlyCypher": [
+      "[\"FT-203-W0\",\"2026-10-01T00:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W1\",\"2026-10-01T00:20:00Z\",\"FLOW\"]",
+      "[\"FT-203-W2\",\"2026-10-01T00:30:00Z\",\"FLOW\"]",
+      "[\"FT-203-W3\",\"2026-10-01T00:40:00Z\",\"FLOW\"]",
+      "[\"FT-203-W4\",\"2026-10-01T00:50:00Z\",\"FLOW\"]",
+      "[\"FT-203-W5\",\"2026-10-01T01:00:00Z\",\"FLOW\"]",
+      "[\"FT-203-W6\",\"2026-10-01T01:10:00Z\",\"FLOW\"]",
+      "[\"FT-203-W7\",\"2026-10-01T01:20:00Z\",\"FLOW\"]",
+      "[\"PT-101-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-101-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-101-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-101-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-101-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-101-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-101-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-201-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-201-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-201-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-201-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-201-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-201-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W0\",\"2026-10-01T00:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W1\",\"2026-10-01T00:20:00Z\",\"PRESS\"]",
+      "[\"PT-301-W2\",\"2026-10-01T00:30:00Z\",\"PRESS\"]",
+      "[\"PT-301-W3\",\"2026-10-01T00:40:00Z\",\"PRESS\"]",
+      "[\"PT-301-W4\",\"2026-10-01T00:50:00Z\",\"PRESS\"]",
+      "[\"PT-301-W5\",\"2026-10-01T01:00:00Z\",\"PRESS\"]",
+      "[\"PT-301-W6\",\"2026-10-01T01:10:00Z\",\"PRESS\"]",
+      "[\"PT-301-W7\",\"2026-10-01T01:20:00Z\",\"PRESS\"]",
+      "[\"ST-103-W0\",\"2026-10-01T00:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W1\",\"2026-10-01T00:20:00Z\",\"RPM\"]",
+      "[\"ST-103-W2\",\"2026-10-01T00:30:00Z\",\"RPM\"]",
+      "[\"ST-103-W3\",\"2026-10-01T00:40:00Z\",\"RPM\"]",
+      "[\"ST-103-W4\",\"2026-10-01T00:50:00Z\",\"RPM\"]",
+      "[\"ST-103-W5\",\"2026-10-01T01:00:00Z\",\"RPM\"]",
+      "[\"ST-103-W6\",\"2026-10-01T01:10:00Z\",\"RPM\"]",
+      "[\"ST-103-W7\",\"2026-10-01T01:20:00Z\",\"RPM\"]",
+      "[\"TT-102-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-102-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-102-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-102-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-102-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-102-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-102-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-202-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-202-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-202-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-202-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-202-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-202-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W0\",\"2026-10-01T00:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W1\",\"2026-10-01T00:20:00Z\",\"TEMP\"]",
+      "[\"TT-302-W2\",\"2026-10-01T00:30:00Z\",\"TEMP\"]",
+      "[\"TT-302-W3\",\"2026-10-01T00:40:00Z\",\"TEMP\"]",
+      "[\"TT-302-W4\",\"2026-10-01T00:50:00Z\",\"TEMP\"]",
+      "[\"TT-302-W5\",\"2026-10-01T01:00:00Z\",\"TEMP\"]",
+      "[\"TT-302-W6\",\"2026-10-01T01:10:00Z\",\"TEMP\"]",
+      "[\"TT-302-W7\",\"2026-10-01T01:20:00Z\",\"TEMP\"]"
+     ],
+     "onlySparql": []
+    },
+    {
+     "id": "s12-phenomenon-window",
+     "status": "not-expressible"
+    },
+    {
+     "id": "s13-alarms",
+     "status": "not-expressible"
+    }
+   ],
+   "comparison": [
+    {
+     "path": "nodes/n:0",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "different",
+     "confidence": 0.9,
+     "terms": "different",
+     "goldTerms": "sosa:Platform, sosa:FeatureOfInterest",
+     "proposedTerms": "sosa:Platform"
+    },
+    {
+     "path": "nodes/n:0/properties/p:1",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:0/properties/p:2",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.85
+    },
+    {
+     "path": "nodes/n:1",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:1/properties/p:4",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:1/properties/p:5",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:2",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:7",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:2/properties/p:8",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:3",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:10",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:11",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:3/properties/p:12",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.7
+    },
+    {
+     "path": "nodes/n:4",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.9,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:14",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 0.95,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:4/properties/p:15",
+     "unit": "property",
+     "gold": "defer",
+     "proposed": "defer",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "unit": "property",
+     "gold": "map",
+     "proposed": "defer",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:resultTime"
+    },
+    {
+     "path": "nodes/n:5",
+     "unit": "node",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "nodes/n:5/properties/p:18",
+     "unit": "property",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:6",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    },
+    {
+     "path": "nodes/n:7",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuation"
+    },
+    {
+     "path": "nodes/n:8",
+     "unit": "node",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:Actuator"
+    },
+    {
+     "path": "relationships/r:0",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:1",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:2",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:3",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "ignore",
+     "outcome": "false-ignore",
+     "confidence": 0.9,
+     "goldTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:4",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:5",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "ignore",
+     "outcome": "agree",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:6",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:7",
+     "unit": "relationship",
+     "gold": "map",
+     "proposed": "map",
+     "outcome": "agree",
+     "confidence": 1,
+     "terms": "exact"
+    },
+    {
+     "path": "relationships/r:8",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.8
+    },
+    {
+     "path": "relationships/r:9",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 0.9,
+     "proposedTerms": "sosa:hasFeatureOfInterest"
+    },
+    {
+     "path": "relationships/r:10",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "map",
+     "outcome": "false-map",
+     "confidence": 1,
+     "proposedTerms": "sosa:madeByActuator"
+    },
+    {
+     "path": "relationships/r:11",
+     "unit": "relationship",
+     "gold": "ignore",
+     "proposed": "defer",
+     "outcome": "ignore-vs-defer",
+     "confidence": 0.9
+    }
+   ],
+   "safetyNet": [
+    {
+     "path": "nodes/n:0",
+     "label": "Rig",
+     "outcome": "different",
+     "proposed": "sosa:Platform",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:4/properties/p:16",
+     "label": "Rollup.windowEnd",
+     "outcome": "false-ignore",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [
+      "s11-rollup-result-times"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "nodes/n:6",
+     "label": "Threshold",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:7",
+     "label": "WorkOrder",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuation",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "nodes/n:8",
+     "label": "Crew",
+     "outcome": "false-map",
+     "proposed": "sosa:Actuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:3",
+     "label": "ON",
+     "outcome": "false-ignore",
+     "proposed": "ignore",
+     "check": [],
+     "oracle": [
+      "s7-observed-on-rig"
+     ],
+     "caught": "oracle"
+    },
+    {
+     "path": "relationships/r:8",
+     "label": "TRIPPED",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:9",
+     "label": "FOR_RIG",
+     "outcome": "false-map",
+     "proposed": "sosa:hasFeatureOfInterest",
+     "check": [
+      "target.range-includes"
+     ],
+     "oracle": [],
+     "caught": "check"
+    },
+    {
+     "path": "relationships/r:10",
+     "label": "SERVICED_BY",
+     "outcome": "false-map",
+     "proposed": "sosa:madeByActuator",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    },
+    {
+     "path": "relationships/r:11",
+     "label": "REPLACED",
+     "outcome": "ignore-vs-defer",
+     "proposed": "defer",
+     "check": [],
+     "oracle": [],
+     "caught": "neither"
+    }
+   ],
+   "acceptSafe": {
+    "safe": 4,
+    "entries": 4,
+    "wrong": 0,
+    "wrongItems": []
+   }
+  }
+ ]
+}
