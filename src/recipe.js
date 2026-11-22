@@ -263,6 +263,8 @@ function subjects(mapping, lpgDoc) {
   };
 }
 
+/** What SPARQL forbids between < and > (IRIREF): <>"{}|^`\, space and control characters. */
+const IRIREF_FORBIDDEN = /[<>"{}|^`\\\u0000-\u0020]/;
 const sparqlLiteral = (v) => `"${String(v).replace(/[\\"]/g, (c) => `\\${c}`).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
 const asList = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] : [v]);
 
@@ -301,7 +303,12 @@ function fillSparql(text, value, subj) {
     if (!vals.length) return kind === 'literal' ? '""' : '<urn:n20s:none>';
     return vals.map((v) => {
       if (kind === 'literal') return sparqlLiteral(v);
-      if (kind === 'iri') return `<${expand(String(v), subj.prefixes).iri ?? v}>`;
+      if (kind === 'iri') {
+        // A value spliced into <…> could close it and add SPARQL of its own: only characters an IRIREF allows.
+        const iri = expand(String(v), subj.prefixes).iri ?? String(v);
+        if (IRIREF_FORBIDDEN.test(iri)) throw new Error(`{{iri|${expr.trim()}}}: ${JSON.stringify(String(v).slice(0, 80))} is not an IRI: it holds a character an IRI cannot (< > " { } | ^ \` \\, space or control).`);
+        return `<${iri}>`;
+      }
       return `<${subj.iri(kind, v)}>`;
     }).join(' ');
   });

@@ -212,7 +212,12 @@ export function endpoints({ recipesDir, n20s, openSource = null, allowRun = fals
       if (!allowRun) return null;
       if (p === '/run' && req.method === 'GET') return json(200, { recipes: (await recipes()).map((r) => ({ ...r, endpoint: `/run/${r.id}` })) });
       m = /^\/run\/([\w-]+)$/.exec(p);
-      if (m && (req.method === 'GET' || req.method === 'POST')) return await runOne(req, url, m[1]);
+      if (m) {
+        // A run can write graphs and publish endpoints: POST with a JSON body only, so a link or a form on another site cannot trigger one.
+        if (req.method !== 'POST') return json(405, { error: 'POST /run/<recipe> with a JSON body (the parameters): a run can change graphs.' }, { allow: 'POST' });
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) return fail(415, 'POST /run/<recipe> takes application/json.');
+        return await runOne(req, url, m[1]);
+      }
       return null;
     } catch (err) {
       return fail(err instanceof UsageError || err instanceof SyntaxError ? 400 : /^n20s .*: 400/.test(err.message) ? 400 : 500, err.message);

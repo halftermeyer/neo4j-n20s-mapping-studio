@@ -1,0 +1,513 @@
+{
+  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json",
+  "version": "1",
+  "id": "Plant telemetry",
+  "name": "Plant telemetry",
+  "description": "Gauges on the rigs of the north site, their readings and the maintenance work.",
+  "nodes": {
+    "n:0": {
+      "labels": {
+        "identifier": "Rig"
+      },
+      "properties": {
+        "p:0": {
+          "type": "STRING",
+          "name": "rigId"
+        },
+        "p:1": {
+          "type": "STRING",
+          "name": "name"
+        },
+        "p:2": {
+          "type": "DATE",
+          "name": "commissioned",
+          "description": "Date the rig went into service."
+        }
+      },
+      "constraints": {
+        "c:0": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:0"
+          ],
+          "name": "rigId_Rig_uniq"
+        },
+        "c:1": {
+          "type": "EXISTS",
+          "properties": [
+            "p:0"
+          ],
+          "name": "rigId_Rig_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 360,
+          "y": 120
+        }
+      },
+      "description": "A drilling rig on the site."
+    },
+    "n:1": {
+      "labels": {
+        "identifier": "Gauge"
+      },
+      "properties": {
+        "p:3": {
+          "type": "STRING",
+          "name": "tag",
+          "description": "Plant tag, e.g. PT-101."
+        },
+        "p:4": {
+          "type": "STRING",
+          "name": "model"
+        },
+        "p:5": {
+          "type": "STRING",
+          "name": "serial"
+        }
+      },
+      "constraints": {
+        "c:2": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:3"
+          ],
+          "name": "tag_Gauge_uniq"
+        },
+        "c:3": {
+          "type": "EXISTS",
+          "properties": [
+            "p:3"
+          ],
+          "name": "tag_Gauge_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 120,
+          "y": 120
+        }
+      }
+    },
+    "n:2": {
+      "labels": {
+        "identifier": "Metric"
+      },
+      "properties": {
+        "p:6": {
+          "type": "STRING",
+          "name": "code"
+        },
+        "p:7": {
+          "type": "STRING",
+          "name": "label"
+        },
+        "p:8": {
+          "type": "STRING",
+          "name": "unit",
+          "description": "bar, degC, rpm\u2026"
+        }
+      },
+      "constraints": {
+        "c:4": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:6"
+          ],
+          "name": "code_Metric_uniq"
+        },
+        "c:5": {
+          "type": "EXISTS",
+          "properties": [
+            "p:6"
+          ],
+          "name": "code_Metric_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 120,
+          "y": 360
+        }
+      },
+      "description": "What a gauge reads."
+    },
+    "n:3": {
+      "labels": {
+        "identifier": "Tick"
+      },
+      "properties": {
+        "p:9": {
+          "type": "STRING",
+          "name": "tickId"
+        },
+        "p:10": {
+          "type": "FLOAT",
+          "name": "value"
+        },
+        "p:11": {
+          "type": "ZONED DATETIME",
+          "name": "measuredAt"
+        },
+        "p:12": {
+          "type": "STRING",
+          "name": "quality",
+          "description": "GOOD, SUSPECT or BAD."
+        }
+      },
+      "constraints": {
+        "c:6": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:9"
+          ],
+          "name": "tickId_Tick_uniq"
+        },
+        "c:7": {
+          "type": "EXISTS",
+          "properties": [
+            "p:9"
+          ],
+          "name": "tickId_Tick_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 360,
+          "y": 360
+        }
+      },
+      "description": "One reading from a gauge."
+    },
+    "n:4": {
+      "labels": {
+        "identifier": "Rollup"
+      },
+      "properties": {
+        "p:13": {
+          "type": "STRING",
+          "name": "rollupId"
+        },
+        "p:14": {
+          "type": "FLOAT",
+          "name": "mean"
+        },
+        "p:15": {
+          "type": "ZONED DATETIME",
+          "name": "windowStart"
+        },
+        "p:16": {
+          "type": "ZONED DATETIME",
+          "name": "windowEnd"
+        }
+      },
+      "constraints": {
+        "c:8": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:13"
+          ],
+          "name": "rollupId_Rollup_uniq"
+        },
+        "c:9": {
+          "type": "EXISTS",
+          "properties": [
+            "p:13"
+          ],
+          "name": "rollupId_Rollup_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 600,
+          "y": 360
+        }
+      },
+      "description": "Ten-minute average of the ticks of one gauge."
+    },
+    "n:5": {
+      "labels": {
+        "identifier": "Method"
+      },
+      "properties": {
+        "p:17": {
+          "type": "STRING",
+          "name": "name"
+        },
+        "p:18": {
+          "type": "STRING",
+          "name": "version"
+        }
+      },
+      "constraints": {
+        "c:10": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:17"
+          ],
+          "name": "name_Method_uniq"
+        },
+        "c:11": {
+          "type": "EXISTS",
+          "properties": [
+            "p:17"
+          ],
+          "name": "name_Method_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 600,
+          "y": 560
+        }
+      }
+    },
+    "n:6": {
+      "labels": {
+        "identifier": "Threshold"
+      },
+      "properties": {
+        "p:19": {
+          "type": "STRING",
+          "name": "thresholdId"
+        },
+        "p:20": {
+          "type": "FLOAT",
+          "name": "limit"
+        },
+        "p:21": {
+          "type": "STRING",
+          "name": "direction",
+          "description": "above or below"
+        }
+      },
+      "constraints": {
+        "c:12": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:19"
+          ],
+          "name": "thresholdId_Threshold_uniq"
+        },
+        "c:13": {
+          "type": "EXISTS",
+          "properties": [
+            "p:19"
+          ],
+          "name": "thresholdId_Threshold_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 360,
+          "y": 560
+        }
+      },
+      "description": "Alarm limit."
+    },
+    "n:7": {
+      "labels": {
+        "identifier": "WorkOrder"
+      },
+      "properties": {
+        "p:22": {
+          "type": "STRING",
+          "name": "woNumber"
+        },
+        "p:23": {
+          "type": "ZONED DATETIME",
+          "name": "opened"
+        },
+        "p:24": {
+          "type": "ZONED DATETIME",
+          "name": "closed"
+        },
+        "p:25": {
+          "type": "STRING",
+          "name": "summary"
+        }
+      },
+      "constraints": {
+        "c:14": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:22"
+          ],
+          "name": "woNumber_WorkOrder_uniq"
+        },
+        "c:15": {
+          "type": "EXISTS",
+          "properties": [
+            "p:22"
+          ],
+          "name": "woNumber_WorkOrder_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 600,
+          "y": 120
+        }
+      }
+    },
+    "n:8": {
+      "labels": {
+        "identifier": "Crew"
+      },
+      "properties": {
+        "p:26": {
+          "type": "STRING",
+          "name": "crewId"
+        },
+        "p:27": {
+          "type": "STRING",
+          "name": "name"
+        }
+      },
+      "constraints": {
+        "c:16": {
+          "type": "UNIQUE",
+          "properties": [
+            "p:26"
+          ],
+          "name": "crewId_Crew_uniq"
+        },
+        "c:17": {
+          "type": "EXISTS",
+          "properties": [
+            "p:26"
+          ],
+          "name": "crewId_Crew_exists"
+        }
+      },
+      "extensions": {
+        "display": {
+          "x": 820,
+          "y": 120
+        }
+      },
+      "description": "Maintenance team."
+    }
+  },
+  "relationships": {
+    "r:0": {
+      "type": "BOLTED_TO",
+      "from": {
+        "node": "n:1"
+      },
+      "to": {
+        "node": "n:0"
+      },
+      "description": "Where the gauge is installed."
+    },
+    "r:1": {
+      "type": "EMITS",
+      "from": {
+        "node": "n:1"
+      },
+      "to": {
+        "node": "n:3"
+      }
+    },
+    "r:2": {
+      "type": "ABOUT",
+      "from": {
+        "node": "n:3"
+      },
+      "to": {
+        "node": "n:2"
+      }
+    },
+    "r:3": {
+      "type": "ON",
+      "from": {
+        "node": "n:3"
+      },
+      "to": {
+        "node": "n:0"
+      }
+    },
+    "r:4": {
+      "type": "TRACKS",
+      "from": {
+        "node": "n:1"
+      },
+      "to": {
+        "node": "n:2"
+      },
+      "description": "What the gauge is configured to read."
+    },
+    "r:5": {
+      "type": "ROLLUP_OF",
+      "from": {
+        "node": "n:4"
+      },
+      "to": {
+        "node": "n:3"
+      },
+      "description": "Ticks included in the average."
+    },
+    "r:6": {
+      "type": "ABOUT",
+      "from": {
+        "node": "n:4"
+      },
+      "to": {
+        "node": "n:2"
+      }
+    },
+    "r:7": {
+      "type": "COMPUTED_WITH",
+      "from": {
+        "node": "n:4"
+      },
+      "to": {
+        "node": "n:5"
+      }
+    },
+    "r:8": {
+      "type": "TRIPPED",
+      "from": {
+        "node": "n:3"
+      },
+      "to": {
+        "node": "n:6"
+      }
+    },
+    "r:9": {
+      "type": "FOR_RIG",
+      "from": {
+        "node": "n:7"
+      },
+      "to": {
+        "node": "n:0"
+      }
+    },
+    "r:10": {
+      "type": "SERVICED_BY",
+      "from": {
+        "node": "n:7"
+      },
+      "to": {
+        "node": "n:8"
+      }
+    },
+    "r:11": {
+      "type": "REPLACED",
+      "from": {
+        "node": "n:1"
+      },
+      "to": {
+        "node": "n:1"
+      },
+      "properties": {
+        "p:28": {
+          "type": "DATE",
+          "name": "on"
+        }
+      },
+      "description": "The new gauge replaced the old one."
+    }
+  }
+}

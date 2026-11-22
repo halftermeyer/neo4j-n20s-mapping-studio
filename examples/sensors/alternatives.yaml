@@ -1,0 +1,18 @@
+# Decisions other than the gold that the evaluation counts as right, per entry.
+# Frozen with the gold (fingerprints in the evaluation report). Only what is as
+# good as the gold is listed: a weaker but defensible choice is not.
+format: n20s-gold-alternatives/0.1
+gold: sensors-sosa.gold.yaml
+alternatives:
+  relationships/r:0:            # BOLTED_TO Gauge -> Rig: the inverse property, reversed
+    - { predicate: sosa:hosts, direction: reverse }
+  relationships/r:1:            # EMITS Gauge -> Tick
+    - { predicate: sosa:madeBySensor, direction: reverse }
+  relationships/r:4:            # TRACKS Gauge -> Metric
+    - { predicate: sosa:isObservedBy, direction: reverse }
+  relationships/r:3:            # ON Tick -> Rig
+    - { predicate: sosa:isFeatureOfInterestOf, direction: reverse }
+  relationships/r:5:            # ROLLUP_OF: left out, or deferred (a rule could relate them later)
+    - { ignore: { deferred: true } }
+  nodes/n:4/properties/p:15:    # Rollup.windowStart: plain ignore as well as deferred
+    - { ignore: {} }

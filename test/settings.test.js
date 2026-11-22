@@ -173,9 +173,19 @@ test('studio Connections: AI settings checked against the provider, saved to an 
 
     // Only the page: no form posts, no other host names.
     assert.equal((await call('/api/settings/ai', { provider: 'openai' }, { 'content-type': 'text/plain' })).status, 415);
-    const other = await new Promise((resolve, reject) => http.get(new URL('/api/settings', studio.url), { headers: { host: 'evil.example' } }, resolve).on('error', reject));
-    other.resume();
-    assert.equal(other.statusCode, 403);
+    const withHost = (p, init = {}) => new Promise((resolve, reject) => {
+      const r = http.request(new URL(p, studio.url), { method: init.method ?? 'GET', headers: { host: 'evil.example', ...(init.headers ?? {}) } }, (res) => { res.resume(); resolve(res.statusCode); });
+      r.on('error', reject);
+      r.end(init.body);
+    });
+    // The host is checked before anything is served: the API, the endpoints, the APIs, the runs.
+    for (const p of ['/api/settings', '/sparql', '/sparql/directory?query=ASK%7B%7D', '/query', '/query/friends', '/run']) assert.equal(await withHost(p), 403, p);
+    assert.equal(await withHost('/run/directory', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), 403);
+    // A run is never a GET, nor a form post.
+    const run = await fetch(new URL('/run/directory', studio.url));
+    assert.equal(run.status, 405);
+    assert.equal(run.headers.get('allow'), 'POST');
+    assert.equal((await fetch(new URL('/run/directory', studio.url), { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'a=1' })).status, 415);
   } finally {
     await studio.close();
     await new Promise((r) => fake.close(r));

@@ -435,13 +435,25 @@ narration_fr: >
 ```scene
 id: s23-lineage-safe
 actions:
+  - click: "testid:oracle-toggle"
+  - click: "testid:oracle-run-proposals"
+  - fast_begin: true
+  - wait_any: { targets: ["testid:oracle-results-pass", "testid:oracle-results-fail"], timeout_ms: 240000 }
+  - fast_end: true
   - hook: accept_safe
+  - click: "testid:oracle-toggle"
   - click: "testid:queue-filter-review"
 shot: "css:#queue"
 narration: >
-  We accept what is safe. The rest needs a person; let's look at two of them.
+  Before accepting anything, the oracle checks the proposals: a relationship is
+  safe only when a question that reads it gets the same answer in Cypher and in
+  SPARQL. We accept what is safe. The rest needs a person; let's look at two of
+  them.
 narration_fr: >
-  On accepte ce qui est sûr. Le reste demande une personne ; regardons-en deux.
+  Avant d'accepter quoi que ce soit, l'oracle vérifie les propositions : une
+  relation n'est sûre que si une question qui la lit obtient la même réponse en
+  Cypher et en SPARQL. On accepte ce qui est sûr. Le reste demande une personne ;
+  regardons-en deux.
 ```
 
 ```scene

@@ -402,7 +402,9 @@ test('serve: /sparql on published endpoints only (SELECT, ASK, CONSTRUCT, read-o
   try {
     assert.deepEqual(JSON.parse((await get(prod, '/sparql')).text).endpoints, [], 'nothing published yet');
     assert.equal((await get(prod, '/run/lineage-kg', { method: 'POST' })).status, 404, '/run is off by default');
-    let r = await get(dev, '/run/lineage-kg', { method: 'POST' });
+    assert.equal((await get(dev, '/run/lineage-kg')).status, 405, 'a run is never a GET');
+    assert.equal((await get(dev, '/run/lineage-kg', { method: 'POST', body: '{}' })).status, 415, 'nor a form post');
+    let r = await get(dev, '/run/lineage-kg', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     assert.equal(r.status, 200, r.text);
     const listed = JSON.parse((await get(prod, '/sparql')).text).endpoints;
     assert.deepEqual(listed.map((e) => [e.endpoint, e.status, e.triples]), [['/sparql/lineage', 'stable', 3833]]);

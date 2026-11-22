@@ -38,6 +38,8 @@ code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:
 .chip { display: inline-block; border-radius: 9px; padding: 0 7px; font-size: 11px; margin: 1px 3px 1px 0; background: #eef0f3; color: var(--text); white-space: nowrap; }
 .chip.error, .chip.rejected { background: #fdecea; color: var(--rejected); }
 .chip.warning, .chip.meaning, .chip.unstable, .chip.review { background: #fff1e6; color: var(--review); }
+.chip.oracle { background: #fdecea; color: var(--rejected); }
+.chip.unverified { background: #fff8e1; color: #8a6d00; }
 .chip.low-confidence, .chip.asserts { background: #fff8e1; color: #8a6d00; }
 .chip.safe, .chip.proposed { background: #e8f0fe; color: var(--safe); }
 .chip.accepted { background: #e8f5e9; color: var(--accepted); }

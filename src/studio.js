@@ -21,7 +21,7 @@ import { reviewItems, applyDecision, acceptSafe } from './review.js';
 import { proposePasses, EXTRA_TERMS, acceptAll } from './propose.js';
 import { compile } from './compile.js';
 import { project } from './project.js';
-import { runOracle } from './oracle.js';
+import { runOracle, oracleEvidence } from './oracle.js';
 import { shorten } from './iri.js';
 import { qualifiedSubject } from './prepare.js';
 import { openSource as openBolt } from './source.js';
@@ -188,6 +188,8 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
   let active = null;
   const oracleOption = oracleFile;
   const designTargets = (l) => designTargetsOf(l, projectFile);
+  /** What the last oracle run said about each relationship decision, next to the mapping: the review gates "safe" on it. */
+  const oracleEvidencePath = () => mappingFile.replace(/(\.mapping)?\.(ya?ml|json)$/i, '') + '.oracle.json';
   const specCheckPath = () => specFile.replace(/\.spec\.ya?ml$/i, '') + '.spec-check.json';
   /** The last check of the mapping against the spec, as review reasons. */
   async function aiSpecFindings() {
@@ -240,8 +242,10 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     const result = await check({ mapping: l.mapping, lpgDoc: l.lpgDoc, targets: l.targets, targetStatus: l.targetStatus, artifactInfo: l.artifactInfo, lock: l.lockData });
     let variants = null;
     try { variants = JSON.parse(await fs.readFile(variantsFile, 'utf8')); } catch { /* no passes recorded */ }
+    let oracle = null;
+    try { oracle = JSON.parse(await fs.readFile(oracleEvidencePath(), 'utf8')); } catch { /* the oracle has not run */ }
     const spec = await readSpec(specFile, l.mapping.id);
-    const items = reviewItems({ mapping: l.mapping, lpgDoc: l.lpgDoc, result, variants, specFindings: [...specFindings(spec, l.mapping, l.lpgDoc), ...await aiSpecFindings(l)] });
+    const items = reviewItems({ mapping: l.mapping, lpgDoc: l.lpgDoc, result, variants, oracle, specFindings: [...specFindings(spec, l.mapping, l.lpgDoc), ...await aiSpecFindings(l)] });
     return { l, result, variants, items, spec };
   }
 
@@ -819,6 +823,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
         const graph = `studio-${withProposals ? 'proposals' : 'accepted'}`;
         const res = await project({ plan, source, n20s, graph });
         const results = await runOracle({ oracle, mapping, lpgDoc: s.l.lpgDoc, source, n20s, graph });
+        await fs.writeFile(oracleEvidencePath(), JSON.stringify(oracleEvidence({ oracle, results, mapping, lpgDoc: s.l.lpgDoc, plan, withProposals }), null, 1) + '\n');
         return { withProposals, triples: res.triples, problems, results, checks: oracle.checks.map((c) => ({ id: c.id, source: c.source ?? null, reason: c.reason ?? null })) };
       } finally {
         await source.close();
@@ -832,7 +837,9 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     const send = (status, type, body, headers = {}) => { res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store', ...headers }); res.end(body); };
     try {
       const url = new URL(req.url, 'http://localhost');
-      // /sparql/<graph> and /run/<recipe>, as `n20s-mapping serve` offers them.
+      // Before anything else: a page of another site cannot reach the studio through a name pointing here (DNS rebinding).
+      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(req.headers.host ?? '')) return send(403, 'application/json', JSON.stringify({ error: 'Forbidden host' }));
+      // /sparql/<graph>, /query/<api> and /run/<recipe>, as `n20s-mapping serve` offers them.
       const ep = await served(req, url);
       if (ep) return send(ep.status, `${ep.type}; charset=utf-8`, ep.body, ep.headers);
       if (req.method === 'GET' && FILES[url.pathname]) {
@@ -841,8 +848,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       }
       const route = routes[`${req.method} ${url.pathname}`];
       if (!route) return send(404, 'application/json', JSON.stringify({ error: 'Not found' }));
-      // The page only: another site cannot reach the API by a name pointing here (Host) nor post to it without a preflight (JSON).
-      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(req.headers.host ?? '')) return send(403, 'application/json', JSON.stringify({ error: 'Forbidden host' }));
+      // The page only: another site cannot post to the API without a preflight (JSON).
       if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] ?? '')) return send(415, 'application/json', JSON.stringify({ error: 'JSON only' }));
       let body = {};
       if (req.method === 'POST') {

@@ -1,0 +1,168 @@
+# The oracle of the second evaluation set: business questions on plant
+# telemetry, asked in Cypher on the LPG and in SPARQL on the SOSA projection.
+# Frozen with the gold before any model sees the set (fingerprints in the
+# evaluation report). Where the gold accepts an inverse property (alternatives.yaml),
+# the SPARQL asks both ways.
+mapping: sensors-sosa.gold.yaml
+prefixes: |
+  PREFIX sosa: <http://www.w3.org/ns/sosa/>
+  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+checks:
+  - id: s1-platforms
+    source: "Which rigs host equipment?"
+    note: "Catches anything else typed as a platform (a crew, a work order)."
+    mode: equal
+    columns: [rig]
+    decode: { rig: "node:n:0" }
+    cypher: |
+      MATCH (r:Rig) RETURN r.rigId AS rig
+    sparql: |
+      SELECT DISTINCT ?rig WHERE { ?rig a sosa:Platform }
+
+  - id: s2-hosted-sensors
+    source: "Which gauges are installed on which rig?"
+    mode: equal
+    columns: [gauge, rig]
+    decode: { gauge: "node:n:1", rig: "node:n:0" }
+    cypher: |
+      MATCH (g:Gauge)-[:BOLTED_TO]->(r:Rig) RETURN g.tag AS gauge, r.rigId AS rig
+    sparql: |
+      SELECT DISTINCT ?gauge ?rig WHERE {
+        { ?gauge sosa:isHostedBy ?rig } UNION { ?rig sosa:hosts ?gauge }
+      }
+
+  - id: s3-observations-per-sensor
+    source: "How many readings did each gauge make?"
+    note: "PT-100 was replaced and reads nothing: it must not appear."
+    mode: equal
+    columns: [gauge, n]
+    decode: { gauge: "node:n:1" }
+    cypher: |
+      MATCH (g:Gauge)-[:EMITS]->(t:Tick) RETURN g.tag AS gauge, count(t) AS n
+    sparql: |
+      SELECT ?gauge (COUNT(DISTINCT ?o) AS ?n) WHERE {
+        { ?gauge sosa:madeObservation ?o } UNION { ?o sosa:madeBySensor ?gauge }
+      } GROUP BY ?gauge
+
+  - id: s4-results
+    source: "How many results are there?"
+    note: "Every reading and every rollup has one result, nothing else does: a unit or a limit mapped to a result shows here."
+    mode: equal
+    columns: [n]
+    cypher: |
+      MATCH (x) WHERE x:Tick OR x:Rollup RETURN count(x) AS n
+    sparql: |
+      SELECT (COUNT(DISTINCT ?x) AS ?n) WHERE { ?x sosa:hasSimpleResult ?v }
+
+  - id: s5-tick-values
+    source: "The first twenty readings of PT-101, with their values."
+    mode: equal
+    columns: [tick, value]
+    decode: { tick: "node:n:3" }
+    cypher: |
+      MATCH (:Gauge {tag: 'PT-101'})-[:EMITS]->(t:Tick)
+      WHERE t.measuredAt < datetime('2026-10-01T00:03:20Z')
+      RETURN t.tickId AS tick, t.value AS value
+    sparql: |
+      SELECT ?tick ?value WHERE {
+        { <{{n:1|PT-101}}> sosa:madeObservation ?tick } UNION { ?tick sosa:madeBySensor <{{n:1|PT-101}}> }
+        ?tick sosa:hasSimpleResult ?value ; sosa:resultTime ?at .
+        FILTER (?at < "2026-10-01T00:03:20Z"^^xsd:dateTime)
+      }
+
+  - id: s6-result-times
+    source: "When were the first ten readings of TT-102 taken?"
+    note: "The time of a reading as a dateTime literal: phenomenonTime cannot carry it (it needs a time resource)."
+    mode: equal
+    columns: [tick, at]
+    decode: { tick: "node:n:3" }
+    cypher: |
+      MATCH (:Gauge {tag: 'TT-102'})-[:EMITS]->(t:Tick)
+      WHERE t.measuredAt < datetime('2026-10-01T00:01:40Z')
+      RETURN t.tickId AS tick, t.measuredAt AS at
+    sparql: |
+      SELECT ?tick ?at WHERE {
+        { <{{n:1|TT-102}}> sosa:madeObservation ?tick } UNION { ?tick sosa:madeBySensor <{{n:1|TT-102}}> }
+        ?tick sosa:resultTime ?at .
+        FILTER (?at < "2026-10-01T00:01:40Z"^^xsd:dateTime)
+      }
+
+  - id: s7-observed-on-rig
+    source: "What is measured on each rig?"
+    mode: equal
+    columns: [rig, metric]
+    decode: { rig: "node:n:0", metric: "node:n:2" }
+    cypher: |
+      MATCH (t:Tick)-[:ON]->(r:Rig), (t)-[:ABOUT]->(m:Metric)
+      RETURN DISTINCT r.rigId AS rig, m.code AS metric
+    sparql: |
+      SELECT DISTINCT ?rig ?metric WHERE {
+        { ?o sosa:hasFeatureOfInterest ?rig } UNION { ?rig sosa:isFeatureOfInterestOf ?o }
+        ?o sosa:observedProperty ?metric .
+      }
+
+  - id: s8-sensors-observe
+    source: "What is each gauge configured to read?"
+    mode: equal
+    columns: [gauge, metric]
+    decode: { gauge: "node:n:1", metric: "node:n:2" }
+    cypher: |
+      MATCH (g:Gauge)-[:TRACKS]->(m:Metric) RETURN g.tag AS gauge, m.code AS metric
+    sparql: |
+      SELECT DISTINCT ?gauge ?metric WHERE {
+        { ?gauge sosa:observes ?metric } UNION { ?metric sosa:isObservedBy ?gauge }
+      }
+
+  - id: s9-rollup-procedure
+    source: "How was each rollup computed?"
+    mode: equal
+    columns: [rollup, method]
+    decode: { rollup: "node:n:4", method: "node:n:5" }
+    cypher: |
+      MATCH (r:Rollup)-[:COMPUTED_WITH]->(m:Method) RETURN r.rollupId AS rollup, m.name AS method
+    sparql: |
+      SELECT ?rollup ?method WHERE { ?rollup sosa:usedProcedure ?method }
+
+  - id: s10-rollup-inputs-not-related
+    source: "The readings averaged into rollup PT-101-W0."
+    note: "No SOSA property relates an observation to the readings it was computed from: none of them may link the rollup to its inputs, either way. This is the check that catches ROLLUP_OF mapped to hasResult, hasMember-like or any other term."
+    mode: disjoint
+    columns: [tick]
+    decode: { tick: "node:n:3" }
+    cypher: |
+      MATCH (:Rollup {rollupId: 'PT-101-W0'})-[:ROLLUP_OF]->(t:Tick) RETURN t.tickId AS tick
+    sparql: |
+      SELECT DISTINCT ?tick WHERE {
+        VALUES ?p {
+          sosa:hasResult sosa:isResultOf sosa:usedProcedure sosa:hasFeatureOfInterest sosa:isFeatureOfInterestOf
+          sosa:observedProperty sosa:madeObservation sosa:madeBySensor sosa:observes sosa:isObservedBy
+          sosa:hosts sosa:isHostedBy sosa:hasSample sosa:isSampleOf sosa:phenomenonTime
+          sosa:madeActuation sosa:madeByActuator sosa:actsOnProperty sosa:isActedOnBy sosa:madeSampling sosa:madeBySampler
+        }
+        { <{{n:4|PT-101-W0}}> ?p ?tick } UNION { ?tick ?p <{{n:4|PT-101-W0}}> }
+        ?tick a sosa:Observation .
+      }
+
+  - id: s11-rollup-result-times
+    source: "When was each rollup available, and what does it average?"
+    note: "The end of the window is the result time of the average. Reads ABOUT from Rollup, not from Tick: both emit sosa:observedProperty."
+    mode: equal
+    columns: [rollup, at, metric]
+    decode: { rollup: "node:n:4", metric: "node:n:2" }
+    cypher: |
+      MATCH (r:Rollup)-[:ABOUT]->(m:Metric)
+      RETURN r.rollupId AS rollup, r.windowEnd AS at, m.code AS metric
+    sparql: |
+      SELECT ?rollup ?at ?metric WHERE {
+        ?rollup sosa:usedProcedure ?procedure ; sosa:resultTime ?at ; sosa:observedProperty ?metric .
+      }
+
+  - id: s12-phenomenon-window
+    source: "Over which window was each rollup computed?"
+    expressible: false
+    reason: "The window as an interval (start and end) is a phenomenon time: a time:Interval resource built from two properties, which the template strategy cannot produce."
+
+  - id: s13-alarms
+    source: "Which readings crossed an alarm limit?"
+    expressible: false
+    reason: "Alarm limits are not in SOSA."

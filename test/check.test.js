@@ -1,6 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { run, codes, find, baseDoc, lockFor } from './helpers.js';
+import path from 'node:path';
+import { run, codes, find, baseDoc, lockFor, ROOT } from './helpers.js';
+import { check } from '../src/index.js';
 
 describe('lineage -> PROV example', () => {
   test('is clean, fully decided, and has no drift against its own lock', async () => {
@@ -144,6 +146,18 @@ describe('target ontology', () => {
     assert.equal(find(res, 'target.not-a-class', 'nodes/job-version/classes/0').length, 1);
   });
 
+  test('a class or predicate from a vocabulary that is no target is unknown; rdfs, owl, xsd are fine', async () => {
+    const res = await run({ mapping: (m) => {
+      m.prefixes.qudt = 'http://qudt.org/schema/qudt/';
+      m.nodes.run.properties.startedAt.predicate = 'qudt:unit';
+      m.nodes['job-version'].classes = ['qudt:Unit'];
+      m.relationships['was-informed-by'].predicate = 'rdfs:seeAlso';
+    } });
+    assert.equal(find(res, 'target.unknown-term', 'nodes/run/properties/startedAt/predicate').length, 1);
+    assert.equal(find(res, 'target.unknown-term', 'nodes/job-version/classes/0').length, 1);
+    assert.equal(find(res, 'target.unknown-term', 'relationships/was-informed-by/predicate').length, 0);
+  });
+
   test('a relationship mapped in the wrong direction breaks domain and range', async () => {
     const res = await run({ mapping: (m) => { m.relationships.used.predicate = 'prov:wasGeneratedBy'; } });
     assert.equal(find(res, 'target.domain', 'relationships/used/predicate').length, 1);
@@ -277,5 +291,22 @@ describe('drift against the lock', () => {
   test('a lock older than the mapping header', async () => {
     const res = await run({ mapping: (m) => { m.lpgOntology.version = '2'; } });
     assert.equal(find(res, 'lock.stale').length, 1);
+  });
+});
+
+describe('schema:domainIncludes and schema:rangeIncludes (SOSA)', () => {
+  test('soft warnings with their own codes; the sensors gold is clean', async () => {
+    const { loadFiles } = await import('../src/node.js');
+    const l = await loadFiles(path.join(ROOT, 'examples/sensors/sensors-sosa.gold.yaml'));
+    const run = async (edit = () => {}) => {
+      const m = structuredClone(l.mapping);
+      edit(m);
+      return check({ mapping: m, lpgDoc: l.lpgDoc, targets: l.targets, targetStatus: l.targetStatus, artifactInfo: l.artifactInfo });
+    };
+    assert.deepEqual((await run()).findings.filter((f) => f.severity !== 'info'), []);
+    let res = await run((m) => { m.nodes['n:0'].classes = ['sosa:Platform']; });
+    assert.deepEqual(res.findings.filter((f) => f.severity !== 'info').map((f) => [f.severity, f.code, f.path]), [['warning', 'target.range-includes', 'relationships/r:3/predicate']]);
+    res = await run((m) => { m.relationships['r:1'] = { predicate: 'sosa:madeBySensor' }; });
+    assert.deepEqual(res.findings.filter((f) => f.severity !== 'info').map((f) => f.code).sort(), ['target.domain-includes', 'target.range-includes']);
   });
 });

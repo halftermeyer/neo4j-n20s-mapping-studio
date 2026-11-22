@@ -1,0 +1,23 @@
+# The lineage evaluation set (eval/propose-eval.js --set examples/lineage). The gold
+# and the oracle were decided by hand before any model saw them; frozen below.
+format: n20s-eval-set/0.1
+id: lineage
+name: Data lineage to PROV-O
+lpg: aura-export.json
+gold: lineage-prov.aura.mapping.yaml
+oracle: oracle.aura.yaml
+seed: seed.cypher
+prefix: lin
+traps:
+  - path: relationships/r:2
+    label: DEPENDS_ON
+    expect: "left out; any PROV link fails q34-potential-not-asserted or q34-potential-no-influence"
+  - path: relationships/r:6
+    label: HAS_COLUMN
+    expect: "left out; prov:hadMember gets target.domain"
+frozen:
+  lpg: 690ece6966b05061793d802fa5b0ee2d364f7a743e0a1f2f1da1db18a5537d5c
+  gold: 441bd992512be99c26be36dfb162f550af3ec56e4dfd1250090001d0cb8829ad
+  oracle: cedb8baec10b756428ab63c9c4b4d0d11581c442e655ed25ae56bef9bf456ece
+  seed: 95dbe0525cfc895f6fa3bb1a8fa4d87096b01b6e1a550cffaee951a42cd55044
+  target: 95bc4a976f6ba48bbabc45724f88bc8461540920b6e6764884416e23119e8790

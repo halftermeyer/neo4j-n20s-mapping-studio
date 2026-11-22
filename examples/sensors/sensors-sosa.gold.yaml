@@ -1,0 +1,75 @@
+# The reference mapping of the second evaluation set: plant telemetry to W3C SOSA,
+# decided by hand. Frozen before any model sees the set (fingerprints in the
+# evaluation report); acceptable alternatives are listed in alternatives.yaml.
+format: n20s-mapping/0.1
+id: sensors-sosa
+name: Plant telemetry to SOSA
+lpgOntology:
+  id: Plant telemetry
+  version: "1"
+  location: aura-export.json
+targets:
+  - namespace: http://www.w3.org/ns/sosa/
+    location: targets/sosa.ttl
+strategy: template
+prefixes:
+  sosa: http://www.w3.org/ns/sosa/
+  xsd: http://www.w3.org/2001/XMLSchema#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  pl: https://plant.example.org/id/
+nodes:
+  n:0:                                  # Rig: hosts gauges, and is what their readings are about
+    subject: pl:rig/{p:0}
+    classes: [sosa:Platform, sosa:FeatureOfInterest]
+    properties:
+      p:1: { predicate: rdfs:label }                                     # name
+      p:2: { ignore: { reason: No SOSA term for a commissioning date. } } # commissioned
+  n:1:                                  # Gauge
+    subject: pl:gauge/{p:3}
+    classes: [sosa:Sensor]
+    properties:
+      p:4: { ignore: { reason: Equipment model; no SOSA term. } }
+      p:5: { ignore: { reason: Serial number; no SOSA term. } }
+  n:2:                                  # Metric
+    subject: pl:metric/{p:6}
+    classes: [sosa:ObservableProperty]
+    properties:
+      p:7: { predicate: rdfs:label }
+      p:8: { ignore: { reason: "A unit of measure: SOSA has no term for it (QUDT or OM would; they are not targets)." } }
+  n:3:                                  # Tick: one reading
+    subject: pl:tick/{p:9}
+    classes: [sosa:Observation]
+    properties:
+      p:10: { predicate: sosa:hasSimpleResult }
+      p:11: { predicate: sosa:resultTime }        # measuredAt; phenomenonTime needs a time:TemporalEntity resource, not a literal
+      p:12: { ignore: { reason: Data quality flag; no SOSA term. } }
+  n:4:                                  # Rollup: an observation computed with a procedure
+    subject: pl:rollup/{p:13}
+    classes: [sosa:Observation]
+    properties:
+      p:14: { predicate: sosa:hasSimpleResult }
+      p:15: { ignore: { reason: "The window is a phenomenon time: an interval resource, which a property cannot produce.", deferred: true } }
+      p:16: { predicate: sosa:resultTime }        # windowEnd: the average is available when the window closes
+  n:5:                                  # Method
+    subject: pl:method/{p:17}
+    classes: [sosa:Procedure]
+    properties:
+      p:18: { ignore: { reason: Version of the method; no SOSA term. } }
+  n:6: { ignore: { reason: "An alarm limit: neither an observation nor a property in SOSA." } }
+  n:7: { ignore: { reason: Maintenance work is not in SOSA. } }
+  n:8: { ignore: { reason: Maintenance teams are not in SOSA. } }
+relationships:
+  r:0: { predicate: sosa:isHostedBy }           # BOLTED_TO   Gauge -> Rig
+  r:1: { predicate: sosa:madeObservation }      # EMITS       Gauge -> Tick
+  r:2: { predicate: sosa:observedProperty }     # ABOUT       Tick -> Metric
+  r:3: { predicate: sosa:hasFeatureOfInterest } # ON          Tick -> Rig
+  r:4: { predicate: sosa:observes }             # TRACKS      Gauge -> Metric
+  r:5:                                          # ROLLUP_OF   Rollup -> Tick
+    ignore:
+      reason: "SOSA has no term relating an observation to the observations it was computed from; the procedure says how it was computed. With the SOSA-PROV alignment, prov:used would express it (PROV is not a target here)."
+  r:6: { predicate: sosa:observedProperty }     # ABOUT       Rollup -> Metric
+  r:7: { predicate: sosa:usedProcedure }        # COMPUTED_WITH Rollup -> Method
+  r:8: { ignore: { reason: Crossing an alarm limit is not in SOSA. } }  # TRIPPED
+  r:9: { ignore: { reason: Maintenance work is not in SOSA. } }         # FOR_RIG
+  r:10: { ignore: { reason: Maintenance work is not in SOSA. } }        # SERVICED_BY
+  r:11: { ignore: { reason: Replacing equipment is not in SOSA. } }     # REPLACED

@@ -95,6 +95,8 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
   }
   for (const f of targets?.failed ?? []) error('target.load-failed', 'targets', `Cannot parse the ontology for ${f.namespace}: ${f.error}`);
 
+  // Classes and predicates outside the targets are fine only from the RDF core vocabularies (rdf, rdfs, owl, xsd).
+  const STANDARD = ['http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'http://www.w3.org/2000/01/rdf-schema#', 'http://www.w3.org/2002/07/owl#', 'http://www.w3.org/2001/XMLSchema#'];
   const declared = (iri) => !!(iri && targets?.namespaceOf(iri) && targets.isDeclared(iri));
   /** Expands a reference and checks it against the targets. */
   function iriOf(ref, path, role) {
@@ -108,18 +110,27 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       if (!targets.isDeclared(r.iri)) error('target.unknown-term', path, `${short(r.iri)} is not declared in ${ns}.`);
       else if (role === 'class' && !targets.isClass(r.iri)) error('target.not-a-class', path, `${short(r.iri)} is not a class.`);
       else if (role === 'property' && !targets.isProperty(r.iri)) error('target.not-a-property', path, `${short(r.iri)} is not a property.`);
+    } else if (targets && ['class', 'property'].includes(role) && !STANDARD.some((n) => r.iri.startsWith(n))) {
+      // A class or predicate from a vocabulary that is no target (qudt:unit when only SOSA is): nothing says it exists.
+      error('target.unknown-term', path, `${short(r.iri)} is in no target ontology (targets: ${targets.namespaces?.join(', ') ?? 'none'}).`);
     }
     return r.iri;
   }
+  // rdfs:domain and rdfs:range entail; schema:domainIncludes and rangeIncludes (SOSA) only suggest:
+  // a softer warning with its own code, when the classes match none of the suggested ones.
   function checkDomain(pred, classes, path) {
     if (!declared(pred)) return;
     const d = targets.satisfies(targets.domains(pred), classes);
     if (d.ok === false) warn('target.domain', path, `The domain of ${short(pred)} is ${list(d.expected)}; the subject is typed ${list(classes)}.`);
+    const di = targets.satisfies(targets.domainIncludes?.(pred) ?? [], classes);
+    if (di.ok === false) warn('target.domain-includes', path, `${short(pred)} is meant for ${list(di.expected)} (schema:domainIncludes); the subject is typed ${list(classes)}.`);
   }
   function checkRange(pred, classes, path) {
     if (!declared(pred)) return;
     const r = targets.satisfies(targets.ranges(pred), classes);
     if (r.ok === false) warn('target.range', path, `The range of ${short(pred)} is ${list(r.expected)}; the object is typed ${list(classes)}.`);
+    const ri = targets.satisfies(targets.rangeIncludes?.(pred) ?? [], classes);
+    if (ri.ok === false) warn('target.range-includes', path, `${short(pred)} is meant to point to ${list(ri.expected)} (schema:rangeIncludes); the object is typed ${list(classes)}.`);
   }
 
   // Subjects and classes, with inheritance through implied labels ------------

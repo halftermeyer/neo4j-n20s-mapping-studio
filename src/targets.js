@@ -57,6 +57,13 @@ export function indexTargets(sources) {
     return union ? { union: listMembers(union) } : { opaque: true };
   });
 
+  /**
+   * schema:domainIncludes and schema:rangeIncludes (SOSA, schema.org): soft
+   * domains and ranges, "one of these is expected", with no entailment.
+   */
+  const SCHEMA = ['http://schema.org/', 'https://schema.org/'];
+  const includes = (iri, local) => SCHEMA.flatMap((ns) => specs(iri, ns + local)).filter((d) => d.iri);
+
   const superCache = new Map();
   /** The class and all its named superclasses. */
   function closure(classIri) {
@@ -124,6 +131,8 @@ export function indexTargets(sources) {
           parents: named(RDFS + 'subPropertyOf'),
           domains: specs(iri, RDFS + 'domain').filter((d) => !d.opaque).flatMap((d) => d.iri ? [d.iri] : d.union),
           ranges: specs(iri, RDFS + 'range').filter((d) => !d.opaque).flatMap((d) => d.iri ? [d.iri] : d.union),
+          domainIncludes: includes(iri, 'domainIncludes').map((d) => d.iri),
+          rangeIncludes: includes(iri, 'rangeIncludes').map((d) => d.iri),
         }),
         links,
       });
@@ -144,6 +153,8 @@ export function indexTargets(sources) {
     isDatatypeProperty: (iri) => typesOf(iri).has(DATATYPE_PROPERTY),
     domains: (iri) => specs(iri, RDFS + 'domain'),
     ranges: (iri) => specs(iri, RDFS + 'range'),
+    domainIncludes: (iri) => includes(iri, 'domainIncludes'),
+    rangeIncludes: (iri) => includes(iri, 'rangeIncludes'),
     closure,
     propertyClosure,
     terms,

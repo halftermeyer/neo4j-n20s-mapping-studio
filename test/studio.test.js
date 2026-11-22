@@ -4,9 +4,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import YAML from 'yaml';
-import { check, propose, proposePasses, variantsOf, reviewItems, applyDecision, acceptSafe, functionProvider } from '../src/index.js';
+import { check, propose, proposePasses, variantsOf, reviewItems, applyDecision, acceptSafe, functionProvider, oracleEvidence, acceptAll, compile } from '../src/index.js';
 import { startStudio } from '../src/studio.js';
 import { EXAMPLE, prov, auraDoc, auraGold, auraBlank, goldAnswer } from './helpers.js';
+
+const auraOracle = YAML.parse(fs.readFileSync(path.join(EXAMPLE, 'oracle.aura.yaml'), 'utf8'));
+/** What an oracle run on these proposals would leave (the studio writes it after each run). */
+async function evidence(mapping, results, withProposals = true) {
+  const projected = withProposals ? acceptAll(mapping) : mapping;
+  const { plan } = await compile(projected, auraDoc);
+  return oracleEvidence({ oracle: auraOracle, results, mapping: projected, lpgDoc: auraDoc, plan, withProposals });
+}
 
 /** Gold answers, with two departures: DEPENDS_ON mapped (pass 2 only) and a low confidence on HAS_COLUMN. */
 const answers = (pass) => (req) => {
@@ -48,11 +56,14 @@ test('review queue: risky first, safe only when stable, confident and clean', as
   assert.deepEqual([...new Set(by['relationships/r:2'].reasons.map((r) => r.code))], ['unstable']);
   assert.ok(by['relationships/r:6'].reasons.some((r) => r.code === 'low-confidence'));
   assert.ok(by['relationships/r:0'].reasons.some((r) => r.code === 'asserts'), 'a mapped relationship asks for a look');
-  assert.equal(by['relationships/r:0'].safe, true);
+  assert.equal(by['relationships/r:0'].safe, false, 'not before the oracle passed with it');
+  assert.ok(by['nodes/n:0'].safe, 'node kinds need no oracle');
   assert.equal(by['relationships/r:2'].safe, false);
   assert.equal(by['relationships/r:6'].safe, false);
   assert.ok(items.indexOf(by['relationships/r:2']) < items.indexOf(by['nodes/n:10']), 'unstable before calm');
   assert.equal(reviewItems({ mapping, lpgDoc: auraDoc, result }).some((i) => i.safe), false, 'without passes nothing is safe');
+  const passing = await evidence(mapping, auraOracle.checks.map((c) => ({ id: c.id, status: 'pass' })));
+  assert.equal(reviewItems({ mapping, lpgDoc: auraDoc, result, variants, oracle: passing }).find((i) => i.key === 'relationships/r:0').safe, true, 'USED: a check that reads it passed');
 
   // HAS_COLUMN -> prov:hadMember, as the model proposed it: a domain warning, ranked as a doubtful meaning.
   const member = structuredClone(mapping);
@@ -63,6 +74,69 @@ test('review queue: risky first, safe only when stable, confident and clean', as
   assert.ok(r6.reasons.some((r) => r.code === 'meaning' && /target\.domain/.test(r.text)), JSON.stringify(r6.reasons));
   assert.equal(r6.safe, false);
   assert.ok(items2.indexOf(r6) < items2.findIndex((i) => i.key === 'relationships/r:0'));
+});
+
+test('a mapped relationship is safe only when a check whose SPARQL uses a term it emits passed: DEPENDS_ON, stable at confidence 1', async () => {
+  // What the model does without descriptions: the same answer in every pass, fully confident, and the structure fits.
+  const { mapping, variants } = await proposed();
+  const decide = (predicate) => {
+    mapping.relationships['r:2'] = { predicate, meta: { status: 'proposed', proposedBy: { kind: 'ai', model: 'test' }, confidence: 1, rationale: 'derived' } };
+    for (const k of Object.keys(variants.elements)) if (k.startsWith('relationships/r:2')) delete variants.elements[k];
+    variants.elements['relationships/r:2'] = { stable: true, variants: [{ entry: { predicate }, passes: [1, 2, 3] }] };
+  };
+  const r2 = async (oracle) => {
+    const result = await check({ mapping, lpgDoc: auraDoc, targets: prov });
+    assert.ok(!result.findings.some((f) => f.path.startsWith('relationships/r:2') && f.severity !== 'info'), 'structure cannot see it');
+    return reviewItems({ mapping, lpgDoc: auraDoc, result, variants, oracle }).find((i) => i.key === 'relationships/r:2');
+  };
+  const status = (fails, only = null) => auraOracle.checks.map((c) => ({ id: c.id,
+    status: only && !only.includes(c.id) ? 'not-run' : fails.includes(c.id) ? 'fail' : c.expressible === false ? 'not-expressible' : 'pass' }));
+
+  // prov:wasInfluencedBy. q34-asserted-inputs and q34-potential-not-asserted read DEPENDS_ON in Cypher and pass,
+  // but their SPARQL never asks about wasInfluencedBy: they say nothing about this decision.
+  decide('prov:wasInfluencedBy');
+  let item = await r2(null);
+  assert.equal(item.safe, false);
+  assert.ok(item.reasons.some((r) => r.code === 'unverified' && /not checked by the oracle/.test(r.text)));
+  item = await r2(await evidence(mapping, status([], ['q34-asserted-inputs', 'q34-potential-not-asserted'])));
+  assert.equal(item.safe, false, 'two passing checks that read DEPENDS_ON do not make it safe');
+  assert.ok(item.reasons.some((r) => r.code === 'unverified' && /no oracle check reads this relationship \(with its ends\) and asks the RDF about the terms it emits/.test(r.text)), JSON.stringify(item.reasons));
+  // The check that asks about influences does, and fails.
+  item = await r2(await evidence(mapping, status(['q34-potential-no-influence'])));
+  assert.equal(item.safe, false);
+  assert.ok(item.reasons.some((r) => r.code === 'oracle' && /q34-potential-no-influence/.test(r.text)), JSON.stringify(item.reasons));
+  assert.ok(!item.reasons.some((r) => r.code === 'oracle' && /q34-asserted-inputs/.test(r.text)));
+
+  // prov:wasDerivedFrom: the checks that ask about derivations fail.
+  decide('prov:wasDerivedFrom');
+  item = await r2(await evidence(mapping, status(['q34-potential-not-asserted', 'q34-potential-no-influence'])));
+  assert.equal(item.safe, false);
+  assert.ok(item.reasons.some((r) => r.code === 'oracle' && /q34-potential-not-asserted/.test(r.text)));
+  assert.ok(item.risk >= 5, 'ranked with the errors');
+
+  // Evidence about another decision does not count; nor does a run on accepted entries only.
+  const ev = await evidence(mapping, status([]));
+  decide('prov:wasInfluencedBy');
+  assert.ok((await r2(ev)).reasons.some((r) => r.code === 'unverified' && /not checked by the oracle with this decision/.test(r.text)));
+  decide('prov:wasDerivedFrom');
+  assert.equal((await r2(await evidence(mapping, status([]), false))).safe, false);
+});
+
+test('leaving something out is not safe when a check whose Cypher reads it fails (Dataset.name, q35)', async () => {
+  const { mapping, variants } = await proposed();
+  const pid = Object.entries(auraDoc.nodes['n:3'].properties).find(([, p]) => p.name === 'name')[0];
+  mapping.nodes['n:3'].properties ??= {};
+  mapping.nodes['n:3'].properties[pid] = { ignore: { reason: 'internal name' }, meta: { status: 'proposed', confidence: 1, rationale: 'internal' } };
+  variants.elements[`nodes/n:3/properties/${pid}`] = { stable: true, variants: [{ entry: { ignore: { reason: 'internal name' } }, passes: [1, 2, 3] }] };
+  const result = await check({ mapping, lpgDoc: auraDoc, targets: prov });
+  const n3 = (oracle) => reviewItems({ mapping, lpgDoc: auraDoc, result, variants, oracle }).find((i) => i.key === 'nodes/n:3');
+  const fails = await evidence(mapping, auraOracle.checks.map((c) => ({ id: c.id, status: c.id === 'q35-owners' ? 'fail' : 'pass' })));
+  const item = n3(fails);
+  assert.equal(item.safe, false);
+  assert.ok(item.reasons.some((r) => r.code === 'oracle' && r.path === `nodes/n:3/properties/${pid}` && /q35-owners reads it and fails/.test(r.text)), JSON.stringify(item.reasons));
+  // A failing check that does not read it says nothing about it.
+  const other = await evidence(mapping, auraOracle.checks.map((c) => ({ id: c.id, status: c.id === 'q37-column-sources' ? 'fail' : 'pass' })));
+  assert.ok(!n3(other).reasons.some((r) => r.code === 'oracle'));
 });
 
 test('decisions: accept cascades to proposed properties, reject keeps a comment, edit is the reviewer\'s', async () => {
@@ -283,4 +357,44 @@ test('studio bench: collection, targets, save keeps comments, delete', async () 
   } finally {
     await studio.close();
   }
+});
+
+test('the ends of a relationship count: two ABOUT emit sosa:observedProperty, a check covers the one its Cypher reads', async () => {
+  const { loadFiles } = await import('../src/node.js');
+  const dir = path.join(path.dirname(EXAMPLE), 'sensors');
+  const l = await loadFiles(path.join(dir, 'sensors-sosa.gold.yaml'));
+  const oracle = YAML.parse(fs.readFileSync(path.join(dir, 'oracle.yaml'), 'utf8'));
+  const mapping = structuredClone(l.mapping);
+  const variants = { passes: 3, elements: {} };
+  for (const id of ['r:2', 'r:6']) {
+    mapping.relationships[id] = { ...mapping.relationships[id], meta: { status: 'proposed', confidence: 1, rationale: 'about' } };
+    variants.elements[`relationships/${id}`] = { stable: true, variants: [{ entry: { predicate: 'sosa:observedProperty' }, passes: [1, 2, 3] }] };
+  }
+  const result = await check({ mapping, lpgDoc: l.lpgDoc, targets: l.targets, targetStatus: l.targetStatus, artifactInfo: l.artifactInfo });
+  const run = async (checks, statusOf) => {
+    const o = { ...oracle, checks };
+    const { plan } = await compile(acceptAll(mapping), l.lpgDoc);
+    const ev = oracleEvidence({ oracle: o, results: checks.map((c) => ({ id: c.id, status: statusOf(c.id) })), mapping: acceptAll(mapping), lpgDoc: l.lpgDoc, plan, withProposals: true });
+    const items = reviewItems({ mapping, lpgDoc: l.lpgDoc, result, variants, oracle: ev });
+    return { tick: items.find((i) => i.key === 'relationships/r:2'), rollup: items.find((i) => i.key === 'relationships/r:6') };
+  };
+  const byId = (id) => oracle.checks.find((c) => c.id === id);
+
+  // s7 reads (:Tick)-[:ABOUT]->(:Metric): it covers ABOUT from Tick, not from Rollup.
+  let r = await run([byId('s7-observed-on-rig'), byId('s11-rollup-result-times')], (id) => (id === 's7-observed-on-rig' ? 'pass' : 'not-run'));
+  assert.equal(r.tick.safe, true);
+  assert.equal(r.rollup.safe, false);
+  assert.ok(r.rollup.reasons.some((x) => x.code === 'unverified'));
+  // s11 reads (:Rollup)-[:ABOUT]->(:Metric): it covers the other one, and its failure is the rollup's only.
+  r = await run([byId('s7-observed-on-rig'), byId('s11-rollup-result-times')], (id) => (id === 's11-rollup-result-times' ? 'fail' : 'pass'));
+  assert.equal(r.tick.safe, true);
+  assert.ok(r.rollup.reasons.some((x) => x.code === 'oracle' && /s11-rollup-result-times/.test(x.text)));
+  // A Cypher that does not say which ABOUT covers neither; covers: says it.
+  const vague = { id: 'vague', cypher: 'MATCH (x)-[:ABOUT]->(m:Metric) RETURN count(x) AS n', sparql: 'SELECT (COUNT(*) AS ?n) WHERE { ?x sosa:observedProperty ?m }', columns: ['n'], mode: 'equal' };
+  r = await run([vague], () => 'pass');
+  assert.equal(r.tick.safe, false);
+  assert.equal(r.rollup.safe, false);
+  r = await run([{ ...vague, covers: ['ABOUT(Rollup→Metric)'] }], () => 'pass');
+  assert.equal(r.tick.safe, false);
+  assert.equal(r.rollup.safe, true);
 });

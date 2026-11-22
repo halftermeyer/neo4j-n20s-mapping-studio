@@ -621,11 +621,13 @@ function renderOracle() {
     fill(box, h('div', {}, 'Projecting and asking the questions…'));
     try { oracle = await api('/api/oracle', { withProposals }); } catch (err) { oracle = { error: err.message }; }
     renderOracle();
+    // The run decides which relationship proposals are safe: read the queue again.
+    try { S = await api('/api/state'); renderTop(); renderQueue(); renderPanel(); } catch { /* the queue stays as it was */ }
   };
   const head = h('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:6px' },
     h('b', {}, 'Oracle: the same questions in Cypher on the LPG and in SPARQL on the projection'),
     h('button', { disabled: !S.can.oracle, onclick: run(false), 'data-testid': 'oracle-run' }, 'Run on accepted entries'),
-    h('button', { disabled: !S.can.oracle, onclick: run(true) }, 'Run with proposals too'),
+    h('button', { disabled: !S.can.oracle, onclick: run(true), 'data-testid': 'oracle-run-proposals' }, 'Run with proposals too'),
     S.can.oracle ? '' : h('span', { style: 'color:#888' }, 'Start the studio with --oracle, --source and n20s-server to use it.'),
     h('button', { style: 'margin-left:auto', onclick: () => { box.hidden = true; } }, 'Close'));
   if (!oracle) return fill(box, head);

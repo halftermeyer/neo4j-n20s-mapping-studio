@@ -1,0 +1,37 @@
+# The plant telemetry evaluation set (eval/propose-eval.js --set examples/sensors):
+# a domain whose names do not repeat the target terms, described as a client
+# would. The gold, its alternatives and the oracle were decided and validated
+# before any model saw the set: their fingerprints are frozen below, and the
+# evaluation refuses to run when one of them changes.
+format: n20s-eval-set/0.1
+id: sensors
+name: Plant telemetry to SOSA
+lpg: aura-export.json
+gold: sensors-sosa.gold.yaml
+alternatives: alternatives.yaml
+oracle: oracle.yaml
+seed: seed.cypher
+prefix: pl
+traps:
+  - path: relationships/r:5
+    label: ROLLUP_OF
+    expect: "left out or deferred; any SOSA link from a rollup to its ticks fails s10"
+  - path: nodes/n:2/properties/p:8
+    label: Metric.unit
+    expect: "left out; an invented term gets target.unknown-term; sosa:hasSimpleResult fails s4"
+  - path: nodes/n:3/properties/p:11
+    label: Tick.measuredAt
+    expect: "sosa:resultTime; sosa:phenomenonTime gets target.kind-mismatch and fails s5, s6"
+  - path: nodes/n:6
+    label: Threshold
+    expect: "left out; as an observation with a result it fails s4"
+  - path: relationships/r:6
+    label: ABOUT (Rollup)
+    expect: "sosa:observedProperty, covered by s11 only"
+frozen:
+  lpg: f1cce5c8bf892693ad3aafca13f4b06c019c07f4f44254a54aa9ce43beaad661
+  gold: 2487b8f56d15344322b8de728d4864fa0637e7a5276a84fb647a416e456efbd4
+  alternatives: e78f6826af4ebfbf53882a574fdf509422cdb1f9d856c51fa1052fe8decd0d3a
+  oracle: 5cca42b9c1bcb6ccf31dc364e79a1f9816ee96542cf26b680c32fd4259ea2dfd
+  seed: 9daf98095a6d096ae615a9cd0a256cfeef67b927d44432499a29c6bc558a177a
+  target: c70b0d1c843c0047e4c98e0a89392e46a05752ff6365bda7f7f55303905a0392

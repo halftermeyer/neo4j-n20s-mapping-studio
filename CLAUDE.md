@@ -95,8 +95,12 @@ node bin/n20s-mapping.js compare examples/lineage/lineage-prov.mapping.yaml --do
 - n20s-server needs Java 21 (`PORT=7474 java -jar …`). Relate CLI: the
   `relate-darwin-arm64` asset of github.com/relatedb/relate releases (here in
   ~/bin/relate-dl/).
-- `node eval/propose-lineage.js --dotenv .env --passes 3` with RELATE_BIN and
-  N20S_JAR set (oracle on); `--gold-answers` checks the evaluation itself.
+- `node eval/propose-eval.js --set examples/sensors --dotenv .env --passes 3`
+  with RELATE_BIN and N20S_JAR set (oracle on); `--gold-answers` and
+  `--answers <mapping>` check the evaluation itself; `--fingerprints` prints the
+  set's and src/ fingerprints. The sensors set is frozen (eval.yaml): its gold,
+  alternatives and oracle were validated by Pierre before any model saw them;
+  never edit them to fit a result. propose-lineage.js = --set examples/lineage.
 - Node 22+. The CLI option is `--dotenv`, not `--env-file`: Node intercepts
   `--env-file` even after the script name.
 

@@ -105,3 +105,38 @@ test('cli recipe --check', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /5 steps, no finding/);
 });
+
+test('{{iri|…}}: a value that would close the IRI and add SPARQL is refused before anything is sent', async () => {
+  const sent = [];
+  const n20s = {
+    list: async () => [], drop: async () => ({}), addTurtle: async () => ({}),
+    query: async (graph, sparql) => { sent.push(sparql); return []; },
+  };
+  const recipe = {
+    format: 'n20s-recipe/0.1', id: 'inject', params: { target: { default: 'http://example.org/a' } },
+    steps: [{ id: 'q', type: 'query', sparql: 'SELECT ?p ?o WHERE { {{iri|$target}} ?p ?o }' }],
+  };
+  const { plan } = await compile(auraGold, auraDoc);
+  const run = (target) => runRecipe({ recipe, params: { target }, mapping: auraGold, lpgDoc: auraDoc, plan, source: { run: async () => [] }, n20s });
+
+  let r = await run('http://example.org/a');
+  assert.equal(r.steps[0].status, 'ok');
+  assert.match(sent.at(-1), /<http:\/\/example\.org\/a> \?p \?o/);
+  assert.equal((await run('lin:entity/x')).steps[0].status, 'ok', 'a prefixed name expands to an IRI');
+  assert.match(sent.at(-1), /<https:\/\/example\.org\/lineage\/entity\/x>/);
+
+  const before = sent.length;
+  for (const bad of [
+    'http://x> ?p ?o } ; SELECT * WHERE { ?s ?p <http://y',  // closes the IRI and the pattern
+    'http://example.org/a b',                                  // space
+    'http://example.org/{x}',                                  // braces
+    'http://example.org/"x',                                   // quote
+    'http://example.org/a\\nb',                                // backslash
+    'http://example.org/a\u0007',                              // control character
+  ]) {
+    r = await run(bad);
+    assert.equal(r.steps[0].status, 'error', bad);
+    assert.match(r.steps[0].error, /is not an IRI/, bad);
+  }
+  assert.equal(sent.length, before, 'nothing reached the engine');
+});
