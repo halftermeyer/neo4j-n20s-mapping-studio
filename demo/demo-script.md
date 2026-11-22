@@ -277,8 +277,8 @@ before:
 actions:
   - fill: { target: "testid:sparql-input", value: "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\nSELECT ?person WHERE {\n  ?p foaf:name ?person ; foaf:knows ?ana .\n  ?ana foaf:name \"Ana Silva\" .\n}" }
   - click: "testid:sparql-ask"
-  - wait_for: "testid:sparql-result-2"
-shot: "testid:sparql-result-2"
+  - wait_for: "testid:sparql-result-1"
+shot: "testid:sparql-result-1"
 narration: >
   A partner asks in SPARQL, plain FOAF, nothing specific to Neo4j: who knows Ana?
   Fatima, and now Leo.
@@ -560,7 +560,7 @@ actions:
   - wait_for: "testid:cq-validate"
   - fast_end: true
   - click: "testid:cq-validate"
-  - wait_for: "text:Validated"
+  - wait_for: "testid:cq-check-i1"
 shot: "css:#design-view .fpanel"
 narration: >
   Business questions make the oracle. The AI drafted this one as a recipe, with a
@@ -587,7 +587,7 @@ actions:
   - click: "testid:queue-filter-all"
   - click: "testid:queue-relationships-r-16"
   - wait_for: "testid:cov-panel-relationships-r-16"
-shot: "css:main"
+shot: "css:#panel"
 narration: >
   The coverage view shows which decisions a question confirms, and which ones no
   question reaches yet. Was invalidated by is now covered.
@@ -763,9 +763,9 @@ actions:
   - fill: { target: "testid:api-param-name", value: "raw.customers" }
   - click: "testid:api-call"
   - fast_begin: true
-  - wait_for: "testid:api-result-3"
+  - wait_for: "testid:api-result-1"
   - fast_end: true
-shot: "testid:api-result-3"
+shot: "testid:api-result-1"
 narration: >
   Is personal data at risk, and who must be told? Staging customers: Alice owns it,
   and Jane Doe is its data protection officer. Nobody tagged it as personal. The
@@ -785,9 +785,9 @@ actions:
   - fill: { target: "testid:api-param-name", value: "raw.orders" }
   - click: "testid:api-call"
   - fast_begin: true
-  - wait_for: "testid:api-result-4"
+  - wait_for: "testid:api-result-2"
   - fast_end: true
-shot: "testid:api-result-4"
+shot: "testid:api-result-2"
 narration: >
   The orders pipeline is tainted too: the revenue mart. But the client's catalog
   says it holds amounts only. Not personal data: no alert.
@@ -824,9 +824,9 @@ before:
 actions:
   - click: "testid:api-call"
   - fast_begin: true
-  - wait_for: "testid:api-result-5"
+  - wait_for: "testid:api-result-3"
   - fast_end: true
-shot: "testid:api-result-5"
+shot: "testid:api-result-3"
 narration: >
   Same question, asked again: the revenue mart is now personal data, owned by
   Alice, and Omar Haddad, the finance domain's data protection officer, must be

@@ -62,7 +62,7 @@ function specView() {
           h('div', {}, describe(i)),
           i.kind === 'question' ? h('div', { style: 'margin-top:4px' }, i.recipe
             ? [h('a', { href: '/recipes', class: 'mono' }, `recipe ${i.recipe}`), ' ',
-              i.check ? h('span', { class: 'chip accepted', title: 'A validated oracle check' }, `check ${i.check}`) : null, ' ',
+              i.check ? h('span', { class: 'chip accepted', title: 'A validated oracle check', 'data-testid': `cq-check-${tid(i.id)}` }, `check ${i.check}`) : null, ' ',
               h('button', { class: 'mini primary', 'data-testid': `cq-open-${tid(i.id)}`, disabled: busy, title: 'Validate the direct Cypher answer on parameter cases: the question becomes an oracle check', onclick: () => openCq(i.id) }, i.check ? 'Check…' : 'Validate the Cypher')]
             : h('button', { class: 'mini primary', disabled: busy || !data.can.model, title: 'The model writes a recipe (Cypher scope, SPARQL query) that answers it; it is checked, saved as a draft, added to the bench, and tried', onclick: () => draftRecipe(i) }, 'Draft a recipe')) : null,
           h('div', { class: 'dmeta' }, i.by?.kind === 'ai' ? `proposed by ${i.by.model ?? 'AI'}, accepted by ${i.reviewedBy}` : `by ${i.by?.name ?? i.reviewedBy}`,
@@ -254,7 +254,8 @@ function cqView() {
       if (r.saved) toast(`${r.saved.kept ? 'Kept failing' : 'Validated'}: check ${r.saved.id} in ${r.saved.oracleFile}${r.saved.created ? ' (created)' : ''}. Run the oracle to see what it covers.`);
       else toast('Drafted again: try it on the same cases.');
       cq = null;
-      if (action === 'redraft') await openCq(id);
+      // The question stays open: validated, or drafted again to try.
+      await openCq(id);
     }
     render();
   };

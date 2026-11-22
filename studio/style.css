@@ -233,3 +233,4 @@ button.mini { padding: 0 7px; font-size: 11px; margin-left: 3px; }
 .cov-uncovered { stroke: #9e9e9e; stroke-dasharray: 5 4; }
 .cov-suspected { stroke: #c62828; stroke-width: 5; }
 .chip.inferred { background: #f3e5f5; color: #7b1fa2; }
+[data-testid="neo4j-now"] td { word-break: break-all; font-size: 11px; }

@@ -163,7 +163,7 @@ function watchFollowing() {
     followTimer = setInterval(async () => {
       if (!root || root.hidden || !root.isConnected) return;
       // Graphs come and go (a run's ephemeral graphs): their names are part of what is shown.
-      const shown = () => JSON.stringify([graphs?.endpoints?.map((e) => [e.graph, e.follow?.state, e.follow?.syncs]), graphs?.graphs?.map((g) => g.name)]);
+      const shown = () => JSON.stringify([graphs?.endpoints?.map((e) => [e.graph, e.follow?.state, e.follow?.syncs, e.follow?.ownSkipped]), graphs?.graphs?.map((g) => g.name)]);
       const before = shown();
       await loadGraphs();
       if (shown() !== before) render();
