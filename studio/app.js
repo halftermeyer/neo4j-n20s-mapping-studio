@@ -693,7 +693,7 @@ function coveragePanel(key) {
     h('div', { class: 'mono', style: 'color:#555' }, `${d.label}${d.kind === 'left-out' ? ' (left out)' : ''}`),
     d.kind === 'left-out'
       ? (d.readBy.length ? d.readBy.map((c) => h('div', { class: ['fail', 'error'].includes(c.status) ? 'warnline' : 'hint' }, `read by ${c.id} (${c.status})`)) : h('div', { class: 'hint' }, 'No check reads it: an omission is only tested by a question that needs it.'))
-      : [d.suspects.length ? h('div', { class: 'warnline' }, `In doubt: ${d.suspects.join(', ')} fail${d.suspects.length === 1 ? 's' : ''}, and ask about a term it emits`) : null,
+      : [d.doubts.map((x) => h('div', { class: x.cleared ? 'hint' : 'warnline' }, `${x.id} fails and asks about a term it emits${x.level === 'strong' ? ', reading it in Cypher (strong doubt)' : ' without reading it in Cypher (weak doubt)'}${x.cleared ? ': cleared, a passing check covers it' : ''}`)),
         d.covering.length ? d.covering.map(checkLine) : h('div', { class: 'hint' }, 'No check covers it: write a competency question that needs it (Design tab).')]))];
 }
 
@@ -714,7 +714,7 @@ function renderCoverage() {
         h('td', {}, d.status),
         h('td', { class: d.counted.length ? 'pass' : '' }, d.counted.map((id) => `${id}${d.covering.find((c) => c.id === id)?.draftedFrom ? ' (drafted from it)' : ''}`).join(', ') || '—'),
         h('td', {}, d.covering.filter((c) => !c.counts).map((c) => `${c.id}: ${c.why}`).join('; ')),
-        h('td', { class: d.suspects.length ? 'fail' : '' }, d.suspects.join(', '))))));
+        h('td', { class: d.suspects.length ? 'fail' : '' }, d.doubts.filter((x) => !x.cleared).map((x) => `${x.id} (${x.level})`).join(', '))))));
 }
 
 // Start ---------------------------------------------------------------------------------------------

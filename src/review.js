@@ -108,7 +108,12 @@ export function reviewItems({ mapping, lpgDoc, result, variants = null, specFind
       const d = cov.get(x.path);
       if (!d) continue;
       // Mapped: a failing check whose SPARQL uses a term it emits puts it in doubt.
-      if (d.suspects.length) reasons.push({ code: 'oracle', ...(x.path !== key ? { path: x.path } : {}), text: `the oracle fails with this decision: ${d.suspects.join(', ')}` });
+      const standing = d.doubts.filter((y) => !y.cleared);
+      const strong = standing.filter((y) => y.level === 'strong').map((y) => y.id);
+      const weak = standing.filter((y) => y.level === 'weak').map((y) => y.id);
+      const at = x.path !== key ? { path: x.path } : {};
+      if (strong.length) reasons.push({ code: 'oracle', level: 'strong', ...at, text: `the oracle fails with this decision: ${strong.join(', ')}` });
+      if (weak.length) reasons.push({ code: 'oracle', level: 'weak', ...at, text: `${weak.join(', ')} fail${weak.length === 1 ? 's' : ''} and ask${weak.length === 1 ? 's' : ''} about a term it emits (without reading it in Cypher), and no passing check covers it` });
       // Left out: a failing check whose Cypher reads what is left out says the RDF misses it.
       const failed = d.readBy.filter((c) => ['fail', 'error'].includes(c.status));
       if (failed.length) reasons.push({ code: 'oracle', path: x.path, text: `left out, but ${failed.map((c) => c.id).join(', ')} reads it and fails` });

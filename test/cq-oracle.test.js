@@ -103,14 +103,26 @@ test('coverage: an empty answer covers nothing; blame is wider than coverage', a
   assert.equal(c33.counts, false);
   assert.match(c33.why, /answers nothing/);
 
-  // DEPENDS_ON -> prov:wasDerivedFrom: q33 reads WAS_DERIVED_FROM only, and fails: DEPENDS_ON is suspected, not covered.
+  // DEPENDS_ON -> prov:wasDerivedFrom: q33 reads WAS_DERIVED_FROM only, and fails: a weak doubt, which stands
+  // while no passing check covers DEPENDS_ON (the q34 checks, which read it, did not run).
   const mapping = structuredClone(auraGold);
   mapping.relationships['r:2'] = { predicate: 'prov:wasDerivedFrom', meta: { status: 'proposed' } };
-  ({ plan, evidence } = await evidenceOf(mapping, auraOracle, (id) => (id === q33 ? 'fail' : 'pass')));
+  ({ plan, evidence } = await evidenceOf(mapping, auraOracle, (id) => (id === q33 ? 'fail' : id.startsWith('q34') ? 'not-run' : 'pass')));
   cov = coverage({ oracle: auraOracle, evidence, mapping, lpgDoc: auraDoc, plan });
-  const dep = cov.decisions.find((d) => d.path === 'relationships/r:2');
-  assert.ok(dep.suspects.includes(q33), JSON.stringify(dep));
+  let dep = cov.decisions.find((d) => d.path === 'relationships/r:2');
+  assert.deepEqual(dep.doubts, [{ id: q33, level: 'weak', cleared: false }], JSON.stringify(dep));
+  assert.deepEqual(dep.suspects, [q33]);
   assert.ok(!dep.covering.some((c) => c.id === q33));
+  // A passing check that reads DEPENDS_ON and asks about prov:wasDerivedFrom clears the weak doubt.
+  ({ plan, evidence } = await evidenceOf(mapping, auraOracle, (id) => (id === q33 ? 'fail' : 'pass')));
+  dep = coverage({ oracle: auraOracle, evidence, mapping, lpgDoc: auraDoc, plan }).decisions.find((d) => d.path === 'relationships/r:2');
+  assert.deepEqual([dep.doubts[0].cleared, dep.suspects], [true, []]);
+  // A check that reads it and fails is a strong doubt: a passing one does not clear it.
+  const q34 = 'q34-potential-not-asserted';
+  ({ plan, evidence } = await evidenceOf(mapping, auraOracle, (id) => (id === q34 ? 'fail' : 'pass')));
+  dep = coverage({ oracle: auraOracle, evidence, mapping, lpgDoc: auraDoc, plan }).decisions.find((d) => d.path === 'relationships/r:2');
+  assert.deepEqual(dep.doubts, [{ id: q34, level: 'strong', cleared: false }]);
+  assert.deepEqual(dep.suspects, [q34]);
 });
 
 test('coverage: a check drafted from a proposed decision does not cover it; once accepted it does, shown as drafted from it', async () => {
@@ -132,7 +144,7 @@ test('coverage: a check drafted from a proposed decision does not cover it; once
   };
   let c = await at(mapping);
   assert.equal(c.counts, false);
-  assert.match(c.why, /drafted from this decision while it is proposed/);
+  assert.match(c.why, /drafted from this decision while it was proposed/);
   mapping.relationships['r:0'].meta.status = 'accepted';
   c = await at(mapping);
   assert.deepEqual([c.counts, c.draftedFrom], [true, true]);
@@ -145,4 +157,35 @@ test('coverage: a check drafted from a proposed decision does not cover it; once
   const { plan, evidence } = await evidenceOf(mapping, edited, () => 'pass');
   c = coverage({ oracle: edited, evidence, mapping, lpgDoc: auraDoc, plan }).decisions.find((d) => d.path === 'relationships/r:0').covering[0];
   assert.match(c.why, /to revalidate/);
+});
+
+test('a check drafted against the gold covers an identical proposal, and Accept safe accepts it', async () => {
+  const { check, reviewItems, acceptSafe } = await import('../src/index.js');
+  const { prov } = await import('./helpers.js');
+  // Drafted and validated against the gold: USED accepted there.
+  const { plan: goldPlan } = await compile(auraGold, auraDoc);
+  const base = {
+    id: 'cq-used', mode: 'equal', columns: ['input'], decode: { input: 'node:n:0' },
+    cypher: 'MATCH (:Run {id: $run})-[:USED]->(v:DatasetVersion) RETURN v.id AS input',
+    sparql: 'SELECT ?input WHERE { <{{n:1|$run}}> prov:used ?input }', cases: [{ params: { run: 'r1' } }],
+  };
+  const relies = reliesOf(base, { mapping: auraGold, lpgDoc: auraDoc, plan: goldPlan, prefixes: auraOracle.prefixes });
+  assert.deepEqual(relies.map((r) => [r.path, r.status]), [['relationships/r:0', 'accepted']]);
+  const oracle = { ...auraOracle, checks: [{ ...base, validated: { by: 'pierre', at: 'then', fingerprint: checkFingerprint(base), relies } }] };
+
+  // A proposal identical to the gold, stable and confident.
+  const mapping = structuredClone(auraGold);
+  mapping.relationships['r:0'] = { ...mapping.relationships['r:0'], meta: { status: 'proposed', confidence: 1, rationale: 'used' } };
+  const { plan, evidence } = await evidenceOf(mapping, oracle, () => 'pass');
+  const c = coverage({ oracle, evidence, mapping, lpgDoc: auraDoc, plan }).decisions.find((d) => d.path === 'relationships/r:0').covering[0];
+  assert.deepEqual([c.counts, c.draftedFrom], [true, true], 'drafted from the gold, where it was accepted');
+
+  const variants = { passes: 3, elements: { 'relationships/r:0': { stable: true, variants: [{ entry: mapping.relationships['r:0'], passes: [1, 2, 3] }] } } };
+  for (const pid of Object.keys(mapping.relationships['r:0'].properties ?? {})) variants.elements[`relationships/r:0/properties/${pid}`] = { stable: true, variants: [{ entry: {}, passes: [1, 2, 3] }] };
+  const result = await check({ mapping, lpgDoc: auraDoc, targets: prov });
+  const items = reviewItems({ mapping, lpgDoc: auraDoc, result, variants, oracle: evidence, oracleFile: oracle });
+  const used = items.find((i) => i.key === 'relationships/r:0');
+  assert.equal(used.safe, true, JSON.stringify(used.reasons));
+  const accepted = acceptSafe(mapping, items, { reviewer: 'P', at: 'now' });
+  assert.equal(accepted.relationships['r:0'].meta.status, 'accepted');
 });

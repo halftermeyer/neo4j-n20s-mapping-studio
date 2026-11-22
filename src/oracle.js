@@ -406,10 +406,16 @@ export function checkFromDraft({ recipe, cypher, cases = [], id, question, mappi
  *             reads the element (a relationship with its ends); it counts when
  *             it passed with this very decision, its Cypher answered something,
  *             it is validated as it is (or written by hand), and it was not
- *             drafted from this decision while the decision was only proposed
- *             (shown as drafted from it once accepted);
- *   suspected a check whose SPARQL uses a term the decision emits failed with
- *             it: blame is wider than coverage;
+ *             drafted from this decision while the decision was proposed in the
+ *             mapping it was drafted from (its status then, in validated.relies),
+ *             unless the decision has been accepted since; a check drafted from
+ *             an accepted decision (the gold, in an evaluation) counts for an
+ *             identical proposal. Either way it shows as drafted from it;
+ *   in doubt  a check failed with the decision. Strong: its SPARQL uses a term
+ *             the decision emits AND its Cypher reads the element. Weak: the
+ *             SPARQL only (blame is wider than coverage); a weak doubt is
+ *             cleared when a check that counts covers the decision. suspects
+ *             lists the doubts that stand;
  *   read by   for a decision to leave something out: the checks whose Cypher reads it.
  * @param {{oracle: object|null, evidence: object|null, mapping: object, lpgDoc: object, plan?: object|null, lpgHash?: string|null}} a
  */
@@ -446,27 +452,32 @@ export function coverage({ oracle, evidence = null, mapping, lpgDoc, plan = null
     const ev = evidence?.decisions?.[d.path];
     const ranWith = !!ev && ev.fingerprint === entryFingerprint(d.entry);
     const covering = [];
-    const suspects = [];
+    const doubts = [];
     const readBy = [];
     for (const k of checks) {
       const status = ranWith ? k.status : 'not-run';
       const reads = readsElement(k.reads, lpgDoc, d.path);
       if (d.kind === 'left-out') { if (reads) readBy.push({ id: k.id, status }); continue; }
       const uses = [...k.terms].some((t) => d.terms.has(t));
-      if (uses && ['fail', 'error'].includes(status)) suspects.push(k.id);
+      if (uses && ['fail', 'error'].includes(status)) doubts.push({ id: k.id, level: reads ? 'strong' : 'weak' });
       if (!uses || !reads) continue;
       const r = k.relies.get(d.path);
       const draftedFrom = !!r && r.fingerprint === entryFingerprint(d.entry);
+      // Self-confirming: drafted from this very decision while it was proposed there, and still proposed here.
+      const selfConfirming = draftedFrom && r.status === 'proposed' && d.status === 'proposed';
       const why = status === 'not-run' ? (ev ? 'not run with this decision' : 'not run yet')
         : status !== 'pass' ? (status === 'fail' ? 'fails' : 'error')
           : k.nonEmpty === false ? 'its Cypher answers nothing: two empty answers prove nothing'
             : k.validation.startsWith('to revalidate') ? k.validation
-              : draftedFrom && d.status === 'proposed' ? 'drafted from this decision while it is proposed: accept it first' : null;
+              : selfConfirming ? 'drafted from this decision while it was proposed: accept it first' : null;
       covering.push({ id: k.id, status, counts: !why, why, draftedFrom });
     }
+    const counted = covering.filter((c) => c.counts).map((c) => c.id);
+    // A weak doubt (the SPARQL only) gives way to a check that covers the decision and counts.
+    for (const x of doubts) x.cleared = x.level === 'weak' && counted.length > 0;
     decisions.push({
       path: d.path, section: d.section, label: label(d.path), kind: d.kind, status: d.status, terms: [...d.terms],
-      covering, counted: covering.filter((c) => c.counts).map((c) => c.id), suspects, readBy,
+      covering, counted, doubts, suspects: doubts.filter((x) => !x.cleared).map((x) => x.id), readBy,
     });
   }
   return {

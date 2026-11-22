@@ -115,10 +115,11 @@ test('a mapped relationship is safe only when a check whose SPARQL uses a term i
   assert.ok(item.risk >= 5, 'ranked with the errors');
 
   // Blame is wider than coverage: q33's Cypher reads WAS_DERIVED_FROM only, but its SPARQL asks about
-  // prov:wasDerivedFrom, which DEPENDS_ON now emits too. It fails, and DEPENDS_ON gets the reason.
-  item = await r2(await evidence(mapping, status(['q33-upstream-asserted-sources'])));
+  // prov:wasDerivedFrom, which DEPENDS_ON now emits too. It fails, and no passing check covers DEPENDS_ON (the
+  // q34 checks did not run): a weak doubt that stands.
+  item = await r2(await evidence(mapping, status(['q33-upstream-asserted-sources'], ['q33-upstream-asserted-sources', 'q32-upstream-runs-and-agents'])));
   assert.equal(item.safe, false);
-  assert.ok(item.reasons.some((r) => r.code === 'oracle' && /q33-upstream-asserted-sources/.test(r.text)), JSON.stringify(item.reasons));
+  assert.ok(item.reasons.some((r) => r.code === 'oracle' && r.level === 'weak' && /q33-upstream-asserted-sources/.test(r.text)), JSON.stringify(item.reasons));
 
   // Evidence about another decision does not count; nor does a run on accepted entries only.
   const ev = await evidence(mapping, status([]));
@@ -391,12 +392,15 @@ test('the ends of a relationship count: two ABOUT emit sosa:observedProperty, a 
   assert.equal(r.tick.safe, true);
   assert.equal(r.rollup.safe, false);
   assert.ok(r.rollup.reasons.some((x) => x.code === 'unverified'));
-  // s11 reads (:Rollup)-[:ABOUT]->(:Metric): it covers the other one. Blame is wider than coverage: when it fails,
-  // both ABOUT are in doubt, since its SPARQL asks about sosa:observedProperty, which both emit.
+  // s11 reads (:Rollup)-[:ABOUT]->(:Metric): when it fails, the rollup's ABOUT is in strong doubt. Its SPARQL asks
+  // about sosa:observedProperty, which the tick's ABOUT emits too: a weak doubt, cleared since s7 passes and covers it.
   r = await run([byId('s7-observed-on-rig'), byId('s11-rollup-result-times')], (id) => (id === 's11-rollup-result-times' ? 'fail' : 'pass'));
-  assert.ok(r.rollup.reasons.some((x) => x.code === 'oracle' && /s11-rollup-result-times/.test(x.text)));
-  assert.equal(r.tick.safe, false);
-  assert.ok(r.tick.reasons.some((x) => x.code === 'oracle' && /s11-rollup-result-times/.test(x.text)));
+  assert.ok(r.rollup.reasons.some((x) => x.code === 'oracle' && x.level === 'strong' && /s11-rollup-result-times/.test(x.text)));
+  assert.equal(r.tick.safe, true, JSON.stringify(r.tick.reasons));
+  assert.ok(!r.tick.reasons.some((x) => x.code === 'oracle'));
+  // Without s7, nothing covers the tick's ABOUT: the weak doubt stands.
+  r = await run([byId('s11-rollup-result-times')], () => 'fail');
+  assert.ok(r.tick.reasons.some((x) => x.code === 'oracle' && x.level === 'weak' && /s11-rollup-result-times/.test(x.text)));
   // When it passes, it covers the rollup's ABOUT only.
   r = await run([byId('s11-rollup-result-times')], () => 'pass');
   assert.equal(r.rollup.safe, true);

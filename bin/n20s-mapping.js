@@ -747,7 +747,7 @@ async function main() {
     const rows = cov.decisions.filter((d) => d.kind === 'mapped' && (!values.uncovered || !d.counted.length || d.suspects.length));
     printTable(rows.map((d) => ({
       decision: d.label, status: d.status, 'covered by': d.counted.map((id) => `${id}${d.covering.find((c) => c.id === id)?.draftedFrom ? ' (drafted from it)' : ''}`).join(', '),
-      'not counting': d.covering.filter((c) => !c.counts).map((c) => `${c.id}: ${c.why}`).join('; '), 'in doubt': d.suspects.join(', '),
+      'not counting': d.covering.filter((c) => !c.counts).map((c) => `${c.id}: ${c.why}`).join('; '), 'in doubt': d.doubts.filter((x) => !x.cleared).map((x) => `${x.id} (${x.level})`).join(', '),
     })));
     console.log(`\n${cov.summary.covered} of ${cov.summary.mapped} mapped decisions covered by a check that counts; ${cov.summary.suspected} in doubt.`);
     return 0;
