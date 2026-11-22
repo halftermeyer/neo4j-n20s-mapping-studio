@@ -10,6 +10,7 @@
 import path from 'node:path';
 import { readRegistry, updateRegistry, republish, loadRecipe, UsageError } from './node.js';
 import { ownTransaction } from './writeback.js';
+import { writeOutcomes } from './recipe.js';
 
 export const ENABLE_CDC = 'Enable Change Data Capture in FULL mode on the database: on Aura, instance → ⋯ → Change Data Capture → FULL; on a self-managed Neo4j Enterprise, ALTER DATABASE <name> SET OPTION txLogEnrichment "FULL".';
 
@@ -43,7 +44,13 @@ export async function cdcStatus(source) {
   return { mode, available: false, message: `Change Data Capture is on, but its mode could not be read: it must be FULL. ${ENABLE_CDC}` };
 }
 
-/** What a publication is built from: node labels and relationship types of its recipe's mapping, null when anything may matter. */
+/**
+ * What a publication is built from: the node labels, relationship types and
+ * property keys its recipe reads (the row queries of its mapping's plan, and
+ * its scope Cypher), null when anything may matter (free Cypher rows steps).
+ * props maps a label or type to the keys read on it; '*' holds keys read
+ * through a variable whose label the text does not say.
+ */
 export async function watchedOf(recipesDir, endpoint) {
   const p = (await readRegistry(recipesDir)).publications?.[endpoint];
   if (!p) throw new UsageError(`Endpoint ${endpoint} is not published from ${recipesDir}.`);
@@ -52,6 +59,32 @@ export async function watchedOf(recipesDir, endpoint) {
   if ((recipe.steps ?? []).some((s) => s.type === 'rows')) return null;
   const labels = new Set();
   const types = new Set();
+  const props = {};
+  const read = (owner, key) => { (props[owner] ??= new Set()).add(key); };
+  const readCypher = (cypher) => {
+    const text = String(cypher ?? '').replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''");
+    const vars = new Map();
+    for (const m of text.matchAll(/\(\s*([A-Za-z_]\w*)?\s*((?::\s*`?[A-Za-z_]\w*`?\s*)+)/g)) {
+      const ls = [...m[2].matchAll(/:\s*`?([A-Za-z_]\w*)`?/g)].map((x) => x[1]);
+      for (const l of ls) labels.add(l);
+      if (m[1]) vars.set(m[1], ls);
+    }
+    for (const m of text.matchAll(/\[\s*([A-Za-z_]\w*)?\s*:\s*`?([A-Za-z_]\w*)`?((?:\s*\|\s*:?`?[A-Za-z_]\w*`?)*)/g)) {
+      const ts = [m[2], ...[...m[3].matchAll(/([A-Za-z_]\w*)/g)].map((x) => x[1])];
+      for (const t of ts) types.add(t);
+      if (m[1]) vars.set(m[1], ts);
+    }
+    // n:Label in a WHERE: a label the query filters on.
+    for (const m of text.matchAll(/\bWHERE\b[\s\S]*/gi)) for (const l of m[0].matchAll(/\b[A-Za-z_]\w*\s*:\s*`?([A-Za-z_]\w*)`?/g)) labels.add(l[1]);
+    for (const m of text.matchAll(/\b([A-Za-z_]\w*)\.`?([A-Za-z_]\w*)`?/g)) {
+      const owners = vars.get(m[1]);
+      if (owners) for (const o of owners) read(o, m[2]); else read('*', m[2]);
+    }
+    // {key: …} maps on patterns: keys read on that label or type.
+    for (const m of text.matchAll(/[([]\s*[A-Za-z_]?\w*\s*:\s*`?([A-Za-z_]\w*)`?[^{)\]]*\{([^}]*)\}/g)) {
+      for (const k of m[2].matchAll(/`?([A-Za-z_]\w*)`?\s*:/g)) read(m[1], k[1]);
+    }
+  };
   for (const u of plan.units) {
     const [section, id] = u.id.split('/');
     if (section === 'nodes') {
@@ -62,19 +95,47 @@ export async function watchedOf(recipesDir, endpoint) {
       if (r?.type) types.add(r.type);
     }
     for (const v of Object.values(u.scope?.nodes ?? {})) if (v.label) labels.add(v.label);
+    readCypher(u.cypher);
   }
-  return { labels: [...labels].sort(), types: [...types].sort() };
+  for (const s of recipe.steps ?? []) if (s.type === 'scope') readCypher(s.cypher);
+  return { labels: [...labels].sort(), types: [...types].sort(), props: Object.fromEntries(Object.entries(props).map(([k, v]) => [k, [...v].sort()]).sort()) };
 }
 
-/** Whether a CDC event touches what is watched. */
+/** The property keys whose value differs between two states. */
+function changedKeys(before = {}, after = {}) {
+  const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
+  return [...keys].filter((k) => JSON.stringify(before?.[k] ?? null) !== JSON.stringify(after?.[k] ?? null));
+}
+
+/**
+ * Whether a CDC event changes something a publication reads: a node of a
+ * watched label created or deleted; a watched label added or removed; a
+ * property key the publication reads changed on a node of a watched label; a
+ * relationship of a watched type created or deleted, or one of its read keys
+ * changed. A label or a relationship type the publication does not read (one
+ * another recipe writes back, for instance) changes nothing.
+ */
 export function touches(event, watched) {
   if (!watched) return true;
+  // Registries from before property keys were recorded: any update of a watched element counts.
+  const reads = (owners, keys) => !watched.props || keys.some((k) => (watched.props['*'] ?? []).includes(k) || owners.some((o) => (watched.props[o] ?? []).includes(k)));
+  const before = event.state?.before ?? null;
+  const after = event.state?.after ?? null;
   if (event.eventType === 'n') {
-    const labels = new Set([...(event.labels ?? []), ...(event.state?.before?.labels ?? []), ...(event.state?.after?.labels ?? [])]);
-    return watched.labels.some((l) => labels.has(l));
+    const bl = before?.labels ?? [];
+    const al = after?.labels ?? [];
+    const here = [...new Set([...(event.labels ?? []), ...bl, ...al])].filter((l) => watched.labels.includes(l));
+    if (event.operation !== 'u' || !before || !after) return here.length > 0;
+    const changedLabels = [...al.filter((l) => !bl.includes(l)), ...bl.filter((l) => !al.includes(l))];
+    if (changedLabels.some((l) => watched.labels.includes(l))) return true;
+    const keys = changedKeys(before.properties, after.properties);
+    return here.length > 0 && keys.length > 0 && reads(here, keys);
   }
   if (event.eventType === 'r') {
-    return watched.types.includes(event.type) || watched.labels.some((l) => (event.start?.labels ?? []).includes(l) || (event.end?.labels ?? []).includes(l));
+    if (!watched.types.includes(event.type)) return false;
+    if (event.operation !== 'u' || !before || !after) return true;
+    const keys = changedKeys(before.properties, after.properties);
+    return keys.length > 0 && reads([event.type], keys);
   }
   return false;
 }
@@ -120,11 +181,12 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, writer = null
     // What the publication's own recipe wrote back is its result, not a change to follow: skipping it ends the loop.
     // Only that recipe's transactions (owner recipe/step, exact recipe id); another recipe's writes are changes like any other.
     const recipeId = registry.publications[endpoint].recipe;
-    const own = rows.filter((x) => ownTransaction(x.txMetadata, recipeId)).length;
+    const own = new Set(rows.filter((x) => ownTransaction(x.txMetadata, recipeId)).map((x) => Number(x.txId))).size;
+    const noteOwn = (f) => { if (own) { f.ownSkipped = (f.ownSkipped ?? 0) + own; f.lastOwn = { at: now(), transactions: own }; } };
     const relevant = rows.filter((x) => !ownTransaction(x.txMetadata, recipeId) && touches(x.event, f.watched));
     const txs = [...new Set(relevant.map((x) => Number(x.txId)))];
     if (!relevant.length && !restarted) {
-      if (cursor !== f.cursor) await updateRegistry(recipesDir, (r) => { if (r.follow?.[endpoint]) r.follow[endpoint].cursor = cursor; });
+      if (cursor !== f.cursor || own) await updateRegistry(recipesDir, (r) => { if (r.follow?.[endpoint]) { r.follow[endpoint].cursor = cursor; noteOwn(r.follow[endpoint]); } });
       out.push({ endpoint, changes: 0, ...(own ? { own } : {}) });
       continue;
     }
@@ -132,13 +194,16 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, writer = null
     await updateRegistry(recipesDir, (r) => {
       if (!r.follow?.[endpoint]) return;
       Object.assign(r.follow[endpoint], { cursor, state: 'syncing', lastChange: change, changes: (r.follow[endpoint].changes ?? 0) + relevant.length });
+      noteOwn(r.follow[endpoint]);
     });
     const t0 = Date.now();
     let sync;
     try {
       const { run } = await republish(recipesDir, endpoint, { source, n20s, onStep, writer, allowWrite });
       const failed = run.steps.find((s) => s.status === 'error');
-      sync = { at: now(), ok: run.ok, ms: Date.now() - t0, graph: run.publications?.find((p) => p.as === endpoint)?.graph ?? null, ...(failed ? { error: `${failed.id}: ${failed.error}` } : {}) };
+      const writes = writeOutcomes(run);
+      sync = { at: now(), ok: run.ok, ms: Date.now() - t0, graph: run.publications?.find((p) => p.as === endpoint)?.graph ?? null, ...(failed ? { error: `${failed.id}: ${failed.error}` } : {}),
+        ...(writes.length ? { writes, as: writer?.user ?? null } : {}) };
     } catch (err) {
       sync = { at: now(), ok: false, ms: Date.now() - t0, error: err.message };
     }

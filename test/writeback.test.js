@@ -116,11 +116,12 @@ test('follow: the publication\'s own writes are not changes to follow', async ()
     publications: { taint: { graph: 'g1', recipe: 'taint-writeback', file: '9-taint-writeback.recipe.yaml', params: {} } },
     follow: { taint: { cursor: 'c0', watched: { labels: ['DatasetVersion'], types: [] }, changes: 0, syncs: 0, state: 'idle' } },
   }));
-  const own = (id, owner) => ({ id, txId: 9, event: { eventType: 'n', labels: ['DatasetVersion', 'Entity', 'Tainted'] }, txMetadata: { app: 'n20s', owner, run: 'r1' } });
+  const own = (id, owner) => ({ id, txId: id === 'c1' ? 9 : 10, event: { eventType: 'n', labels: ['DatasetVersion', 'Entity', 'Tainted'] }, txMetadata: { app: 'n20s', owner, run: 'r1' } });
   const source = { async run(cypher, p) { if (/db\.cdc\.query/.test(cypher)) return [own('c1', 'taint-writeback/mark'), own('c2', 'taint-writeback/link')].filter((e) => e.id > p.from); throw new Error(cypher); } };
   const [res] = await syncOnce(recipes, { source, n20s: null });
   assert.deepEqual(res, { endpoint: 'taint', changes: 0, own: 2 });
-  assert.equal(JSON.parse(fs.readFileSync(path.join(recipes, 'graphs.json'), 'utf8')).follow.taint.cursor, 'c2');
+  const f = JSON.parse(fs.readFileSync(path.join(recipes, 'graphs.json'), 'utf8')).follow.taint;
+  assert.deepEqual([f.cursor, f.ownSkipped, f.lastOwn.transactions], ['c2', 2, 2], 'two transactions of its own, seen and skipped');
 });
 
 /** A run up to the write steps, with n20s faked: the tainted query answers two rows. */

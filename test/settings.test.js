@@ -217,3 +217,15 @@ test('listModels: the Gemini models that generate content', async () => {
   };
   assert.deepEqual(await listModels({ provider: 'gemini', apiKey: 'k', fetch }), [{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' }]);
 });
+
+test('mask hosts: the user and database from the environment are masked too, and mean the current ones when given back', () => {
+  const env = { NEO4J_URI: 'neo4j+s://abc123.databases.neo4j.io', NEO4J_USERNAME: 'neo4j', NEO4J_PASSWORD: 'pw', NEO4J_DATABASE: 'neo4j' };
+  const s = connectionSettings({ env, sourceUrl: env.NEO4J_URI, maskHosts: true });
+  const d = s.describe().neo4j;
+  assert.ok(!JSON.stringify(d).includes('abc123'));
+  assert.deepEqual([d.user, d.database], ['••••••', '••••••']);
+  assert.deepEqual(s.neo4jFrom({ url: d.url, user: d.user, password: '', database: d.database }), { url: env.NEO4J_URI, user: 'neo4j', password: 'pw', database: 'neo4j' });
+  s.setNeo4j(s.neo4jFrom({ url: d.url, user: 'partner', password: 'p2', database: d.database }), { ok: true });
+  assert.equal(s.describe().neo4j.user, 'partner', 'a user typed in the studio is shown');
+  assert.equal(connectionSettings({ env, sourceUrl: env.NEO4J_URI }).describe().neo4j.user, 'neo4j', 'not masked without maskHosts');
+});

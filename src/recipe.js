@@ -178,6 +178,11 @@ export function checkRecipe(recipe, { mapping = null, lpgDoc = null } = {}) {
   return findings;
 }
 
+/** What the write steps of a run did: per step, written or not, added, removed, counters, or the error. */
+export const writeOutcomes = (run) => (run?.steps ?? []).filter((x) => x.type === 'write').map((x) => (x.status === 'ok'
+  ? { step: x.id, kind: x.result.kind, name: x.result.name, on: x.result.on, owner: x.result.owner, written: !!x.result.written, added: x.result.added ?? 0, removed: x.result.removed ?? 0, counters: x.result.counters ?? null }
+  : { step: x.id, error: x.error }));
+
 /** Whether a recipe writes back into Neo4j. */
 export const writesBack = (recipe) => (recipe?.steps ?? []).some((s) => s?.type === 'write');
 

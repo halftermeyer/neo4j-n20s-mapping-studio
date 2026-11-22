@@ -100,14 +100,23 @@ function aliasOf(id, pid) {
 const placeholders = (t) => [...(t ?? '').matchAll(/\{([^{}]+)\}/g)].map((m) => m[1]);
 const termOf = (curie) => S.catalog.terms.find((t) => t.curie === curie);
 function category(item) {
+  if (item && (inferredBy(item.key) || (item.key.startsWith('nodes/') && isTechnical(item.key.split('/')[1])))) return 'inferred';
   if (!item || item.status === 'undecided') return 'undecided';
   if (item.status === 'proposed') return item.safe ? 'safe' : 'review';
   if (item.status === 'accepted') return 'accepted';
   if (item.status === 'rejected') return 'rejected';
   return 'ignored';
 }
-const COLORS = { accepted: '#2e7d32', safe: '#1565c0', review: '#e65100', rejected: '#c62828', ignored: '#9e9e9e', undecided: '#ffffff' };
-const CAT_TEXT = { accepted: 'accepted', safe: 'proposed, safe', review: 'to review', rejected: 'rejected', ignored: 'left out', undecided: 'undecided' };
+const COLORS = { accepted: '#2e7d32', safe: '#1565c0', review: '#e65100', rejected: '#c62828', ignored: '#9e9e9e', undecided: '#ffffff', inferred: '#7b1fa2' };
+const CAT_TEXT = { accepted: 'accepted', safe: 'proposed, safe', review: 'to review', rejected: 'rejected', ignored: 'left out', undecided: 'undecided', inferred: 'written back' };
+
+// Write-back: what the LPG ontology declares as written back by a recipe, and its technical bookkeeping.
+let showTechnical = false;
+const isTechnical = (id) => !!S.lpg.nodes[id]?.extensions?.custom?.technical;
+const inferredBy = (key) => { const [section, id] = key.split('/'); return section === 'relationships' ? S.lpg.relationships[id]?.extensions?.custom?.inferredBy ?? null : null; };
+const inferredLabels = (id) => Object.entries(S.lpg.nodes[id]?.labels?.extensions?.custom?.inferredBy ?? {});
+const byText = (b) => (b?.shared ? 'several recipes (shared)' : `recipe ${b?.recipe}, step ${b?.step}`);
+const hidden = (key) => { const [section, id] = key.split('/'); return !showTechnical && (section === 'nodes' ? isTechnical(id) : isTechnical(S.lpg.relationships[id]?.from?.node) || isTechnical(S.lpg.relationships[id]?.to?.node)); };
 
 // Rendering -------------------------------------------------------------------------------
 function render() {
@@ -161,11 +170,11 @@ function renderQueue() {
     all: () => true,
   };
   const names = { review: 'To review', safe: 'Safe', done: 'Decided', all: 'All' };
-  const list = S.items.filter(groups[filter]);
+  const list = S.items.filter((i) => !hidden(i.key)).filter(groups[filter]);
   fill($('queue'), 
     h('div', { class: 'tabs' }, Object.keys(groups).map((g) => h('button', {
       class: g === filter ? 'on' : '', onclick: () => { filter = g; renderQueue(); }, 'data-testid': `queue-filter-${g}`,
-    }, `${names[g]} ${S.items.filter(groups[g]).length}`))),
+    }, `${names[g]} ${S.items.filter((i) => !hidden(i.key)).filter(groups[g]).length}`))),
     list.length ? list.map((i) => h('div', {
       class: `qitem${i.key === selected ? ' sel' : ''}`,
       style: `border-left-color:${COLORS[category(i)] === '#ffffff' ? '#ccc' : COLORS[category(i)]}`,
@@ -237,7 +246,7 @@ function renderGraph() {
   }
 
   // Implied labels: dashed, from the subtype to the kind it implies.
-  for (const id of Object.keys(S.lpg.nodes)) {
+  for (const id of Object.keys(S.lpg.nodes).filter((x) => !hidden(`nodes/${x}`))) {
     for (const a of ancestors(id).slice(0, 1)) {
       const [p, q] = [pos[id], pos[a]];
       g.append(s('line', { class: 'implied', x1: p.x, y1: p.y, x2: q.x, y2: q.y }));
@@ -247,6 +256,7 @@ function renderGraph() {
   // Relationships: parallel ones bend apart, self loops go above the node.
   const groups = {};
   for (const [id, r] of Object.entries(S.lpg.relationships)) {
+    if (hidden(`relationships/${id}`)) continue;
     const k = [r.from.node, r.to.node].sort().join('|');
     (groups[k] ??= []).push(id);
   }
@@ -285,16 +295,24 @@ function renderGraph() {
       const w = r.type.length * 7.4 + 14;
       g.append(s('g', { class: `edge${selected === key ? ' sel' : ''}`, onclick: (e) => { e.stopPropagation(); select(key); } },
         s('path', { class: 'hit', d }),
-        s('path', { class: 'line', d, stroke: color, 'marker-end': `url(#arrow-${cat})`, 'stroke-dasharray': cat === 'ignored' ? '5 4' : null }),
+        s('path', { class: 'line', d, stroke: color, 'marker-end': `url(#arrow-${cat})`, 'stroke-dasharray': cat === 'ignored' ? '5 4' : cat === 'inferred' ? '10 4 2 4' : null, 'data-testid': cat === 'inferred' ? `inferred-${tid(key)}` : null }),
         coverageOf(key) ? s('rect', { class: `cov-ring cov-${coverageOf(key)}`, x: lx - w / 2 - 4, y: ly - 14, width: w + 8, height: 28, rx: 14, 'data-testid': `cov-${tid(key)}-${coverageOf(key)}` }) : null,
         s('rect', { x: lx - w / 2, y: ly - 10, width: w, height: 20, rx: 10, fill: '#fff', stroke: color }),
-        s('text', { x: lx, y: ly + 0.5, fill: cat === 'ignored' ? '#777' : '#1d2530' }, r.type)));
+        s('text', { x: lx, y: ly + 0.5, fill: cat === 'ignored' ? '#777' : cat === 'inferred' ? COLORS.inferred : '#1d2530' }, r.type)));
     });
   }
 
   for (const id of Object.keys(S.lpg.nodes)) {
     const key = `nodes/${id}`;
+    if (hidden(key)) continue;
     const cat = category(itemOf(key));
+    // Labels a recipe writes back on this node kind: a badge under it.
+    const badges = inferredLabels(id).map(([l], i) => {
+      const w = l.length * 7 + 18;
+      return s('g', { 'data-testid': `inferred-label-${tid(l)}` },
+        s('rect', { x: pos[id].x - w / 2, y: pos[id].y + R + 6 + 22 * i, width: w, height: 18, rx: 9, fill: '#fff', stroke: COLORS.inferred, 'stroke-dasharray': '10 4 2 4' }),
+        s('text', { x: pos[id].x, y: pos[id].y + R + 15.5 + 22 * i, fill: COLORS.inferred, style: 'font-size:11px' }, `+${l}`));
+    });
     const p = pos[id];
     const label = nodeLabel(id);
     const dark = !['undecided', 'ignored'].includes(cat);
@@ -302,7 +320,7 @@ function renderGraph() {
     g.append(s('g', { class: `node${selected === key ? ' sel' : ''}`, onclick: (e) => { e.stopPropagation(); select(key); } },
       ring ? s('circle', { class: `cov-ring cov-${ring}`, cx: p.x, cy: p.y, r: R + 6, 'data-testid': `cov-${tid(key)}-${ring}` }) : null,
       s('circle', { cx: p.x, cy: p.y, r: R, fill: COLORS[cat] }),
-      s('text', { x: p.x, y: p.y, fill: dark ? '#fff' : '#1d2530', style: label.length > 11 ? 'font-size:11px' : null }, label)));
+      s('text', { x: p.x, y: p.y, fill: dark ? '#fff' : '#1d2530', style: label.length > 11 ? 'font-size:11px' : null }, label), ...badges));
   }
 
   fill(svgEl, defs, g);
@@ -315,8 +333,11 @@ function renderGraph() {
     view = { k, x: (width - box.w * k) / 2 - box.x * k, y: (height - box.h * k) / 2 - box.y * k };
   }
   g.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
-  fill($('legend'), ...Object.entries(CAT_TEXT).map(([c, t]) => h('span', {}, h('i', { style: `background:${COLORS[c]}` }), t)),
+  const technical = Object.keys(S.lpg.nodes).filter(isTechnical);
+  const written = Object.keys(S.lpg.relationships).some((id) => inferredBy(`relationships/${id}`)) || Object.keys(S.lpg.nodes).some((id) => inferredLabels(id).length);
+  fill($('legend'), ...Object.entries(CAT_TEXT).filter(([c]) => c !== 'inferred' || written).map(([c, t]) => h('span', {}, h('i', { style: `background:${COLORS[c]}` }), t)),
     h('span', {}, '- - - implies'),
+    technical.length ? h('button', { class: `mini${showTechnical ? ' on' : ''}`, 'data-testid': 'show-technical', title: 'Write-back bookkeeping, never mapped', onclick: () => { showTechnical = !showTechnical; renderQueue(); renderGraph(); } }, `${showTechnical ? 'hide' : 'show'} technical (${technical.length})`) : null,
     cov?.available ? [['covered', '#2e7d32', 'covered'], ['partly', '#f9a825', 'partly covered'], ['uncovered', '#9e9e9e', 'no check covers it'], ['suspected', '#c62828', 'a failing check puts it in doubt']]
       .map(([, color, t]) => h('span', {}, h('i', { style: `background:none;border:3px solid ${color}` }), t)) : null);
 }
@@ -473,6 +494,7 @@ function renderPanel() {
       [...new Set(item.reasons.map((r) => r.code))].map((c) => h('span', { class: `chip ${c}` }, c))),
     lpgEl.description ? h('div', { class: 'desc', style: 'margin-top:8px' }, lpgEl.description) : h('div', { class: 'desc', style: 'margin-top:8px;color:#999' }, 'No description in the LPG ontology. A description is what helps the model most.'),
 
+    writeBackPanel(section, id),
     h('h3', {}, statusOf(e) === 'rejected' && e ? 'Rejected proposal' : 'Decision'),
     h('div', { style: statusOf(e) === 'rejected' && e ? 'text-decoration:line-through;color:#888' : null }, describe(selected, e)),
     statusOf(e) === 'rejected' && e ? h('div', { class: 'sentence' }, 'Undecided until the model proposes again or you edit it.') : null,
@@ -506,6 +528,18 @@ function renderPanel() {
       variants.map(([p, v]) => h('div', {}, h('div', { class: 'mono', style: 'color:#888;margin-top:6px' }, p === selected ? '(element)' : propName(p)),
         v.variants.map((x) => h('div', { class: 'variant' }, `pass ${x.passes.join(', ')}: `, summarize(x.entry)))))) : null,
   );
+}
+
+/** What a recipe writes back on this element, or that it is write-back bookkeeping. */
+function writeBackPanel(section, id) {
+  const block = (text) => h('div', { class: 'finding', style: `border-left:3px solid ${COLORS.inferred};margin-top:8px`, 'data-testid': 'write-back-note' }, text);
+  if (section === 'relationships' && inferredBy(`relationships/${id}`)) {
+    const props = Object.values(S.lpg.relationships[id].properties ?? {}).filter((p) => p.extensions?.custom?.provenance).map((p) => p.name);
+    return block(`Written back by ${byText(inferredBy(`relationships/${id}`))}: inferred, never ingested, so the mapping leaves it out.${props.length ? ` Provenance on each: ${props.join(', ')}.` : ''}`);
+  }
+  if (section === 'nodes' && isTechnical(id)) return block('Technical: write-back bookkeeping (one node per write step, locked by each run). Never mapped.');
+  const labels = section === 'nodes' ? inferredLabels(id) : [];
+  return labels.length ? labels.map(([l, b]) => block(`Label ${l}: written back by ${byText(b)} on some of these nodes. Inferred, never ingested.`)) : null;
 }
 
 function propName(path) {

@@ -1,0 +1,15 @@
+# Specification of the mapping, written in the design conversation: only accepted items count.
+format: n20s-spec/0.1
+mapping: lineage-prov
+items:
+  - id: i1
+    kind: question
+    text: Which versions were built from an input that a run later invalidated, and by which run?
+    status: accepted
+    by:
+      kind: human
+      name: Pierre
+    reviewedBy: Pierre
+    at: 2026-11-22T17:53:19.258Z
+    recipe: versions-from-invalidated-input.recipe.yaml
+    answerCypher: MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(gen_r:Run)-[:USED]->(input_v:DatasetVersion) MATCH (input_v)-[:WAS_INVALIDATED_BY]->(inv_r:Run) RETURN DISTINCT v.id AS version, inv_r.id AS invalidatingRun

@@ -447,6 +447,26 @@ export function adminScript(lpgDoc, recipes, { mapping = null } = {}) {
   ].join('\n');
 }
 
+/** What a written name holds in Neo4j now, as a person reads it: a Cypher statement (read only) and a title. */
+export function extensionQuery(t, { limit = 50 } = {}) {
+  const q = quote;
+  if (t.kind === 'label') {
+    const n = t.node;
+    return { title: `:${t.name} on ${n.label}`, cypher: `MATCH (n:${q(n.label)}:${q(t.name)}) RETURN n.${q(n.key)} AS ${q(n.label)} ORDER BY ${q(n.label)} LIMIT ${limit}`, count: `MATCH (n:${q(n.label)}:${q(t.name)}) RETURN count(n) AS n` };
+  }
+  if (t.kind === 'relationship') {
+    const { from: a, to: b } = t;
+    const own = t.shared ? ' WHERE r.owner = $owner' : '';
+    const cols = [`a.${q(a.key)} AS from`, `b.${q(b.key)} AS to`, ...t.provenance.map((p) => `r.${q(p)} AS ${q(p)}`)];
+    return { title: `(${a.label})-[:${t.name}]->(${b.label})`, cypher: `MATCH (a:${q(a.label)})-[r:${q(t.name)}]->(b:${q(b.label)})${own} RETURN ${cols.join(', ')} ORDER BY from, to LIMIT ${limit}`, count: `MATCH (:${q(a.label)})-[r:${q(t.name)}]->(:${q(b.label)})${own} RETURN count(r) AS n` };
+  }
+  if (t.kind === 'property') {
+    const n = t.node;
+    return { title: `${n.label}.${t.name}`, cypher: `MATCH (n:${q(n.label)}) WHERE n.${q(t.name)} IS NOT NULL RETURN n.${q(n.key)} AS ${q(n.label)}, n.${q(t.name)} AS ${q(t.name)} ORDER BY ${q(n.label)} LIMIT ${limit}`, count: `MATCH (n:${q(n.label)}) WHERE n.${q(t.name)} IS NOT NULL RETURN count(n) AS n` };
+  }
+  return null;
+}
+
 // Running a write ----------------------------------------------------------------------------
 
 const deltaKeys = ['labelsAdded', 'labelsRemoved', 'relationshipsCreated', 'relationshipsDeleted', 'propertiesSet', 'nodesCreated', 'nodesDeleted'];

@@ -711,3 +711,29 @@ test('competency question as a validated oracle check: suggested cases, tried, v
     await studio.close();
   }
 });
+
+test('design: a draft whose try fails (a Cypher error) is repaired once, with the error', { skip, timeout: 60000 }, async () => {
+  const { startStudio } = await import('../src/studio.js');
+  const { functionProvider } = await import('../src/providers.js');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-draft-fail-'));
+  fs.cpSync(EXAMPLE, dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  const asked = [];
+  const answer = (scope) => ({ id: 'invalidated', title: 'Invalidated', params: [], cypher: scope,
+    sparql: 'SELECT DISTINCT ?version WHERE { ?version prov:wasInvalidatedBy ?r }', decode: [{ column: 'version', node: 'n:0' }],
+    answerCypher: 'MATCH (v:DatasetVersion)-[:WAS_INVALIDATED_BY]->(:Run) RETURN DISTINCT v.id AS version', explanation: '.' });
+  const provider = () => functionProvider((req) => { asked.push(req.user); return asked.length === 1
+    ? answer('MATCH (v:DatasetVersion) WHERE (v)-[:WAS_INVALIDATED_BY]->(r:Run) RETURN v, r')
+    : answer('MATCH p = (v:DatasetVersion)-[:WAS_INVALIDATED_BY]->(:Run) RETURN p'); }, { model: 'test' });
+  const studio = await startStudio({ mappingFile: path.join(dir, 'lineage-prov.aura.mapping.yaml'), port: 0, reviewer: 'P', provider, n20s, openSource: () => ({ url: 'test', run: (q, p) => source.run(q, p), close: async () => {} }) });
+  const call = async (p, body) => (await (await fetch(new URL(p, studio.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json());
+  try {
+    await call('/api/design/decide', { action: 'edit', item: { kind: 'question', text: 'Which versions were invalidated?' } });
+    const d = (await call('/api/design/draft', { id: 'i1' })).drafted;
+    assert.equal(asked.length, 2, 'one repair call');
+    assert.match(asked[1], /Running the recipe failed: .*r/);
+    assert.deepEqual([d.tried.ok, d.tried.compare.agree], [true, true]);
+  } finally {
+    await studio.close();
+  }
+});

@@ -1,0 +1,23 @@
+# Drafted by gemini-2.5-flash from the question i1 of the spec: "Which versions were built from an input that a run later invalidated, and by which run?"
+# Review it before relying on it. It agrees with a direct Cypher answer (1 rows on the default parameters).
+# This recipe finds DatasetVersions that were generated using an input DatasetVersion, where that input was subsequently invalidated by a specific Run. The RDF graph captures the generation, usage, and invalidation events, but does not explicitly link the invalidation back to the *output* version that used the now-invalidated input. The Cypher scope now returns all intermediate nodes required for the SPARQL query to reconstruct the full provenance path.
+# Direct Cypher answer: MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(gen_r:Run)-[:USED]->(input_v:DatasetVersion) MATCH (input_v)-[:WAS_INVALIDATED_BY]->(inv_r:Run) RETURN DISTINCT v.id AS version, inv_r.id AS invalidatingRun
+format: n20s-recipe/0.1
+id: versions-from-invalidated-input
+title: Versions built from an input later invalidated by a run
+mapping: ../lineage-prov.mapping.yaml
+params: {}
+steps:
+  - id: scope
+    type: scope
+    title: What the question needs
+    cypher: |
+      MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(gen_r:Run)-[:USED]->(input_v:DatasetVersion) MATCH (input_v)-[:WAS_INVALIDATED_BY]->(inv_r:Run) RETURN v, gen_r, input_v, inv_r
+  - id: answer
+    type: query
+    title: Versions built from an input later invalidated by a run
+    sparql: |
+      SELECT DISTINCT ?version ?invalidatingRun WHERE { ?version prov:wasGeneratedBy ?generatingRun . ?generatingRun prov:used ?inputVersion . ?inputVersion prov:wasInvalidatedBy ?invalidatingRun . }
+    decode:
+      version: node:n:4
+      invalidatingRun: node:n:9

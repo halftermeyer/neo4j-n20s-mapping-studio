@@ -82,6 +82,10 @@ export async function envFileRisk(file) {
  */
 export function connectionSettings({ env = process.env, sourceUrl = null, sourceOrigin = 'environment', model = null, provider = null, n20sUrl = null, envFile = null, maskHosts = false, fixedProvider = null } = {}) {
   /** For screen recordings: the first label of a host is not shown (neo4j+s://••••••••.databases.neo4j.io). */
+  // With maskHosts, a user or database name that comes from the environment (an Aura credentials file) is masked too.
+  const fromEnvNames = new Set([env.NEO4J_USERNAME, env.N20S_SOURCE_USER, env.N20S_WRITE_USER, env.NEO4J_DATABASE, env.N20S_SOURCE_DATABASE].filter(Boolean));
+  const MASKED = '•'.repeat(6);
+  const maskName = (v) => (maskHosts && v && fromEnvNames.has(v) ? MASKED : v);
   const mask = (url) => (maskHosts && url ? String(url).replace(/^(\w[\w+.-]*:\/\/)([^.:/]+)/, (m, scheme, host) => (host === 'localhost' || /^\d+$/.test(host) ? m : `${scheme}${'•'.repeat(8)}`)) : url);
   let neo4j = null;
   if (sourceUrl && isSourceUrl(sourceUrl)) {
@@ -105,7 +109,7 @@ export function connectionSettings({ env = process.env, sourceUrl = null, source
       return {
         // Shown relative: a home directory path says who runs it.
         envFile: envFile ? (path.relative(process.cwd(), envFile) || envFile) : null,
-        neo4j: neo4j ? { url: mask(neo4j.url), user: neo4j.user, database: neo4j.database, passwordSet: !!neo4j.password, origin: neo4j.origin, snapshot: !!neo4j.snapshot, status: status.neo4j } : null,
+        neo4j: neo4j ? { url: mask(neo4j.url), user: maskName(neo4j.user), database: maskName(neo4j.database), passwordSet: !!neo4j.password, origin: neo4j.origin, snapshot: !!neo4j.snapshot, status: status.neo4j } : null,
         ai: fixedProvider ? { provider: fixedProvider.name, model: fixedProvider.model, keySet: false, keyVar: null, origin: 'replay', replay: true, status: null }
           : ai ? { provider: ai.provider, model: ai.model, baseUrl: ai.baseUrl, keySet: !!ai.apiKey, keyVar: PROVIDERS[ai.provider].keyVar, origin: ai.origin, status: status.ai } : null,
         n20s: { url: this.n20sUrl },
@@ -120,6 +124,9 @@ export function connectionSettings({ env = process.env, sourceUrl = null, source
     neo4jFrom({ url, user, password, database }) {
       // The page shows a masked URL: given back unchanged, it means the current one.
       if (neo4j && url === mask(neo4j.url)) url = neo4j.url;
+      // Masked names given back unchanged mean the current ones.
+      if (neo4j && user === MASKED) user = neo4j.user;
+      if (neo4j && database === MASKED) database = neo4j.database;
       if (!isSourceUrl(url)) throw new Error('A Bolt URL: bolt://, neo4j://, neo4j+s://…');
       const p = parseSourceUrl(url, env);
       const same = neo4j && neo4j.url === p.url;

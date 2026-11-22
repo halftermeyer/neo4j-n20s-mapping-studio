@@ -85,3 +85,27 @@ test('following: start from the current change, advance past changes that do not
   reg = JSON.parse(fs.readFileSync(path.join(dir, 'graphs.json'), 'utf8'));
   assert.deepEqual(reg.follow, {});
 });
+
+test('touches: only the names a publication reads; writing back Tainted does not rebuild the lineage endpoint', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-touch-'));
+  fs.cpSync(path.join(EXAMPLE, '../../demo/project'), root, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  const dir = path.join(root, 'lineage/recipes');
+  fs.writeFileSync(path.join(dir, 'graphs.json'), JSON.stringify({ format: 'n20s-graphs/0.1', graphs: {}, publications: { lineage: { graph: 'g1', recipe: 'lineage-kg', file: '5-lineage-kg.recipe.yaml', params: {} } } }));
+  const watched = await watchedOf(dir, 'lineage');
+  assert.ok(watched.props.DatasetVersion.includes('invalidatedAt'));
+  assert.ok(!watched.labels.includes('Tainted') && !watched.types.includes('READS_TAINTED_INPUT'));
+  const version = (before, after) => ({ eventType: 'n', operation: 'u', labels: after.labels, state: { before, after } });
+  const props = { id: 'dsv:x@1', generatedAt: '2026-11-01T00:00:00Z', schemaHash: 'a' };
+  // What recipe 9 writes back: a label it adds, a relationship type it creates.
+  assert.equal(touches(version({ labels: ['DatasetVersion', 'Entity'], properties: props }, { labels: ['DatasetVersion', 'Entity', 'Tainted'], properties: props }), watched), false, 'Tainted added');
+  assert.equal(touches({ eventType: 'r', operation: 'c', type: 'READS_TAINTED_INPUT', start: { labels: ['DatasetVersion', 'Entity'] }, end: { labels: ['DatasetVersion', 'Entity'] }, state: { before: null, after: { properties: { createdBy: 'x' } } } }, watched), false, 'READS_TAINTED_INPUT created');
+  // What another application commits: an invalidation, which the mapping reads.
+  assert.equal(touches(version({ labels: ['DatasetVersion', 'Entity'], properties: props }, { labels: ['DatasetVersion', 'Entity'], properties: { ...props, invalidatedAt: '2026-11-06T09:30:00Z' } }), watched), true, 'invalidatedAt set');
+  // A property the publication does not read changes nothing; a watched label added does.
+  assert.equal(touches(version({ labels: ['DatasetVersion', 'Entity'], properties: props }, { labels: ['DatasetVersion', 'Entity'], properties: { ...props, schemaHash: 'b' } }), watched), false, 'schemaHash, not mapped');
+  assert.equal(touches(version({ labels: ['Thing'], properties: props }, { labels: ['Thing', 'DatasetVersion'], properties: props }), watched), true, 'becomes a DatasetVersion');
+  assert.equal(touches({ eventType: 'n', operation: 'c', labels: ['DatasetVersion', 'Entity'], state: { before: null, after: { labels: ['DatasetVersion', 'Entity'], properties: props } } }, watched), true, 'a new version');
+  assert.equal(touches({ eventType: 'r', operation: 'c', type: 'USED', start: { labels: ['Run'] }, end: { labels: ['DatasetVersion'] } }, watched), true);
+  // A relationship of a type it does not read, between nodes it reads: nothing (it used to count).
+  assert.equal(touches({ eventType: 'r', operation: 'c', type: 'MENTIONS', start: { labels: ['DatasetVersion'] }, end: { labels: ['Run'] } }, watched), false);
+});

@@ -10,6 +10,10 @@
 #                          prompts or the script changed)
 #   demo/demo.sh stop      stops the studio, n20s-server and Fuseki, undoes the demo transactions
 #
+# The reset also prepares write-back (recipe 9): the admin script of write-patch
+# (WriteLedger constraint, names), role and user n20s_writer (N20S_WRITE_USER and
+# N20S_WRITE_PASSWORD kept in .env), nothing written back yet.
+#
 # Act 3 needs Apache Jena Fuseki: FUSEKI_JAR (default ~/bin/fuseki-dl/jena-fuseki-server-6.1.0.jar,
 # from Maven Central: org.apache.jena:jena-fuseki-server).
 # Needs: .env (NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD of a Neo4j Enterprise or

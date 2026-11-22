@@ -273,7 +273,7 @@ export async function graphsReport(recipesDir, n20s) {
   const graphs = graphStatuses(registry, await n20s.list(), current);
   const endpoints = publicationStatuses(registry, graphs).map((e) => {
     const f = registry.follow?.[e.endpoint];
-    return f ? { ...e, follow: { since: f.since, state: f.state, changes: f.changes, syncs: f.syncs, lastChange: f.lastChange, lastSync: f.lastSync, watched: f.watched } } : e;
+    return f ? { ...e, follow: { since: f.since, state: f.state, changes: f.changes, syncs: f.syncs, lastChange: f.lastChange, lastSync: f.lastSync, watched: f.watched, ownSkipped: f.ownSkipped ?? 0, lastOwn: f.lastOwn ?? null } } : e;
   });
   return Object.assign(graphs, { endpoints });
 }

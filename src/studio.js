@@ -17,7 +17,7 @@ import { readTargetsSummary } from './workspace.js';
 import { endpoints } from './endpoints.js';
 import { readProject, projectStatus, introspectSource, fetchTarget, newMapping, addToProject, addTargetToMapping, setMappingOracle } from './workspace.js';
 import { BENCH_FORMAT, checkBench } from './bench.js';
-import { checkRecipe, recipeOutline, recipeKind, runRecipe, writesBack, RECIPE_FORMAT, STEP_TYPES, LIFECYCLES } from './recipe.js';
+import { checkRecipe, recipeOutline, recipeKind, runRecipe, writesBack, writeOutcomes, RECIPE_FORMAT, STEP_TYPES, LIFECYCLES } from './recipe.js';
 import YAML from 'yaml';
 import { reviewItems, applyDecision, acceptSafe } from './review.js';
 import { proposePasses, EXTRA_TERMS, acceptAll } from './propose.js';
@@ -28,7 +28,7 @@ import { shorten } from './iri.js';
 import { qualifiedSubject } from './prepare.js';
 import { openSource as openBolt } from './source.js';
 import { sourceValues, readRegistry, writerFromEnv, writePatchFiles, freshnessOf, saveCheck, oraclePathFor, evidencePathFor } from './node.js';
-import { resolveWrite } from './writeback.js';
+import { resolveWrite, extensionQuery } from './writeback.js';
 import { n20sClient } from './n20s.js';
 import { makeProvider, listModels } from './providers.js';
 import { envFileRisk, writeEnvFile } from './settings.js';
@@ -634,10 +634,34 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       const writer = open ? open() : null;
       try {
         const { run } = await republish(recipeDir, endpoint, { source, n20s, writer, allowWrite: !!writer });
-        return { ...(await routes['GET /api/graphs']()), run: { ok: run.ok, ms: run.ms, error: run.steps.find((s) => s.status === 'error')?.error ?? null, graph: run.publications.find((p) => p.as === endpoint)?.graph ?? null } };
+        const writes = writeOutcomes(run);
+        return { ...(await routes['GET /api/graphs']()), run: { ok: run.ok, ms: run.ms, error: run.steps.find((s) => s.status === 'error')?.error ?? null, graph: run.publications.find((p) => p.as === endpoint)?.graph ?? null, ...(writes.length ? { writes, as: writer?.user ?? null } : {}) } };
       } finally {
         await source.close();
         await writer?.close();
+      }
+    },
+
+    // What the write steps of a publication's recipe hold in Neo4j now, read through the read source, as any application would.
+    'POST /api/graphs/written': async ({ endpoint }) => {
+      if (!openSource) throw new UsageError('No database connected (Connections tab).');
+      const p = (await readRegistry(recipeDir)).publications?.[endpoint];
+      if (!p) throw new UsageError(`Endpoint ${endpoint} is not published here.`);
+      const f = await loadRecipe(path.join(recipeDir, p.file));
+      const source = openSource();
+      try {
+        const out = [];
+        for (const step of f.recipe.steps.filter((x) => x.type === 'write')) {
+          const { target } = resolveWrite(f.recipe, step, { lpgDoc: f.lpgDoc, mapping: f.mapping });
+          const q = target && extensionQuery(target);
+          if (!q) continue;
+          const params = target.shared ? { owner: target.writeOwner } : {};
+          const [{ n }] = await source.run(q.count, params);
+          out.push({ step: step.id, title: q.title, cypher: q.cypher, count: Number(n), rows: await source.run(q.cypher, params) });
+        }
+        return { endpoint, recipe: f.recipe.id, steps: out };
+      } finally {
+        await source.close();
       }
     },
 
@@ -860,8 +884,11 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       res = { ...res, json: keep(res.json) };
       let a = await assess(res.json);
       const disagrees = (x) => x.tried?.compare && x.tried.compare.agree === false;
-      if (a.findings.length || disagrees(a)) {
+      // A draft whose try fails (a Cypher or SPARQL error) is repaired like one that disagrees.
+      const failed = (x) => x.tried && x.tried.ok === false;
+      if (a.findings.length || disagrees(a) || failed(a)) {
         const why = a.findings.length ? a.findings.map((f) => `- ${f.path}: ${f.message}`).join('\n')
+          : failed(a) ? `- Running the recipe failed: ${a.tried.error}`
           : a.tried.compare.error ? `- ${a.tried.compare.error}`
             : `- The recipe and your direct Cypher answer disagree on ${a.tried.compare.columns.join(', ')}: the recipe gives ${a.tried.compare.recipeRows} rows, the Cypher ${a.tried.compare.cypherRows}. Only in the recipe: ${a.tried.compare.onlyRecipe.join(' ') || 'none'}. Only in the Cypher: ${a.tried.compare.onlyCypher.join(' ') || 'none'}. Find which one misreads the question (direction of relationships, what the scope projects, the SPARQL pattern) and fix it.`;
         res = await model.complete({ ...request, user: `${request.user}\n\n# Your draft\n${JSON.stringify(res.json)}\n\n# What went wrong\n${why}\nDraft it again.` });

@@ -59,6 +59,13 @@ let selected = null;
 let params = {};
 let running = false;
 let patch = null;        // POST /api/ontology-patch: what the LPG ontology must declare for the writes
+let republished = null;  // the last Re-publish of an endpoint: { endpoint, run }
+let written = null;      // POST /api/graphs/written: what the write steps hold in Neo4j now
+
+/** One line per write step: what it wrote, or that nothing changed. */
+const writeLines = (writes, as) => writes.map((w) => h('div', { class: w.error ? 'warnline' : w.written ? 'okline' : 'hint', 'data-testid': `write-line-${w.step}` },
+  w.error ? `${w.step}: ${w.error}`
+    : `${w.step} — ${w.kind === 'label' ? `:${w.name} on ${w.on}` : w.kind === 'relationship' ? w.name : `${w.on}.${w.name}`}: ${w.written ? `+${w.added} −${w.removed}, written${as ? ` as ${as}` : ''}` : `unchanged, nothing written${w.counters ? ` (counters ${Object.values(w.counters).reduce((a, b) => a + b, 0) === 0 ? 'all at 0' : JSON.stringify(w.counters)})` : ''}`}`));
 let creating = false;
 let addingParam = false;
 let editingGraph = null; // graph key being edited, or '' for a new one
@@ -182,6 +189,8 @@ function followBox(e) {
       h('div', { class: 'hint' }, `Since ${at(f.since)}: every committed transaction that touches ${f.watched ? [...f.watched.labels, ...f.watched.types].join(', ') : 'the database'} rebuilds the graph, checks it, and swaps it in.`),
       f.lastChange ? h('div', { 'data-testid': 'follow-last-change' }, `Last change ${at(f.lastChange.at)}: ${f.lastChange.transactions ?? 0} transaction(s), ${f.lastChange.events} change(s)`) : h('div', { class: 'hint' }, 'No change yet.'),
       s ? h('div', { 'data-testid': `follow-sync-${f.syncs}`, class: s.ok ? 'okline' : 'warnline' }, s.ok ? `Rebuilt ${at(s.at)} in ${(s.ms / 1000).toFixed(1)} s: now serving ${s.graph}` : `Rebuild failed ${at(s.at)}, the endpoint kept its graph: ${s.error}`) : null,
+      s?.writes?.length ? h('div', { 'data-testid': 'follow-writes' }, h('div', { class: 'hint' }, 'Written back into Neo4j by this rebuild:'), writeLines(s.writes, s.as)) : null,
+      f.ownSkipped ? h('div', { class: 'hint', 'data-testid': 'follow-own' }, `Its own writes, seen by change data capture and skipped: ${f.ownSkipped} transaction(s)${f.lastOwn ? `, last ${at(f.lastOwn.at)}` : ''}.`) : null,
       h('button', { onclick: () => toggle(false), 'data-testid': 'follow-off' }, 'Stop following'));
   }
   const ok = cdc?.available;
@@ -289,16 +298,27 @@ function endpointPanel() {
         try {
           const r = await api('/api/graphs/republish', { endpoint: e.endpoint });
           graphs = r; apis = graphs.can ? (await api('/query')).apis : apis;
+          republished = { endpoint: e.endpoint, run: r.run };
           toast(r.run.ok ? `Re-published: ${r.run.graph} (${r.run.ms} ms)` : `Not re-published, the endpoint keeps its graph: ${r.run.error}`, !r.run.ok);
         } catch (err) { toast(err.message, true); }
         render();
-      } }, 'Re-publish'),
+      }, 'data-testid': 'republish' }, 'Re-publish'),
       recipeFile ? h('button', { onclick: () => open(recipeFile) }, 'Open the recipe') : null,
+      list.recipes.find((r) => r.file === p.file)?.writes ? h('button', { 'data-testid': 'neo4j-now-show', title: 'What the write steps of this recipe hold in Neo4j now, read with Cypher', onclick: async () => {
+        try { written = await api('/api/graphs/written', { endpoint: e.endpoint }); } catch (err) { toast(err.message, true); }
+        render();
+      } }, 'In Neo4j now') : null,
       h('button', { class: 'bad', onclick: async () => {
         if (!confirm(`Stop serving /sparql/${e.endpoint}?`)) return;
         try { graphs = await api('/api/graphs/unpublish', { endpoint: e.endpoint }); view = null; toast(`Unpublished /sparql/${e.endpoint}`); } catch (err) { toast(err.message, true); }
         render();
       } }, 'Unpublish')),
+    republished?.endpoint === e.endpoint && republished.run.writes ? h('div', { class: 'follow', 'data-testid': 'republish-result' },
+      h('b', {}, `Re-published ${republished.run.ok ? `in ${(republished.run.ms / 1000).toFixed(1)} s` : ': failed'}`), writeLines(republished.run.writes, republished.run.as)) : null,
+    written?.endpoint === e.endpoint ? h('div', { class: 'follow', 'data-testid': 'neo4j-now' },
+      h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, 'In Neo4j now'), h('button', { class: 'mini', onclick: () => { written = null; render(); } }, '×')),
+      h('div', { class: 'hint' }, `Read with Cypher, as any application would: what ${written.recipe} wrote back.`),
+      written.steps.map((x) => [h('div', { style: 'margin-top:6px' }, h('b', { class: 'mono' }, x.title), ` · ${x.count}`), table(x.rows)])) : null,
     e.status !== 'missing' ? sparqlConsole(async (q) => {
       const res = await fetch(`/sparql/${encodeURIComponent(e.endpoint)}?query=${encodeURIComponent(q)}`);
       const text = await res.text();

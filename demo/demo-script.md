@@ -67,14 +67,13 @@ actions:
   - hover: "testid:target-foaf"
 shot: "testid:project-cols"
 narration: >
-  The project has three columns. On the left, the graph models, as Aura exports
-  them. On the right, the target vocabularies: FOAF for people, PROV-O for lineage.
-  In the middle, the mappings between them. The FOAF mapping is still empty.
+  The project in three columns: the graph models as Aura exports them, the target
+  vocabularies, FOAF and PROV-O, and in the middle, the mappings. The FOAF one is
+  still empty.
 narration_fr: >
-  Le projet tient en trois colonnes. À gauche, les modèles de graphe, tels
-  qu'Aura les exporte. À droite, les vocabulaires cibles : FOAF pour les
-  personnes, PROV-O pour le lignage. Au milieu, les mappings entre les deux. Celui
-  vers FOAF est encore vide.
+  Le projet en trois colonnes : les modèles de graphe tels qu'Aura les exporte, les
+  vocabulaires cibles, FOAF et PROV-O, et au milieu, les mappings. Celui vers FOAF
+  est encore vide.
 ```
 
 ## Act 1 — the member directory, as FOAF
@@ -236,26 +235,11 @@ narration_fr: >
   copie que quelqu'un doit maintenir.
 ```
 
-```scene
-id: s12-sparql
-actions:
-  - fill: { target: "testid:sparql-input", value: "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\nSELECT ?person ?knows WHERE {\n  ?p foaf:name ?person ; foaf:knows ?k .\n  ?k foaf:name ?knows .\n} ORDER BY ?person" }
-  - click: "testid:sparql-ask"
-  - wait_for: "testid:sparql-result-1"
-shot: "testid:sparql-result-1"
-narration: >
-  A partner asks in SPARQL: who knows whom? Plain FOAF, nothing specific to
-  Neo4j.
-narration_fr: >
-  Un partenaire interroge en SPARQL : qui connaît qui ? Du FOAF standard, rien de
-  spécifique à Neo4j.
-```
-
 Talking points: this is where the graph database earns its place. Change data
 capture is a property of the database; the endpoint subscribes to it.
 
 ```scene
-id: s13-follow
+id: s12-follow
 actions:
   - click: "testid:follow-on"
   - wait_for: "testid:follow-state-idle"
@@ -271,7 +255,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s14-tx-leo
+id: s13-tx-leo
 hook: tx_leo_joins
 actions:
   - wait_any: { targets: ["testid:follow-sync-1"], timeout_ms: 90000 }
@@ -287,7 +271,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s15-sparql-leo
+id: s14-sparql-leo
 before:
   - dismiss: "testid:tx-card-close"
 actions:
@@ -296,13 +280,15 @@ actions:
   - wait_for: "testid:sparql-result-2"
 shot: "testid:sparql-result-2"
 narration: >
-  Who knows Ana? Fatima, and now Leo.
+  A partner asks in SPARQL, plain FOAF, nothing specific to Neo4j: who knows Ana?
+  Fatima, and now Leo.
 narration_fr: >
-  Qui connaît Ana ? Fatima, et maintenant Leo.
+  Un partenaire interroge en SPARQL, du FOAF standard, rien de spécifique à Neo4j :
+  qui connaît Ana ? Fatima, et maintenant Leo.
 ```
 
 ```scene
-id: s16-tx-duplicate
+id: s15-tx-duplicate
 hook: tx_duplicate_ana
 actions:
   - wait_for: "testid:tx-card-rolled-back"
@@ -321,7 +307,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s17-api-friends
+id: s16-api-friends
 before:
   - dismiss: "testid:tx-card-close"
 actions:
@@ -344,7 +330,7 @@ Talking points: security is not re-implemented on the RDF side. It is the
 database's own role-based access control, applied to every client.
 
 ```scene
-id: s18-partner
+id: s17-partner
 actions:
   - click: "testid:tab-connections"
   - fill: { target: "testid:neo4j-user", value: "partner" }
@@ -363,7 +349,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s19-api-partner
+id: s18-api-partner
 actions:
   - click: "testid:tab-recipes"
   - click: "testid:api-friends"
@@ -380,43 +366,27 @@ narration_fr: >
   de second modèle de sécurité à synchroniser.
 ```
 
-```scene
-id: s20-steward
-actions:
-  - click: "testid:tab-connections"
-  - fill: { target: "testid:neo4j-user", value: "neo4j" }
-  - fill: { target: "testid:neo4j-password", value: "" }
-  - click: "testid:neo4j-connect"
-  - wait_for: "testid:neo4j-ok-neo4j"
-shot: "testid:conn-neo4j"
-narration: >
-  Back to the steward account.
-narration_fr: >
-  Retour au compte administrateur.
-```
-
 ## Act 2 — data lineage, as W3C PROV-O
 
 Talking points: a real model, with subtle semantics. This is where "the AI
 proposes, a person decides, and the oracle checks the meaning" matters.
 
 ```scene
-id: s21-act2
+id: s19-act2
 hook: act2_card
 actions:
+  - hook: back_to_steward
   - wait_for: "testid:act-card"
 shot: "testid:act-card"
 narration: >
-  Act two, a real case: the data lineage of an analytics platform, published in
-  W3C PROV-O. Datasets, versions, runs and owners, in the same database.
+  Act two, a real case: the data lineage of an analytics platform, in W3C PROV-O.
 narration_fr: >
-  Deuxième acte, un cas réel : le lignage des données d'une plateforme
-  analytique, publié en PROV-O du W3C. Jeux de données, versions, exécutions et
-  responsables, dans la même base.
+  Deuxième acte, un cas réel : le lignage des données d'une plateforme analytique,
+  en PROV-O du W3C.
 ```
 
 ```scene
-id: s22-lineage-open
+id: s20-lineage-open
 before:
   - dismiss: "testid:act-card"
 actions:
@@ -426,14 +396,17 @@ actions:
 shot: "css:#graph"
 narration: >
   The lineage mapping was mostly reviewed last week. The AI proposed eight
-  relationship types again; they are waiting for review.
+  relationship types again; they are waiting for review. One link, drawn dotted, is
+  not ingested data: a recipe writes it back. We will come to it.
 narration_fr: >
   Le mapping du lignage a été revu en grande partie la semaine dernière. L'IA a
-  reproposé huit types de relations ; ils attendent une revue.
+  reproposé huit types de relations ; ils attendent une revue. Un lien, en
+  pointillés, n'est pas une donnée ingérée : une recette l'écrit dans la base. Nous
+  y viendrons.
 ```
 
 ```scene
-id: s23-lineage-safe
+id: s21-lineage-safe
 actions:
   - click: "testid:oracle-toggle"
   - click: "testid:oracle-run-proposals"
@@ -445,19 +418,24 @@ actions:
   - click: "testid:queue-filter-review"
 shot: "css:#queue"
 narration: >
-  Before accepting anything, the oracle checks the proposals: a relationship is
-  safe only when a question that reads it gets the same answer in Cypher and in
-  SPARQL. We accept what is safe. The rest needs a person; let's look at two of
-  them.
+  Can we trust the AI? On two test sets, it agrees with an expert mapping on about
+  three decisions out of four. So nothing is accepted blindly. The oracle checks the
+  proposals first. Accept safe takes only stable, confident proposals with no
+  problem found, and a link only when a passing question confirms it. In our tests,
+  it accepted no wrong decision in fifteen passes, but it accepts little. The rest
+  goes to a person.
 narration_fr: >
-  Avant d'accepter quoi que ce soit, l'oracle vérifie les propositions : une
-  relation n'est sûre que si une question qui la lit obtient la même réponse en
-  Cypher et en SPARQL. On accepte ce qui est sûr. Le reste demande une personne ;
-  regardons-en deux.
+  Peut-on faire confiance à l'IA ? Sur deux jeux de test, elle est d'accord avec un
+  mapping d'expert sur environ trois décisions sur quatre. Rien n'est donc accepté à
+  l'aveugle. L'oracle vérifie d'abord les propositions. « Accept safe » ne prend que
+  des propositions stables, à confiance élevée, sans problème détecté, et un lien
+  seulement quand une question réussie le confirme. Dans nos tests, il n'a accepté
+  aucune décision fausse en quinze passes, mais il accepte peu. Le reste va à une
+  personne.
 ```
 
 ```scene
-id: s24-has-column-version
+id: s22-has-column-version
 actions:
   - click: "testid:queue-relationships-r-7"
   - wait_for: "testid:panel-relationships-r-7"
@@ -474,7 +452,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s25-reject-ask
+id: s23-reject-ask
 actions:
   - click: "testid:reject"
   - type: { target: "testid:reject-comment", value: "A dataset version is not a prov:Collection. Leave it out, like HAS_COLUMN.", delay_ms: 18 }
@@ -492,7 +470,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s26-accept-new
+id: s24-accept-new
 actions:
   - click: "testid:accept"
   - wait_for: "text:Accepted"
@@ -510,7 +488,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s27-tempted
+id: s25-tempted
 actions:
   - click: "testid:edit"
   - select: { target: "testid:decision", value: "map" }
@@ -527,7 +505,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s28-oracle-fail
+id: s26-oracle-fail
 actions:
   - click: "testid:oracle-toggle"
   - click: "testid:oracle-run"
@@ -546,7 +524,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s29-fix
+id: s27-fix
 actions:
   - click: "testid:edit"
   - select: { target: "testid:decision", value: "ignore" }
@@ -559,38 +537,71 @@ actions:
   - fast_end: true
 shot: "css:#oracle"
 narration: >
-  We put it back as the AI had it. Every question now gets the same answer on
-  both sides.
+  We put it back as the AI had it. Every question now gets the same answer on both
+  sides. In our tests, the checks and the oracle together caught about six wrong
+  decisions out of ten; the rest is what human review is for.
 narration_fr: >
   On revient à la décision de l'IA. Chaque question obtient maintenant la même
-  réponse des deux côtés.
+  réponse des deux côtés. Dans nos tests, les contrôles et l'oracle ont attrapé
+  ensemble environ six décisions fausses sur dix ; le reste, c'est le rôle de la
+  revue humaine.
 ```
 
 ```scene
-id: s30-impact
+id: s28-question
 actions:
-  - click: "testid:tab-recipes"
-  - click: "testid:api-owners-to-notify"
-  - fill: { target: "testid:api-param-name", value: "raw.customers" }
-  - click: "testid:api-call"
+  - click: "testid:oracle-toggle"
+  - click: "testid:tab-design"
+  - wait_for: "testid:cq-open-i1"
+  - click: "testid:cq-open-i1"
+  - wait_for: "testid:cq-cypher"
+  - click: "testid:cq-try"
   - fast_begin: true
-  - wait_for: "testid:api-result-1"
+  - wait_for: "testid:cq-validate"
   - fast_end: true
-shot: "testid:api-result-1"
+  - click: "testid:cq-validate"
+  - wait_for: "text:Validated"
+shot: "css:#design-view .fpanel"
 narration: >
-  Now an impact question, served as an API: which owners must we notify when a
-  source fed a run that read a bad input? Cypher scopes the lineage downstream of
-  raw customers, and a rule reasons over PROV. Today: nobody.
+  Business questions make the oracle. The AI drafted this one as a recipe, with a
+  direct Cypher answer. A person checks the Cypher, the truth on the graph, tries
+  it against the recipe, and validates it: it becomes a check.
 narration_fr: >
-  Maintenant une question d'impact, servie comme une API : quels responsables
-  prévenir quand une source a alimenté une exécution qui a lu une entrée
-  défectueuse ? Cypher délimite le lignage en aval de « raw customers », et une
-  règle raisonne sur PROV. Aujourd'hui : personne.
+  Les questions métier font l'oracle. L'IA a rédigé celle-ci sous forme de recette,
+  avec une réponse directe en Cypher. Une personne vérifie le Cypher, la vérité sur
+  le graphe, l'essaie face à la recette, et le valide : il devient un contrôle.
 ```
 
 ```scene
-id: s31-publish-lineage
+id: s29-coverage
 actions:
+  - click: "testid:tab-mapping"
+  - click: "testid:oracle-toggle"
+  - click: "testid:oracle-run"
+  - fast_begin: true
+  - wait_any: { targets: ["testid:oracle-results-pass", "testid:oracle-results-fail"], timeout_ms: 240000 }
+  - fast_end: true
+  - click: "testid:oracle-toggle"
+  - click: "testid:coverage-toggle"
+  - wait_for: "testid:coverage-table"
+  - click: "testid:queue-filter-all"
+  - click: "testid:queue-relationships-r-16"
+  - wait_for: "testid:cov-panel-relationships-r-16"
+shot: "css:main"
+narration: >
+  The coverage view shows which decisions a question confirms, and which ones no
+  question reaches yet. Was invalidated by is now covered.
+narration_fr: >
+  La vue de couverture montre quelles décisions une question confirme, et celles
+  qu'aucune question n'atteint encore. « Was invalidated by » est maintenant
+  couverte.
+```
+
+```scene
+id: s30-publish-lineage
+actions:
+  - click: "testid:coverage-toggle"
+  - click: "testid:tab-recipes"
   - click: "testid:recipe-lineage-kg"
   - click: "testid:recipe-run"
   - fast_begin: true
@@ -609,6 +620,33 @@ narration_fr: >
 ```
 
 ```scene
+id: s31-taint-publish
+actions:
+  - click: "testid:recipe-taint-writeback"
+  - wait_for: "testid:recipe-run"
+  - click: "testid:recipe-run"
+  - fast_begin: true
+  - wait_any: { targets: ["testid:run-ok-taint-writeback"], timeout_ms: 180000 }
+  - fast_end: true
+  - click: "testid:endpoint-taint"
+  - click: "testid:follow-on"
+  - wait_for: "testid:follow-state-idle"
+shot: "css:#recipes-view .fmain"
+narration: >
+  Reasoning can also feed the database. This recipe finds the versions written
+  from an invalidated input, and writes them back: a Tainted label, and a link to
+  the input. Both are declared in the graph model as inferred by this recipe. It
+  writes with its own restricted user, only what changed, and only after we
+  confirm.
+narration_fr: >
+  Le raisonnement peut aussi alimenter la base. Cette recette trouve les versions
+  écrites à partir d'une entrée invalidée, et les réécrit dans la base : un label
+  « Tainted », et un lien vers l'entrée. Les deux sont déclarés dans le modèle du
+  graphe comme déduits par cette recette. Elle écrit avec son propre utilisateur
+  restreint, seulement ce qui a changé, et seulement après confirmation.
+```
+
+```scene
 id: s32-incident
 hook: tx_customers_incident
 actions:
@@ -623,37 +661,55 @@ narration_fr: >
 ```
 
 ```scene
-id: s33-impact-after
+id: s33-taint-synced
 before:
   - dismiss: "testid:tx-card-close"
 actions:
-  - click: "testid:api-owners-to-notify"
-  - fill: { target: "testid:api-param-name", value: "raw.customers" }
-  - click: "testid:api-call"
-  - fast_begin: true
-  - wait_for: "testid:api-result-2"
-  - fast_end: true
-shot: "testid:api-result-2"
+  - click: "testid:endpoint-taint"
+  - wait_any: { targets: ["testid:follow-writes"], timeout_ms: 120000 }
+shot: "testid:follow-box"
 narration: >
-  Same call: Alice, owner of staging customers, must be notified. The API read
-  the committed state. Meanwhile, the lineage SPARQL endpoint, which follows the
-  database, is being rebuilt in the background.
+  Change data capture sees the commit. Both endpoints are rebuilt, and the taint
+  recipe writes back, as its own user, the newly tainted versions, linked to the
+  corrupt load.
 narration_fr: >
-  Même appel : Alice, responsable de « staging customers », doit être prévenue.
-  L'API a lu l'état validé. Pendant ce temps, l'endpoint SPARQL du lignage, qui
-  suit la base, se reconstruit en arrière-plan.
+  La capture des changements voit la validation. Les deux endpoints sont
+  reconstruits, et la recette réécrit dans la base, sous son propre utilisateur,
+  les versions nouvellement contaminées, reliées au chargement corrompu.
 ```
 
 ```scene
-id: s34-endpoint-synced
+id: s34-in-neo4j
 actions:
-  - click: "testid:endpoint-lineage"
-  - wait_any: { targets: ["testid:follow-sync-1"], timeout_ms: 120000 }
-shot: "testid:follow-box"
+  - click: "testid:neo4j-now-show"
+  - wait_for: "testid:neo4j-now"
+shot: "testid:neo4j-now"
 narration: >
-  And there it is: rebuilt, checked, swapped.
+  In Neo4j, any application sees it with plain Cypher: the tainted versions, each
+  linked to the input it read, with who created the link, and when.
 narration_fr: >
-  Et le voilà : reconstruit, vérifié, basculé.
+  Dans Neo4j, n'importe quelle application le voit en Cypher : les versions
+  contaminées, chacune reliée à l'entrée qu'elle a lue, avec qui a créé le lien, et
+  quand.
+```
+
+```scene
+id: s35-nothing-more
+actions:
+  - wait_any: { targets: ["testid:follow-own"], timeout_ms: 60000 }
+  - click: "testid:republish"
+  - fast_begin: true
+  - wait_for: "testid:republish-result"
+  - fast_end: true
+shot: "css:#recipes-view .fpanel"
+narration: >
+  Those writes come back through change data capture, tagged with the recipe, so
+  they do not trigger another rebuild. Run it again by hand: nothing changed, so
+  nothing is written. Every counter is at zero.
+narration_fr: >
+  Ces écritures reviennent par la capture des changements, marquées du nom de la
+  recette : elles ne déclenchent pas de nouvelle reconstruction. Relançons à la
+  main : rien n'a changé, donc rien n'est écrit. Tous les compteurs sont à zéro.
 ```
 
 ## Act 3 — your triple store and the graph database, one answer
@@ -667,7 +723,7 @@ the database), the client's store for their knowledge. The reasoner works on all
 three. A static file would be a copy; their endpoint is their live store.
 
 ```scene
-id: s35-act3
+id: s36-act3
 hook: act3_card
 actions:
   - wait_for: "testid:act-card"
@@ -681,7 +737,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s36-mixed-recipe
+id: s37-mixed-recipe
 before:
   - dismiss: "testid:act-card"
 actions:
@@ -689,22 +745,19 @@ actions:
   - wait_for: "testid:recipe-run"
 shot: "css:#recipes-view .fmain"
 narration: >
-  This recipe reads three sources, each for what it does best. What the incident
-  tainted comes from Neo4j, scoped by Cypher on each call. Who owns those datasets
-  comes from our published lineage endpoint, precomputed. What each dataset holds,
-  and who protects personal data, comes from the client's own triple store,
-  through standard SPARQL. We only read it.
+  This recipe reads three sources, each for what it does best: what the incident
+  tainted, from Neo4j, on each call; who owns those datasets, from our lineage
+  endpoint; what each dataset holds, from the client's own triple store, which we
+  only read.
 narration_fr: >
-  Cette recette lit trois sources, chacune pour ce qu'elle fait de mieux. Ce que
-  l'incident a contaminé vient de Neo4j, délimité par Cypher à chaque appel. Qui
-  est responsable de ces jeux de données vient de notre endpoint de lignage
-  publié, précalculé. Ce que contient chaque jeu, et qui protège les données
-  personnelles, vient du triple store du client, en SPARQL standard. On ne fait
-  que le lire.
+  Cette recette lit trois sources, chacune pour ce qu'elle fait de mieux : ce que
+  l'incident a contaminé, depuis Neo4j, à chaque appel ; qui est responsable de ces
+  jeux de données, depuis notre endpoint de lignage ; ce que contient chaque jeu,
+  depuis le triple store du client, que l'on ne fait que lire.
 ```
 
 ```scene
-id: s37-alert
+id: s38-alert
 actions:
   - click: "testid:api-personal-data-alert"
   - fill: { target: "testid:api-param-name", value: "raw.customers" }
@@ -714,23 +767,20 @@ actions:
   - fast_end: true
 shot: "testid:api-result-3"
 narration: >
-  After the incident, the compliance question: is personal data at risk, and who
-  must be told? Staging customers: Alice owns it, according to our lineage
-  endpoint, and Jane Doe is its data protection officer, according to the
-  client's catalog. Nobody tagged it as personal. The client's ontology says that a
-  dataset holding an email address is a personal dataset, and the OWL reasoner
-  works it out, over all three sources.
+  Is personal data at risk, and who must be told? Staging customers: Alice owns it,
+  and Jane Doe is its data protection officer. Nobody tagged it as personal. The
+  client's ontology says that a dataset holding an email address is personal data,
+  and the OWL reasoner works it out across all three sources.
 narration_fr: >
-  Après l'incident, la question de conformité : des données personnelles sont-elles
-  exposées, et qui prévenir ? « Staging customers » : Alice en est responsable,
-  d'après notre endpoint de lignage, et Jane Doe est sa déléguée à la protection des
-  données, d'après le catalogue du client. Personne ne l'a marqué comme personnel.
-  L'ontologie du client dit qu'un jeu contenant une adresse e-mail est un jeu de
-  données personnelles, et le raisonneur OWL le déduit, sur les trois sources.
+  Des données personnelles sont-elles exposées, et qui prévenir ? « Staging
+  customers » : Alice en est responsable, et Jane Doe est sa déléguée à la
+  protection des données. Personne ne l'a marqué comme personnel. L'ontologie du
+  client dit qu'un jeu contenant une adresse e-mail est un jeu de données
+  personnelles, et le raisonneur OWL le déduit sur les trois sources.
 ```
 
 ```scene
-id: s38-not-personal
+id: s39-not-personal
 actions:
   - fill: { target: "testid:api-param-name", value: "raw.orders" }
   - click: "testid:api-call"
@@ -752,7 +802,7 @@ changes it, with their own tools, the next answer follows, without touching
 Neo4j or the project. A file copied into the project would not have seen it.
 
 ```scene
-id: s39-client-tx
+id: s40-client-tx
 hook: tx_client_revenue_emails
 actions:
   - wait_for: "testid:tx-card-committed"
@@ -768,7 +818,7 @@ narration_fr: >
 ```
 
 ```scene
-id: s40-alert-again
+id: s41-alert-again
 before:
   - dismiss: "testid:tx-card-close"
 actions:
@@ -791,7 +841,7 @@ narration_fr: >
 ## Closing
 
 ```scene
-id: s41-closing
+id: s42-closing
 hook: closing_card
 actions:
   - wait_for: "testid:act-card"
@@ -799,14 +849,15 @@ shot: "testid:act-card"
 pad_s: 2.5
 narration: >
   So. Neo4j stays the system of record: transactions, constraints, roles, change
-  data capture. RDF is a view of it, in standard vocabularies, with reasoning when
-  you need it, always consistent with what was committed, and it works with the
-  triple store you already have. The best of both worlds, and no second copy to
-  keep in sync.
+  data capture. RDF is a view of it, in standard vocabularies, always built from a
+  committed state, never half-built, and it works with the triple store you already
+  have. What reasoning finds can come back into the graph, under the same rules. The
+  best of both worlds, and no second copy to maintain by hand.
 narration_fr: >
   En résumé. Neo4j reste la source de vérité : transactions, contraintes, rôles,
   capture des changements. Le RDF en est une vue, dans des vocabulaires standard,
-  avec du raisonnement quand il le faut, toujours cohérent avec ce qui a été
-  validé, et compatible avec le triple store que vous avez déjà. Le meilleur des
-  deux mondes, sans seconde copie à synchroniser.
+  toujours construite à partir d'un état validé, jamais à moitié, et compatible avec
+  le triple store que vous avez déjà. Ce que le raisonnement trouve peut revenir
+  dans le graphe, sous les mêmes règles. Le meilleur des deux mondes, sans seconde
+  copie à maintenir à la main.
 ```
