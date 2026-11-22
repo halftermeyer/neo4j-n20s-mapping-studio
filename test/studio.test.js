@@ -398,3 +398,20 @@ test('the ends of a relationship count: two ABOUT emit sosa:observedProperty, a 
   assert.equal(r.tick.safe, false);
   assert.equal(r.rollup.safe, true);
 });
+
+test('a range conflict that comes from a node kind\'s typing is credited to that node kind, with the fix (Rig, ON)', async () => {
+  const { loadFiles } = await import('../src/node.js');
+  const l = await loadFiles(path.join(path.dirname(EXAMPLE), 'sensors', 'sensors-sosa.gold.yaml'));
+  const mapping = structuredClone(l.mapping);
+  mapping.nodes['n:0'] = { ...mapping.nodes['n:0'], classes: ['sosa:Platform'], meta: { status: 'proposed', confidence: 1, rationale: 'a rig is a platform' } };
+  const variants = { passes: 3, elements: { 'nodes/n:0': { stable: true, variants: [{ entry: { classes: ['sosa:Platform'] }, passes: [1, 2, 3] }] } } };
+  const result = await check({ mapping, lpgDoc: l.lpgDoc, targets: l.targets, targetStatus: l.targetStatus, artifactInfo: l.artifactInfo });
+  const f = result.findings.find((x) => x.code === 'target.range-includes');
+  assert.equal(f.path, 'relationships/r:3/predicate');
+  assert.deepEqual(f.data, { node: 'n:0', side: 'range', expected: ['sosa:FeatureOfInterest', 'sosa:Sample'], typed: ['sosa:Platform'] });
+  const rig = reviewItems({ mapping, lpgDoc: l.lpgDoc, result, variants }).find((i) => i.key === 'nodes/n:0');
+  assert.equal(rig.safe, false, 'stable and confident, but its typing breaks ON');
+  const r = rig.reasons.find((x) => x.fix);
+  assert.match(r.text, /target\.range-includes on ON/);
+  assert.equal(r.fix, 'add sosa:FeatureOfInterest or sosa:Sample to the classes of Rig, or change the mapping of ON');
+});

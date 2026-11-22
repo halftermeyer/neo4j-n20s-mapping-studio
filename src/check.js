@@ -118,19 +118,22 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
   }
   // rdfs:domain and rdfs:range entail; schema:domainIncludes and rangeIncludes (SOSA) only suggest:
   // a softer warning with its own code, when the classes match none of the suggested ones.
-  function checkDomain(pred, classes, path) {
+  // `node` is the node kind whose classes are checked: the conflict may come from its typing rather than
+  // from the predicate, so the finding names it (data.node) and the review credits that decision too.
+  const typing = (node, side, expected, classes) => (node ? { node, side, expected: expected.map(short), typed: classes.map(short) } : undefined);
+  function checkDomain(pred, classes, path, node = null) {
     if (!declared(pred)) return;
     const d = targets.satisfies(targets.domains(pred), classes);
-    if (d.ok === false) warn('target.domain', path, `The domain of ${short(pred)} is ${list(d.expected)}; the subject is typed ${list(classes)}.`);
+    if (d.ok === false) warn('target.domain', path, `The domain of ${short(pred)} is ${list(d.expected)}; the subject is typed ${list(classes)}.`, typing(node, 'domain', d.expected, classes));
     const di = targets.satisfies(targets.domainIncludes?.(pred) ?? [], classes);
-    if (di.ok === false) warn('target.domain-includes', path, `${short(pred)} is meant for ${list(di.expected)} (schema:domainIncludes); the subject is typed ${list(classes)}.`);
+    if (di.ok === false) warn('target.domain-includes', path, `${short(pred)} is meant for ${list(di.expected)} (schema:domainIncludes); the subject is typed ${list(classes)}.`, typing(node, 'domain', di.expected, classes));
   }
-  function checkRange(pred, classes, path) {
+  function checkRange(pred, classes, path, node = null) {
     if (!declared(pred)) return;
     const r = targets.satisfies(targets.ranges(pred), classes);
-    if (r.ok === false) warn('target.range', path, `The range of ${short(pred)} is ${list(r.expected)}; the object is typed ${list(classes)}.`);
+    if (r.ok === false) warn('target.range', path, `The range of ${short(pred)} is ${list(r.expected)}; the object is typed ${list(classes)}.`, typing(node, 'range', r.expected, classes));
     const ri = targets.satisfies(targets.rangeIncludes?.(pred) ?? [], classes);
-    if (ri.ok === false) warn('target.range-includes', path, `${short(pred)} is meant to point to ${list(ri.expected)} (schema:rangeIncludes); the object is typed ${list(classes)}.`);
+    if (ri.ok === false) warn('target.range-includes', path, `${short(pred)} is meant to point to ${list(ri.expected)} (schema:rangeIncludes); the object is typed ${list(classes)}.`, typing(node, 'range', ri.expected, classes));
   }
 
   // Subjects and classes, with inheritance through implied labels ------------
@@ -226,7 +229,7 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
     }
   }
 
-  function checkPropertyMapping(pe, prop, path, subjectClasses) {
+  function checkPropertyMapping(pe, prop, path, subjectClasses, node = null) {
     const pred = iriOf(pe.predicate, `${path}/predicate`, 'property');
     const emitsIri = !!pe.values || pe.kind === 'iri';
     if (declared(pred)) {
@@ -236,7 +239,7 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       if (emitsIri && targets.isDatatypeProperty(pred) && !targets.isObjectProperty(pred)) {
         warn('target.kind-mismatch', `${path}/predicate`, `${short(pred)} is a datatype property, but this entry emits an IRI.`);
       }
-      checkDomain(pred, subjectClasses, `${path}/predicate`);
+      checkDomain(pred, subjectClasses, `${path}/predicate`, node);
     }
     if (!emitsIri) {
       let dt = null;
@@ -288,7 +291,7 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       const path = `${base}/properties/${pid}`;
       const found = idx.findNodeProperty(id, pid);
       if (!found) { error('ref.unknown-property', path, `"${id}" has no property "${pid}", own or implied.`); continue; }
-      if (active(pe)) checkPropertyMapping(pe, found.prop, path, classes);
+      if (active(pe)) checkPropertyMapping(pe, found.prop, path, classes, id);
     }
   }
 
@@ -306,15 +309,16 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       else if (!effectiveSubject(nodeId)) error('rel.endpoint-no-subject', base, `The ${end} node kind "${nodeId}" has no subject, own or inherited: this relationship cannot be emitted.`);
     }
     const reverse = e.direction === 'reverse';
-    const subjectClasses = effectiveClasses(reverse ? rel.to : rel.from);
-    const objectClasses = effectiveClasses(reverse ? rel.from : rel.to);
+    const [subjectNode, objectNode] = reverse ? [rel.to, rel.from] : [rel.from, rel.to];
+    const subjectClasses = effectiveClasses(subjectNode);
+    const objectClasses = effectiveClasses(objectNode);
     if (e.predicate) {
       const pred = iriOf(e.predicate, `${base}/predicate`, 'property');
       if (declared(pred) && targets.isDatatypeProperty(pred) && !targets.isObjectProperty(pred)) {
         warn('target.kind-mismatch', `${base}/predicate`, `${short(pred)} is a datatype property; a relationship needs an object property.`);
       }
-      checkDomain(pred, subjectClasses, `${base}/predicate`);
-      checkRange(pred, objectClasses, `${base}/predicate`);
+      checkDomain(pred, subjectClasses, `${base}/predicate`, subjectNode);
+      checkRange(pred, objectClasses, `${base}/predicate`, objectNode);
     }
     let qualifiedClasses = [];
     if (e.qualified) {
@@ -324,11 +328,11 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       const cls = iriOf(q.class, `${qp}/class`, 'class');
       if (cls) qualifiedClasses = [cls];
       const link = iriOf(q.link, `${qp}/link`, 'property');
-      checkDomain(link, subjectClasses, `${qp}/link`);
+      checkDomain(link, subjectClasses, `${qp}/link`, subjectNode);
       checkRange(link, qualifiedClasses, `${qp}/link`);
       const target = iriOf(q.target, `${qp}/target`, 'property');
       checkDomain(target, qualifiedClasses, `${qp}/target`);
-      checkRange(target, objectClasses, `${qp}/target`);
+      checkRange(target, objectClasses, `${qp}/target`, objectNode);
     }
     for (const [pid, pe] of entries(e.properties)) {
       const path = `${base}/properties/${pid}`;

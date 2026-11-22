@@ -288,13 +288,41 @@ function goldAnswer(req) {
 }
 
 // Safety net ------------------------------------------------------------------------------
-// A wrong decision is neither the gold nor an alternative (nor an acceptable annotation).
+// A wrong decision is neither the gold nor an alternative (nor an acceptable annotation). By severity:
+//   false assertion  the RDF says something the source does not (a false map, another term, an extra class);
+//   omission         the RDF misses something the gold says (a false ignore, a missing class or qualified form);
+//   benign           ignore instead of defer, or a qualified form on top of the gold's predicate.
+// The safety net and Accept safe are measured on false assertions and omissions.
 const WRONG = new Set(['related', 'different', 'false-map', 'false-ignore', 'ignore-vs-defer', 'missing']);
+function severityOf(row, mapping) {
+  if (row.outcome === 'ignore-vs-defer') return 'benign';
+  if (row.outcome === 'false-ignore' || row.outcome === 'missing') return 'omission';
+  if (row.outcome === 'false-map') return 'false assertion';
+  const [section, id, , pid] = row.path.split('/');
+  const entryIn = (m) => { const e = m[section]?.[id]; return pid ? e?.properties?.[pid] : e; };
+  const [g, p] = [entryIn(gold), entryIn(mapping)];
+  if (!g || !p) return 'false assertion';
+  if (section === 'nodes' && !pid) {
+    const [gc, pc] = [(g.classes ?? []).map(iri), (p.classes ?? []).map(iri)];
+    if (pc.every((c) => gc.includes(c)) && pc.length < gc.length) return 'omission';
+    return 'false assertion';
+  }
+  if (section === 'relationships' && !pid) {
+    const same = iri(g.predicate ?? '') === iri(p.predicate ?? '') && (g.direction ?? 'forward') === (p.direction ?? 'forward') && g.predicate;
+    if (same && !g.qualified && p.qualified) return 'benign';
+    if (same && g.qualified && !p.qualified) return 'omission';
+    return 'false assertion';
+  }
+  return 'false assertion';
+}
+const SERIOUS = new Set(['false assertion', 'omission']);
 const idx = indexLpg(lpgDoc);
 /** Whether the check caught a decision: a finding on the entry itself (an element's own fields, or a property). */
 function caughtByCheck(row, findings) {
+  const nodeId = row.unit === 'node' ? row.path.split('/')[1] : null;
+  // A node kind's own fields, or a domain or range conflict elsewhere that comes from its typing (data.node).
   const own = row.unit === 'property' ? (f) => f.path === row.path || f.path.startsWith(`${row.path}/`)
-    : (f) => f.path === row.path || (f.path.startsWith(`${row.path}/`) && !f.path.startsWith(`${row.path}/properties/`));
+    : (f) => f.path === row.path || (f.path.startsWith(`${row.path}/`) && !f.path.startsWith(`${row.path}/properties/`)) || (nodeId && f.data?.node === nodeId);
   return findings.filter((f) => f.severity !== 'info' && own(f)).map((f) => f.code);
 }
 /** The IRIs a decision uses: classes, predicate, qualified class, link and target, value IRIs. */
@@ -331,14 +359,14 @@ function safetyNet(comparison, mapping, findings, evidence) {
   return comparison.filter((x) => WRONG.has(x.outcome)).map((x) => {
     const check = caughtByCheck(x, findings);
     const oracle = caughtByOracle(x, mapping, evidence);
-    return { path: x.path, label: labelOf(x.path), outcome: x.outcome, proposed: x.proposedTerms ?? x.proposed, check, oracle,
+    return { path: x.path, label: labelOf(x.path), outcome: x.outcome, severity: severityOf(x, mapping), proposed: x.proposedTerms ?? x.proposed, check, oracle,
       caught: check.length && oracle.length ? 'both' : check.length ? 'check' : oracle.length ? 'oracle' : 'neither' };
   });
 }
 /** What Accept safe would accept after an oracle run on the proposals, and how much of it is wrong. */
 function acceptSafePrecision(run, variants) {
   const items = reviewItems({ mapping: run.mapping, lpgDoc, result: run.result, variants, oracle: run.evidence });
-  const wrongAt = new Map(run.comparison.filter((x) => WRONG.has(x.outcome)).map((x) => [x.path, x]));
+  const wrongAt = new Map(run.comparison.filter((x) => WRONG.has(x.outcome) && SERIOUS.has(severityOf(x, run.mapping))).map((x) => [x.path, x]));
   const safe = items.filter((i) => i.safe);
   const wrong = safe.filter((i) => i.proposed.some((p) => wrongAt.has(p)));
   return { safe: safe.length, entries: safe.reduce((n, i) => n + i.proposed.length, 0), wrong: wrong.length,
@@ -348,7 +376,8 @@ function acceptSafePrecision(run, variants) {
 // Runs ----------------------------------------------------------------------------------
 const version = PROMPT_VERSION.replace('/', '-');
 const recDir = path.join(HERE, 'recordings', manifest.id, opt.model, version);
-const outDir = path.join(HERE, 'results', `${manifest.id}-${opt.model}-${version}-${new Date().toISOString().slice(0, 10)}`);
+// A replay re-reads recorded answers with the code of now: its report goes next to the run's, never over it.
+const outDir = path.join(HERE, 'results', `${manifest.id}-${opt.model}-${version}-${new Date().toISOString().slice(0, 10)}${opt.replay ? '-replay' : ''}`);
 fs.mkdirSync(recDir, { recursive: true });
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -424,7 +453,8 @@ try {
 }
 
 // Report --------------------------------------------------------------------------------
-const report = { set: manifest.id, name: manifest.name, model: opt.model, promptVersion: PROMPT_VERSION, date: new Date().toISOString(), fingerprints, withOracle, runs };
+const report = { set: manifest.id, name: manifest.name, model: opt.model, promptVersion: PROMPT_VERSION, date: new Date().toISOString(), fingerprints, withOracle,
+  ...(opt.replay ? { replay: `answers replayed from ${path.relative(ROOT, recDir)}` } : {}), runs };
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 1) + '\n');
 fs.writeFileSync(path.join(outDir, 'report.md'), markdown(report));
 console.log(markdown(report));
@@ -437,7 +467,7 @@ function markdown(rep) {
     ...Object.entries(rep.fingerprints.files).map(([k, f]) => `| ${k} | ${f.file} | \`${f.sha256}\` |`),
     `| src | src/ (${rep.fingerprints.src.files} files) | \`${rep.fingerprints.src.sha256}\` |`, '',
     rep.fingerprints.commit ? `Commit \`${rep.fingerprints.commit.hash}\` on ${rep.fingerprints.commit.branch}${rep.fingerprints.commit.dirty ? `, **with uncommitted changes**: ${rep.fingerprints.commit.changed.join(', ')}` : ', clean'}. Prompt ${rep.promptVersion}, model ${rep.model}.` : `Prompt ${rep.promptVersion}, model ${rep.model}.`, ''];
-  if (rep.fingerprints.commit) lines.splice(1, 0, '', `**Commit ${rep.fingerprints.commit.hash.slice(0, 12)}**${rep.fingerprints.commit.dirty ? ' (dirty)' : ''}`);
+  if (rep.fingerprints.commit) lines.splice(1, 0, '', `**Commit ${rep.fingerprints.commit.hash.slice(0, 12)}**${rep.fingerprints.commit.dirty ? ' (dirty)' : ''}${rep.replay ? ` — ${rep.replay}` : ''}`);
   const byCond = Object.groupBy(rep.runs, (r) => r.condition);
   lines.push('| condition | pass | agree | agree, alternative or acceptable | alternative | related | different | false map | false ignore | ignore/defer | missing | check E/W | repaired | completed | dropped | oracle pass | tokens in/out | s |');
   lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
@@ -450,12 +480,14 @@ function markdown(rep) {
     }
   }
   lines.push('', '### Safety net', '',
-    'Wrong decisions (neither gold nor alternative), and what caught them; Accept safe after an oracle run on the proposals: how many elements it would accept, how many of them hold a wrong decision.', '',
-    '| condition | pass | wrong | caught by check only | by oracle only | by both | by neither | Accept safe: elements (entries) | of which wrong | precision |', '|---|---|---|---|---|---|---|---|---|---|');
+    'Wrong decisions (neither gold nor alternative) by severity: false assertions, omissions, benign (ignore instead of defer, a qualified form on top). What caught the false assertions and omissions; Accept safe after an oracle run on the proposals: how many elements it would accept, how many of them hold a false assertion or an omission.', '',
+    '| condition | pass | false assertions | omissions | benign | caught by check only | by oracle only | by both | by neither | Accept safe: elements (entries) | of which wrong | precision |', '|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rep.runs) {
-    const c = (k) => r.safetyNet.filter((x) => x.caught === k).length;
+    const serious = r.safetyNet.filter((x) => SERIOUS.has(x.severity));
+    const c = (k) => serious.filter((x) => x.caught === k).length;
+    const sev = (k) => r.safetyNet.filter((x) => x.severity === k).length;
     const a = r.acceptSafe;
-    lines.push(`| ${r.condition} | ${r.pass} | ${r.safetyNet.length} | ${c('check')} | ${c('oracle')} | ${c('both')} | ${c('neither')} | ${a ? `${a.safe} (${a.entries})` : '-'} | ${a ? a.wrong : '-'} | ${a && a.safe ? pct(a.safe - a.wrong, a.safe) : '-'} |`);
+    lines.push(`| ${r.condition} | ${r.pass} | ${sev('false assertion')} | ${sev('omission')} | ${sev('benign')} | ${c('check')} | ${c('oracle')} | ${c('both')} | ${c('neither')} | ${a ? `${a.safe} (${a.entries})` : '-'} | ${a ? a.wrong : '-'} | ${a && a.safe ? pct(a.safe - a.wrong, a.safe) : '-'} |`);
   }
   if ((manifest.traps ?? []).length) {
     lines.push('', '### Traps', '', '| condition | pass | trap | expected | proposed | outcome | check |', '|---|---|---|---|---|---|---|');
@@ -509,9 +541,11 @@ function markdown(rep) {
       if (r.dropped.length) extra.push(`dropped: ${r.dropped.map((x) => labelOf(x.element)).join(', ')}`);
       if (r.check.findings.length) extra.push(`check: ${r.check.findings.join('; ')}`);
       if (r.compileProblems.length) extra.push(`compile: ${r.compileProblems.map((x) => `${x.code} ${x.path}`).join('; ')}`);
-      const missed = r.safetyNet.filter((x) => x.caught === 'neither');
-      if (missed.length) extra.push(`wrong and caught by nothing: ${missed.map((x) => `${x.label} (${x.outcome}${x.proposed && x.proposed !== 'map' ? `: ${x.proposed}` : ''})`).join(', ')}`);
-      const caught = r.safetyNet.filter((x) => x.caught !== 'neither');
+      const missed = r.safetyNet.filter((x) => x.caught === 'neither' && SERIOUS.has(x.severity));
+      if (missed.length) extra.push(`false assertions and omissions caught by nothing: ${missed.map((x) => `${x.label} (${x.severity}, ${x.outcome}${x.proposed && x.proposed !== 'map' ? `: ${x.proposed}` : ''})`).join(', ')}`);
+      const benign = r.safetyNet.filter((x) => x.severity === 'benign');
+      if (benign.length) extra.push(`benign: ${benign.map((x) => `${x.label} (${x.outcome === 'ignore-vs-defer' ? 'ignore vs defer' : 'qualified form on top'})`).join(', ')}`);
+      const caught = r.safetyNet.filter((x) => x.caught !== 'neither' && SERIOUS.has(x.severity));
       if (caught.length) extra.push(`wrong and caught: ${caught.map((x) => `${x.label} by ${[...x.check, ...x.oracle].join(', ')}`).join('; ')}`);
       if (r.acceptSafe?.wrong) extra.push(`Accept safe would accept wrong decisions: ${r.acceptSafe.wrongItems.map((x) => `${x.label} [${x.entries.join(', ')}]`).join('; ')}`);
       if (r.oracle) extra.push(`oracle: ${r.oracle.filter((x) => x.status !== 'pass' && x.status !== 'not-expressible').map((x) => `${x.id} ${x.status}${x.error ? ` (${x.error})` : ''}`).join(', ') || 'all expressible checks pass'}`);

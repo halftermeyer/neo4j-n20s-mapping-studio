@@ -36,6 +36,13 @@ export function reviewItems({ mapping, lpgDoc, result, variants = null, specFind
   for (const f of result.findings.filter((x) => x.severity !== 'info' && /^(nodes|relationships)\//.test(x.path))) {
     findingsBy.set(keyOf(f.path), [...(findingsBy.get(keyOf(f.path)) ?? []), f]);
   }
+  // A domain or range conflict on a predicate may come from the typing of a node kind (data.node): Rig typed
+  // sosa:Platform only, with ON -> sosa:hasFeatureOfInterest. The node kind's decision gets it too, with the fix.
+  const typingBy = new Map();
+  for (const f of result.findings.filter((x) => x.severity !== 'info' && x.data?.node)) {
+    const key = `nodes/${f.data.node}`;
+    typingBy.set(key, [...(typingBy.get(key) ?? []), f]);
+  }
   const undecided = result.coverage?.undecided ?? [];
   // Whether a check's Cypher reads an element or a property (through a label it implies, too).
   const labelsOf = (nodeId) => {
@@ -71,11 +78,21 @@ export function reviewItems({ mapping, lpgDoc, result, variants = null, specFind
           : entry?.ignore ? (entry.ignore.deferred ? 'deferred' : 'ignored') : 'accepted';
 
     const reasons = [];
-    const findings = findingsBy.get(key) ?? [];
+    const typing = section === 'nodes' ? (typingBy.get(key) ?? []).filter((f) => keyOf(f.path) !== key) : [];
+    const findings = [...(findingsBy.get(key) ?? []), ...typing];
     // Where the mapping departs from the spec the person validated.
     for (const f of specFindings.filter((x) => x.path === key)) reasons.push({ code: 'spec', text: f.message });
     // Domain, range and kind warnings point at a doubtful meaning (prov:hadMember between a dataset and its columns).
-    for (const f of findings) reasons.push({ code: f.severity === 'error' ? 'error' : /^target\.(domain|range|kind-mismatch)$/.test(f.code) ? 'meaning' : 'warning', path: f.path, text: `${f.code}: ${f.message}` });
+    for (const f of findings) {
+      if (typing.includes(f)) {
+        const via = keyOf(f.path);
+        const viaLabel = via.startsWith('relationships/') ? idx.rels.get(via.split('/')[1])?.type : idx.nodes.get(via.split('/')[1])?.label;
+        reasons.push({ code: f.code === 'target.domain' || f.code === 'target.range' ? 'meaning' : 'warning', path: f.path, text: `${f.code} on ${viaLabel}: ${f.message}`,
+          fix: `add ${f.data.expected.join(' or ')} to the classes of ${label}, or change the mapping of ${viaLabel}` });
+        continue;
+      }
+      reasons.push({ code: f.severity === 'error' ? 'error' : /^target\.(domain|range|kind-mismatch)$/.test(f.code) ? 'meaning' : 'warning', path: f.path, text: `${f.code}: ${f.message}` });
+    }
     const v = variants ? Object.entries(variants.elements).filter(([p]) => p === key || p.startsWith(`${key}/`)) : [];
     for (const [p, x] of v.filter(([, x]) => !x.stable)) {
       reasons.push({ code: 'unstable', path: p, text: `${x.variants.length} different proposals in ${variants.passes} passes` });

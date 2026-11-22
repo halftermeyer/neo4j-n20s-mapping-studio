@@ -483,6 +483,8 @@ function renderPanel() {
     editing?.path === selected && editing.kind === 'element' ? (section === 'nodes' ? nodeForm(id, e) : relForm(id, e)) : null,
 
     findings.length ? [h('h3', {}, 'Check'), findings.map((f) => h('div', { class: `finding ${f.severity}` }, `${f.code}: ${f.message}`))] : null,
+    // A conflict found on another element that comes from this node kind's typing, with the fix.
+    item.reasons.some((r) => r.fix) ? [h('h3', {}, 'Typing'), item.reasons.filter((r) => r.fix).map((r) => h('div', { class: 'finding warning', 'data-testid': 'typing-fix' }, r.text, h('div', { class: 'term' }, `Proposed: ${r.fix}`)))] : null,
 
     Object.keys(lpgEl.properties ?? {}).length ? [h('h3', {}, 'Properties'),
       h('table', { class: 'props' }, h('tr', {}, h('th', {}, 'property'), h('th', {}, 'decision'), h('th', {}, ''), h('th', {}, '')), propRows(selected))] : null,
