@@ -50,11 +50,15 @@ async function waitFor(fn, what, ms = 30000) {
 const procs = [];
 let source;
 let n20s;
+let boltUrl;
+let neo4jPassword;
 
 before(async () => {
   if (skip) return;
   const [bolt, http, n20sPort] = await Promise.all([freePort(), freePort(), freePort()]);
   const password = randomBytes(12).toString('hex');
+  neo4jPassword = password;
+  boltUrl = `bolt://127.0.0.1:${bolt}`;
   procs.push(spawn(RELATE_BIN, ['serve', '-d', ':memory:', '--bolt', String(bolt), '--http', String(http), '--auth', `neo4j:${password}`], { stdio: 'ignore' }));
   procs.push(spawn('java', ['-jar', N20S_JAR], { env: { ...process.env, PORT: String(n20sPort) }, stdio: 'ignore' }));
 
@@ -491,5 +495,108 @@ test('design: a drafted recipe is tried and cross-checked against its direct Cyp
     assert.equal(YAML.parse(fs.readFileSync(path.join(dir, 'recipes', 'bench.yaml'), 'utf8')).requests.at(-1).expect.rows, 1);
   } finally {
     await studio.close();
+  }
+});
+
+test('write-back: written as a delta, nothing when unchanged, retracted, collision then adopt, parallel runs (Relate)', { skip, timeout: 240000 }, async () => {
+  const { loadRecipe, adoptStep, openWriter } = await import('../src/node.js');
+  const { runRecipe } = await import('../src/recipe.js');
+  const { LEDGER_CONSTRAINT } = await import('../src/writeback.js');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-writeback-'));
+  fs.cpSync(path.join(ROOT, 'demo/project'), dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  const file = path.join(dir, 'lineage/recipes/9-taint-writeback.recipe.yaml');
+  const f = await loadRecipe(file);
+  const writer = openWriter(boltUrl, { env: { N20S_WRITE_USER: 'neo4j', N20S_WRITE_PASSWORD: neo4jPassword } });
+  const incident = "MATCH (v:DatasetVersion {id: 'demo:lineage:v2:dsv:raw.customers@7'}) SET v.invalidatedAt = datetime('2026-11-06T09:30:00Z')";
+  const run = (recipe = f.recipe) => runRecipe({ ...f, recipe, source, n20s, writer, allowWrite: true });
+  const step = (r, id) => r.steps.find((s) => s.id === id);
+  const expected = async () => (await source.run(`MATCH (v:DatasetVersion)-[:WAS_GENERATED_BY]->(:Run)-[:USED]->(i:DatasetVersion)
+    WHERE i.invalidatedAt IS NOT NULL RETURN DISTINCT v.id AS v, i.id AS i ORDER BY v, i`)).map((r) => `${r.v} <- ${r.i}`);
+  const written = async () => (await source.run('MATCH (v:Tainted)-[r:READS_TAINTED_INPUT]->(i) RETURN v.id AS v, i.id AS i ORDER BY v, i')).map((r) => `${r.v} <- ${r.i}`);
+  const tainted = async () => (await source.run('MATCH (v:Tainted) RETURN count(v) AS n'))[0].n;
+  const ledgers = async () => source.run('MATCH (l:WriteLedger) RETURN l.owner AS owner, l.firstRun AS firstRun, l.lastRun AS lastRun, l.lock AS lock ORDER BY owner');
+  try {
+    // No constraint, no write: the administrator creates it, never the tool.
+    let r = await run();
+    assert.match(step(r, 'mark').error, /CREATE CONSTRAINT write_ledger_owner/);
+    await source.run(LEDGER_CONSTRAINT);
+
+    // 1. First run: the delta is everything; provenance on the relationships; one ledger per step.
+    r = await run();
+    assert.ok(r.ok, JSON.stringify(r.steps.filter((s) => s.status === 'error')));
+    const want = await expected();
+    assert.ok(want.length > 0, 'stg.orders@16 is invalidated in the seed');
+    assert.deepEqual(await written(), want);
+    assert.equal(step(r, 'mark').result.added, new Set(want.map((x) => x.split(' <- ')[0])).size);
+    assert.equal(step(r, 'link').result.added, want.length);
+    assert.equal(step(r, 'link').result.ledger, 'created');
+    const [prov] = await source.run('MATCH ()-[r:READS_TAINTED_INPUT]->() RETURN r.createdBy AS by, r.createdAt IS NOT NULL AS at LIMIT 1');
+    assert.deepEqual(prov, { by: `taint-writeback/link@${r.runId}`, at: true });
+    assert.deepEqual((await ledgers()).map((l) => [l.owner, l.firstRun, l.lastRun, l.lock ?? null]), [['taint-writeback/link', r.runId, r.runId, null], ['taint-writeback/mark', r.runId, r.runId, null]]);
+    const first = r.runId;
+
+    // 2. Unchanged: nothing written, the ledger keeps the run that last wrote.
+    r = await run();
+    assert.ok(r.ok);
+    for (const id of ['mark', 'link']) {
+      assert.equal(step(r, id).result.written, false);
+      assert.ok(Object.values(step(r, id).result.counters).every((v) => v === 0), JSON.stringify(step(r, id).result.counters));
+    }
+    assert.ok((await ledgers()).every((l) => l.lastRun === first));
+
+    // 3. Another input invalidated: only the new facts are added.
+    await source.run(incident);
+    r = await run();
+    const now = await expected();
+    assert.ok(now.length > want.length);
+    assert.deepEqual(await written(), now);
+    assert.equal(step(r, 'link').result.added, now.length - want.length);
+    assert.equal(step(r, 'link').result.removed, 0);
+
+    // 4. The incident is undone: what is no longer true is retracted, on the scoped versions.
+    await source.run("MATCH (v:DatasetVersion {id: 'demo:lineage:v2:dsv:raw.customers@7'}) REMOVE v.invalidatedAt");
+    r = await run();
+    assert.deepEqual(await written(), want);
+    assert.equal(step(r, 'link').result.removed, now.length - want.length);
+
+    // retract: all on a partial scope is refused.
+    const partial = structuredClone(f.recipe);
+    partial.steps.find((s) => s.id === 'lineage').cypher = "MATCH (n) WHERE n:Run OR (n:DatasetVersion AND n.id STARTS WITH 'demo:lineage:v2:dsv:stg.') RETURN n";
+    partial.steps.find((s) => s.id === 'mark').retract = 'all';
+    r = await run(partial);
+    assert.match(step(r, 'mark').error, /retract: all needs a scope that covers every DatasetVersion/);
+
+    // 5. The ledgers are gone, the facts are not: the first run refuses (collision) until adopt.
+    await source.run('MATCH (l:WriteLedger) DELETE l');
+    r = await run();
+    assert.match(step(r, 'mark').error, /Collision: \d+ nodes already carry Tainted.*adopt/);
+    const dry = await adoptStep(file, 'mark', { writer });
+    assert.equal(dry.adopted, false);
+    assert.equal(dry.facts, await tainted());
+    await adoptStep(file, 'mark', { writer, yes: true });
+    await adoptStep(file, 'link', { writer, yes: true });
+    await assert.rejects(adoptStep(file, 'mark', { writer, yes: true }), /has a ledger already/);
+    r = await run();
+    assert.ok(r.ok, JSON.stringify(r.steps.filter((s) => s.status === 'error')));
+    assert.equal(step(r, 'mark').result.written, false, 'adopted: nothing to change');
+
+    // 6. Two runs at once, from scratch: one relationship per pair, one ledger per step.
+    await source.run('MATCH (n:Tainted) REMOVE n:Tainted');
+    await source.run('MATCH ()-[r:READS_TAINTED_INPUT]->() DELETE r');
+    await source.run('MATCH (l:WriteLedger) DELETE l');
+    const both = await Promise.all([run(), run()]);
+    assert.ok(both.every((x) => x.ok), JSON.stringify(both.map((x) => x.steps.filter((s) => s.status === 'error'))));
+    assert.deepEqual(await written(), want, 'no duplicate');
+    assert.equal(both.filter((x) => step(x, 'link').result.written).length, 1, 'one wrote, the other found nothing to change');
+    assert.deepEqual((await ledgers()).map((l) => l.owner), ['taint-writeback/link', 'taint-writeback/mark']);
+  } finally {
+    await source.run("MATCH (v:DatasetVersion {id: 'demo:lineage:v2:dsv:raw.customers@7'}) REMOVE v.invalidatedAt");
+    await source.run('MATCH (n:Tainted) REMOVE n:Tainted');
+    await source.run('MATCH ()-[r:READS_TAINTED_INPUT]->() DELETE r');
+    await source.run('MATCH (l:WriteLedger) DELETE l');
+    await source.run('DROP CONSTRAINT write_ledger_owner IF EXISTS');
+    for (const g of await n20s.list()) if (g.graphName.startsWith('lineage-taint')) await n20s.drop(g.graphName);
+    await writer.close();
   }
 });

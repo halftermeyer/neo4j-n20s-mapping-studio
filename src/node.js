@@ -10,7 +10,9 @@ import { indexTargets, formatFromPath } from './targets.js';
 import { compile } from './compile.js';
 import { proposePasses, acceptAll } from './propose.js';
 import { emptyRegistry, recordRun, retire, provenance, graphStatuses, publicationStatuses, unpublish } from './graphs.js';
-import { runRecipe } from './recipe.js';
+import { runRecipe, writesBack } from './recipe.js';
+import { exportPatch, resolveWrite, adopt as adoptLedger } from './writeback.js';
+import { openWriter } from './source.js';
 import { emptySpec } from './design.js';
 
 export class UsageError extends Error {}
@@ -251,6 +253,16 @@ export async function updateRegistry(dir, change) {
 /** The graph an endpoint of this recipes directory serves now, for recipes that read it (lifecycle: published). */
 export const publishedResolver = (dir) => async (endpoint) => (await readRegistry(dir)).publications?.[endpoint]?.graph ?? null;
 
+/** The status of the graph an endpoint serves (stable, stale, incomplete, missing, unknown): a write never reads a stale one. */
+export const freshnessOf = (recipesDir, n20s) => async (endpoint) => {
+  try {
+    const e = (await graphsReport(recipesDir, n20s)).endpoints.find((x) => x.endpoint === endpoint);
+    return e?.status ?? 'missing';
+  } catch {
+    return 'unknown';
+  }
+};
+
 /** Status of the graphs of n20s-server and of the registry of a recipes directory, and of the endpoints. */
 export async function graphsReport(recipesDir, n20s) {
   const registry = await readRegistry(recipesDir);
@@ -267,12 +279,12 @@ export async function graphsReport(recipesDir, n20s) {
 }
 
 /** Runs again the recipe that published an endpoint, with the parameters of that run: a new version, gated, swapped. */
-export async function republish(recipesDir, endpoint, { source, n20s, onStep } = {}) {
+export async function republish(recipesDir, endpoint, { source, n20s, onStep, writer = null, allowWrite = false } = {}) {
   const p = (await readRegistry(recipesDir)).publications?.[endpoint];
   if (!p) throw new UsageError(`Endpoint ${endpoint} is not published from ${recipesDir}.`);
   const file = path.join(recipesDir, p.file);
   const loaded = await loadRecipe(file);
-  const run = await runRecipe({ ...loaded, params: p.params ?? {}, source, n20s, resolvePublished: publishedResolver(recipesDir), onStep });
+  const run = await runRecipe({ ...loaded, params: p.params ?? {}, source, n20s, resolvePublished: publishedResolver(recipesDir), onStep, writer, allowWrite, freshness: freshnessOf(recipesDir, n20s) });
   const recorded = await recordRecipeRun(file, run, loaded, { source: { url: source.url }, n20s });
   return { run, recorded };
 }
@@ -290,6 +302,78 @@ export async function unpublishEndpoint(recipesDir, endpoint, { n20s } = {}) {
   await writeRegistry(recipesDir, registry);
   if (dropped) { try { await n20s?.drop(dropped); } catch { /* already gone */ } }
   return { endpoint, dropped };
+}
+
+/**
+ * The write connection of a run: N20S_WRITE (else the source URL), with
+ * N20S_WRITE_USER and N20S_WRITE_PASSWORD. Never the read credentials: the
+ * writer is a user with the write-back privileges only.
+ */
+export function writerFromEnv(sourceUrl = null, env = process.env) {
+  const url = env.N20S_WRITE || sourceUrl;
+  if (!url) throw new UsageError('No write connection: set N20S_WRITE (or a source), N20S_WRITE_USER and N20S_WRITE_PASSWORD.');
+  if (!env.N20S_WRITE_USER && !/\/\/[^/@]+@/.test(url)) throw new UsageError('No write user: set N20S_WRITE_USER and N20S_WRITE_PASSWORD (a user with the write-back privileges only; the source that recipes read stays read-only).');
+  return openWriter(url, { env });
+}
+
+/** The recipe files a path names: one file, or the *.recipe.yaml of a directory. */
+async function recipeFiles(target) {
+  const st = await fs.stat(target).catch(() => null);
+  if (!st) throw new UsageError(`No recipe or directory ${target}.`);
+  if (!st.isDirectory()) return [target];
+  return (await fs.readdir(target)).filter((f) => /\.recipe\.ya?ml$/.test(f)).sort().map((f) => path.join(target, f));
+}
+
+/**
+ * What the LPG ontology must declare for the recipes that write back, per LPG
+ * file: the changes, and the patched document (written with apply).
+ */
+export async function writePatchFiles(target, { apply = false } = {}) {
+  const byLpg = new Map();
+  for (const file of await recipeFiles(target)) {
+    const f = await loadRecipe(file);
+    if (!writesBack(f.recipe)) continue;
+    const mappingDir = path.dirname(f.mappingFile);
+    const lpgFile = path.resolve(mappingDir, f.mapping.lpgOntology?.location ?? '');
+    if (!byLpg.has(lpgFile)) byLpg.set(lpgFile, { lpgFile, lpgDoc: f.lpgDoc, recipes: [] });
+    byLpg.get(lpgFile).recipes.push({ recipe: f.recipe, mapping: f.mapping, file });
+  }
+  const out = [];
+  for (const g of byLpg.values()) {
+    const { changes, doc } = exportPatch(g.lpgDoc, g.recipes);
+    if (apply && changes.length) {
+      // Keep the layout of the file: the compact one of the examples (one line per property), or plain JSON.
+      const compact = /"labels": \{ "/.test(await fs.readFile(g.lpgFile, 'utf8'));
+      await fs.writeFile(g.lpgFile, (compact ? compactSpecJson(doc) : JSON.stringify(doc, null, 2)) + '\n');
+    }
+    out.push({ lpgFile: g.lpgFile, recipes: g.recipes.map((r) => r.recipe.id), changes, applied: apply && changes.length > 0, doc });
+  }
+  return out;
+}
+
+/** An LPG ontology document laid out like the examples: elements and their properties and constraints expanded, the rest on one line. */
+export function compactSpecJson(doc) {
+  const inline = (v) => (Array.isArray(v) ? `[${v.map(inline).join(', ')}]`
+    : v && typeof v === 'object' ? (Object.keys(v).length ? `{ ${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}: ${inline(x)}`).join(', ')} }` : '{}')
+      : JSON.stringify(v));
+  const block = (v, depth, expand) => {
+    const pad = '  '.repeat(depth + 1);
+    const items = Object.entries(v).map(([k, x]) => `${pad}${JSON.stringify(k)}: ${x && typeof x === 'object' && !Array.isArray(x) && expand(k, depth + 1) ? block(x, depth + 1, expand) : inline(x)}`);
+    return items.length ? `{\n${items.join(',\n')}\n${'  '.repeat(depth)}}` : '{}';
+  };
+  // Depth 1: nodes, relationships; 2: an element; 3: its properties and constraints.
+  return block(doc, 0, (k, depth) => depth <= 2 || (depth === 3 && ['properties', 'constraints'].includes(k)));
+}
+
+/** Takes over the name a write step writes when its ledger is gone (confirmed with yes). */
+export async function adoptStep(recipeFile, stepId, { writer, yes = false, run = `adopt-${Date.now().toString(36)}` } = {}) {
+  const f = await loadRecipe(recipeFile);
+  const step = (f.recipe.steps ?? []).find((s) => s.id === stepId);
+  if (!step || step.type !== 'write') throw new UsageError(`${f.recipe.id} has no write step ${stepId}.`);
+  const { target, findings } = resolveWrite(f.recipe, step, { lpgDoc: f.lpgDoc, mapping: f.mapping });
+  const errors = findings.filter((x) => x.severity === 'error');
+  if (!target || errors.length) throw new UsageError(errors.map((x) => x.message).join(' ') || `${stepId}: what it writes is not declared in the LPG ontology (write-patch).`);
+  return adoptLedger({ writer, target, run, yes });
 }
 
 /** The specification of a mapping, and its design conversation, next to it unless the project says otherwise. */
@@ -346,4 +430,4 @@ export async function readQueryArg(arg) {
   }
 }
 
-export { openSource, splitStatements, parseSourceUrl, isSourceUrl, defaultSource, temporalToXsd, toPlain } from './source.js';
+export { openSource, openWriter, defaultWriter, splitStatements, parseSourceUrl, isSourceUrl, defaultSource, temporalToXsd, toPlain } from './source.js';

@@ -9,6 +9,7 @@
 // incremental update needs next. Today the whole publication is rebuilt.
 import path from 'node:path';
 import { readRegistry, updateRegistry, republish, loadRecipe, UsageError } from './node.js';
+import { ownTransaction } from './writeback.js';
 
 export const ENABLE_CDC = 'Enable Change Data Capture in FULL mode on the database: on Aura, instance → ⋯ → Change Data Capture → FULL; on a self-managed Neo4j Enterprise, ALTER DATABASE <name> SET OPTION txLogEnrichment "FULL".';
 
@@ -99,7 +100,7 @@ export async function stopFollowing(recipesDir, endpoint) {
  * Looks once at the changes since each followed endpoint's cursor; rebuilds the
  * endpoints whose sources changed. Returns what it did, per endpoint.
  */
-export async function syncOnce(recipesDir, { source, n20s, onStep, now = () => new Date().toISOString() } = {}) {
+export async function syncOnce(recipesDir, { source, n20s, onStep, writer = null, allowWrite = false, now = () => new Date().toISOString() } = {}) {
   const registry = await readRegistry(recipesDir);
   const out = [];
   for (const [endpoint, f] of Object.entries(registry.follow ?? {})) {
@@ -107,7 +108,7 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, now = () => n
     let rows;
     let restarted = false;
     try {
-      rows = await source.run('CALL db.cdc.query($from) YIELD id, txId, event RETURN id, txId, event', { from: f.cursor });
+      rows = await source.run('CALL db.cdc.query($from) YIELD id, txId, event, metadata RETURN id, txId, event, metadata.txMetadata AS txMetadata', { from: f.cursor });
     } catch (err) {
       // A cursor older than the retained log: start again from now, with a full rebuild.
       if (!/expired|too old|before the earliest|Invalid change identifier/i.test(err.message)) throw err;
@@ -116,11 +117,15 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, now = () => n
       restarted = id;
     }
     const cursor = restarted || (rows.length ? rows[rows.length - 1].id : f.cursor);
-    const relevant = rows.filter((x) => touches(x.event, f.watched));
+    // What the publication's own recipe wrote back is its result, not a change to follow: skipping it ends the loop.
+    // Only that recipe's transactions (owner recipe/step, exact recipe id); another recipe's writes are changes like any other.
+    const recipeId = registry.publications[endpoint].recipe;
+    const own = rows.filter((x) => ownTransaction(x.txMetadata, recipeId)).length;
+    const relevant = rows.filter((x) => !ownTransaction(x.txMetadata, recipeId) && touches(x.event, f.watched));
     const txs = [...new Set(relevant.map((x) => Number(x.txId)))];
     if (!relevant.length && !restarted) {
       if (cursor !== f.cursor) await updateRegistry(recipesDir, (r) => { if (r.follow?.[endpoint]) r.follow[endpoint].cursor = cursor; });
-      out.push({ endpoint, changes: 0 });
+      out.push({ endpoint, changes: 0, ...(own ? { own } : {}) });
       continue;
     }
     const change = { at: now(), events: relevant.length, transactions: txs.length, ...(restarted ? { restarted: true } : {}) };
@@ -131,7 +136,7 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, now = () => n
     const t0 = Date.now();
     let sync;
     try {
-      const { run } = await republish(recipesDir, endpoint, { source, n20s, onStep });
+      const { run } = await republish(recipesDir, endpoint, { source, n20s, onStep, writer, allowWrite });
       const failed = run.steps.find((s) => s.status === 'error');
       sync = { at: now(), ok: run.ok, ms: Date.now() - t0, graph: run.publications?.find((p) => p.as === endpoint)?.graph ?? null, ...(failed ? { error: `${failed.id}: ${failed.error}` } : {}) };
     } catch (err) {
@@ -152,7 +157,7 @@ export async function syncOnce(recipesDir, { source, n20s, onStep, now = () => n
  * at every look: the studio changes its directory, source and n20s-server.
  * @param {{recipesDir: () => string|string[]|null, openSource: () => (null|(() => object)), n20s: () => object|null, intervalMs?: number}} o
  */
-export function follower({ recipesDir, openSource, n20s, intervalMs = 1500, onSync = () => {}, onError = () => {} }) {
+export function follower({ recipesDir, openSource, n20s, openWriter = () => null, intervalMs = 1500, onSync = () => {}, onError = () => {} }) {
   let stopped = false;
   let timer = null;
   let running = false;
@@ -169,10 +174,14 @@ export function follower({ recipesDir, openSource, n20s, intervalMs = 1500, onSy
       }
       if (followed.length && open && client) {
         const source = open();
+        // A publication whose recipe writes back rebuilds only with a write connection (serve --write, or the studio's).
+        const openW = openWriter();
+        const writer = openW ? openW() : null;
         try {
-          for (const dir of followed) for (const r of await syncOnce(dir, { source, n20s: client })) if (r.sync) onSync({ ...r, dir });
+          for (const dir of followed) for (const r of await syncOnce(dir, { source, n20s: client, writer, allowWrite: !!writer })) if (r.sync) onSync({ ...r, dir });
         } finally {
           await source.close();
+          await writer?.close();
         }
       }
     } catch (err) {

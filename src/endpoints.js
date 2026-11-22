@@ -14,13 +14,16 @@
 //                       scoped for the call (lazy), its published ones read as
 //                       they are (precomputed). Returns what its result step found.
 //   /query              the query APIs, their parameters and kind.
-//   /run/<recipe>       any recipe (allowRun only: the studio, serve --run).
+//   /run/<recipe>       any recipe (allowRun only: the studio, serve --run), by POST.
+//                       A recipe that writes back into Neo4j runs only with
+//                       allowWrite (serve --run --write) and a write connection;
+//                       /query never writes.
 // Used by `n20s-mapping serve` and mounted in the studio.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
-import { loadRecipe, recordRecipeRun, graphsReport, publishedResolver, UsageError } from './node.js';
-import { runRecipe, graphsOf, recipeKind, coerceParams } from './recipe.js';
+import { loadRecipe, recordRecipeRun, graphsReport, publishedResolver, freshnessOf, UsageError } from './node.js';
+import { runRecipe, graphsOf, recipeKind, coerceParams, writesBack } from './recipe.js';
 
 const JSON_TYPE = 'application/json';
 const SPARQL_JSON = 'application/sparql-results+json';
@@ -69,11 +72,11 @@ export function selectVars(q) {
 const ntTerm = (t) => (t.startsWith('_:') || t.startsWith('"') ? t : `<${t}>`);
 
 /**
- * @param {{recipesDir: string, n20s: object, openSource?: (() => object)|null, allowRun?: boolean}} o
+ * @param {{recipesDir: string, n20s: object, openSource?: (() => object)|null, allowRun?: boolean, allowWrite?: boolean, openWriter?: (() => object)|null}} o
  * @returns {(req: import('node:http').IncomingMessage, url: URL) => Promise<null | {status: number, type: string, body: string, headers?: object}>}
  *          null when the path is not one of these endpoints
  */
-export function endpoints({ recipesDir, n20s, openSource = null, allowRun = false }) {
+export function endpoints({ recipesDir, n20s, openSource = null, allowRun = false, allowWrite = false, openWriter = null }) {
   const json = (status, data, headers) => ({ status, type: JSON_TYPE, body: JSON.stringify(data, null, 1), headers });
   const fail = (status, error) => json(status, { error });
 
@@ -93,7 +96,7 @@ export function endpoints({ recipesDir, n20s, openSource = null, allowRun = fals
     for (const file of files) {
       try {
         const r = YAML.parse(await fs.readFile(path.join(recipesDir, file), 'utf8'));
-        out.push({ id: r.id, file, title: r.title ?? r.id, params: r.params ?? {}, graphs: graphsOf(r), kind: recipeKind(r), api: r.api ?? null });
+        out.push({ id: r.id, file, title: r.title ?? r.id, params: r.params ?? {}, graphs: graphsOf(r), kind: recipeKind(r), api: r.api ?? null, writes: writesBack(r) });
       } catch { /* broken files are the studio's business */ }
     }
     return out;
@@ -146,15 +149,21 @@ export function endpoints({ recipesDir, n20s, openSource = null, allowRun = fals
   }
 
   /** Runs a recipe file and answers with what its result step found. */
-  async function execute(r, given, url, resultStep = null) {
+  async function execute(r, given, url, resultStep = null, { write = false } = {}) {
     if (!openSource) return fail(400, 'Running recipes needs a source (--source).');
     const file = path.join(recipesDir, r.file);
     const f = await loadRecipe(file);
+    if (writesBack(f.recipe)) {
+      if (!write) return fail(403, `${r.id} writes back into Neo4j: a query never writes. Run it with POST /run/${r.id}.`);
+      if (!allowWrite) return fail(403, `${r.id} writes back into Neo4j: this server does not write (serve --run --write).`);
+      if (!openWriter) return fail(403, `${r.id} writes back into Neo4j: no write connection (N20S_WRITE, N20S_WRITE_USER, N20S_WRITE_PASSWORD).`);
+    }
     const { params, errors } = coerceParams(f.recipe, given);
     if (errors.length) return fail(400, errors.join(' '));
     const source = openSource();
+    const writer = write && writesBack(f.recipe) ? openWriter() : null;
     try {
-      const run = await runRecipe({ ...f, params, source, n20s, resolvePublished: publishedResolver(recipesDir) });
+      const run = await runRecipe({ ...f, params, source, n20s, resolvePublished: publishedResolver(recipesDir), writer, allowWrite: !!writer, freshness: freshnessOf(recipesDir, n20s) });
       await recordRecipeRun(file, run, f, { source: { url: source.url }, n20s });
       const pick = resultStep
         ? run.steps.find((s) => s.id === resultStep && s.status === 'ok')
@@ -174,13 +183,14 @@ export function endpoints({ recipesDir, n20s, openSource = null, allowRun = fals
       });
     } finally {
       await source.close();
+      await writer?.close();
     }
   }
 
   async function runOne(req, url, id) {
     const r = (await recipes()).find((x) => x.id === id);
     if (!r) return fail(404, `No recipe ${id}. GET /run lists them.`);
-    return execute(r, await readParams(req, url), url);
+    return execute(r, await readParams(req, url), url, null, { write: true });
   }
 
   async function queryApi(req, url, name) {

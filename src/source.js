@@ -26,15 +26,18 @@ export const defaultSource = (env = process.env) => env.N20S_SOURCE || env.NEO4J
  *   sent to another server;
  * - N20S_SOURCE_USER, N20S_SOURCE_PASSWORD, N20S_SOURCE_DATABASE.
  */
-export function parseSourceUrl(url, env = process.env) {
+export function parseSourceUrl(url, env = process.env, { prefix = 'N20S_SOURCE', own = false } = {}) {
   if (!isSourceUrl(url)) throw new Error(`Not a source URL: ${String(url).replace(/\/\/[^@/]*@/, '//***@')}`);
   const u = new URL(url);
   const aura = env.NEO4J_URI && hostOf(env.NEO4J_URI) === u.hostname
     ? { user: env.NEO4J_USERNAME, password: env.NEO4J_PASSWORD, database: env.NEO4J_DATABASE }
     : {};
-  const user = decodeURIComponent(u.username) || aura.user || env.N20S_SOURCE_USER || null;
-  const password = decodeURIComponent(u.password) || aura.password || env.N20S_SOURCE_PASSWORD || '';
-  const database = u.searchParams.get('database') || aura.database || env.N20S_SOURCE_DATABASE || null;
+  const mine = { user: env[`${prefix}_USER`], password: env[`${prefix}_PASSWORD`], database: env[`${prefix}_DATABASE`] };
+  // own: the prefixed variables come before the Aura credentials file (a dedicated writer, not the admin of the file).
+  const [first, second] = own && mine.user ? [mine, aura] : [aura, mine];
+  const user = decodeURIComponent(u.username) || first.user || second.user || null;
+  const password = decodeURIComponent(u.password) || (own && mine.user ? mine.password : first.password ?? second.password) || '';
+  const database = u.searchParams.get('database') || first.database || second.database || null;
   u.username = '';
   u.password = '';
   u.searchParams.delete('database');
@@ -94,7 +97,7 @@ export function toPlain(v) {
  * @param {string} url bolt://, neo4j://, neo4j+s://… (see parseSourceUrl), or the path of a snapshot file
  * @param {{database?: string, user?: string, password?: string}} [options] override the URL and the environment
  */
-export function openSource(url, { database, user: givenUser, password: givenPassword } = {}) {
+export function openSource(url, { database, user: givenUser, password: givenPassword, readOnly = false } = {}) {
   if (!isSourceUrl(url)) {
     let snapshot;
     try {
@@ -114,7 +117,8 @@ export function openSource(url, { database, user: givenUser, password: givenPass
     url: clean,
     /** Runs a statement. A single `row` column is unwrapped; otherwise each record becomes an object. */
     async run(cypher, params = {}) {
-      const res = await driver.executeQuery(cypher, params, db ? { database: db } : {});
+      // readOnly: read transactions; Neo4j refuses a write in them, so the source of a recipe can never change the database.
+      const res = await driver.executeQuery(cypher, params, { ...(db ? { database: db } : {}), ...(readOnly ? { routing: neo4j.routing.READ } : {}) });
       return res.records.map((rec) => (rec.keys.length === 1 && rec.keys[0] === 'row' ? toPlain(rec.get('row')) : toPlain(rec.toObject())));
     },
     async agent() {
@@ -127,6 +131,60 @@ export function openSource(url, { database, user: givenUser, password: givenPass
     async system(cypher, params = {}) {
       const res = await driver.executeQuery(cypher, params, { database: 'system' });
       return res.records.map((rec) => toPlain(rec.toObject()));
+    },
+    close: () => driver.close(),
+  };
+}
+
+/** A conflict with a concurrent transaction, worth running the transaction again. */
+const transient = (err) => neo4j.isRetryableError?.(err) || /write-write conflict|deadlock|TransientError/i.test(`${err?.code ?? ''} ${err?.message ?? ''}`);
+
+/** The write connection: N20S_WRITE (or the given URL), credentials as for a source, N20S_WRITE_* first. */
+export const defaultWriter = (env = process.env) => env.N20S_WRITE || null;
+
+/**
+ * A connection that writes: reads with run(), writes only through transaction(),
+ * whose metadata Neo4j keeps (and change data capture shows).
+ * @returns {{url: string, run: Function, transaction: (work: (tx) => Promise<{commit: boolean}>, o?: {metadata?: object}) => Promise<object>, close: Function}}
+ */
+export function openWriter(url, { env = process.env, user: givenUser, password: givenPassword, database: givenDb } = {}) {
+  const parsed = parseSourceUrl(url, env, { prefix: 'N20S_WRITE', own: true });
+  const user = givenUser ?? parsed.user;
+  const password = givenPassword ?? parsed.password;
+  const driver = neo4j.driver(parsed.url, user ? neo4j.auth.basic(user, password) : undefined, { userAgent: 'n20s-mapping/0.1 (write)' });
+  const db = givenDb ?? parsed.database ?? undefined;
+  const plain = (r) => r.records.map((rec) => toPlain(rec.toObject()));
+  return {
+    url: parsed.url,
+    user,
+    async run(cypher, params = {}) { return plain(await driver.executeQuery(cypher, params, { ...(db ? { database: db } : {}), routing: neo4j.routing.READ })); },
+    /**
+     * work(tx) gets tx.run(cypher, params) -> {rows, counters}; it returns {commit}: false rolls back (nothing written).
+     * A transient conflict with a concurrent transaction (a deadlock, or a write-write conflict on servers that
+     * refuse rather than wait) runs the whole work again, which reads again what the other one committed.
+     */
+    async transaction(work, { metadata = {}, attempts = 5 } = {}) {
+      for (let attempt = 1; ; attempt += 1) {
+        const session = driver.session({ ...(db ? { database: db } : {}), defaultAccessMode: neo4j.session.WRITE });
+        let tx = null;
+        try {
+          tx = await session.beginTransaction({ metadata });
+          const out = await work({
+            async run(cypher, params = {}) {
+              const r = await tx.run(cypher, params);
+              return { rows: plain(r), counters: r.summary.counters.updates() };
+            },
+          });
+          if (out?.commit) await tx.commit(); else await tx.rollback();
+          return out;
+        } catch (err) {
+          await tx?.rollback().catch(() => {});
+          if (attempt >= attempts || !transient(err)) throw err;
+          await new Promise((r) => setTimeout(r, 50 * attempt + Math.random() * 100));
+        } finally {
+          await session.close();
+        }
+      }
     },
     close: () => driver.close(),
   };

@@ -18,7 +18,9 @@
 // mapping, rows through a template, static triples, construct from another
 // graph), changes it (forward inference, construct, update), asks it (SPARQL,
 // SHACL, explain; with on-the-fly reasoning when a profile or rules are given)
-// or publishes it as a SPARQL endpoint, behind validation gates. Data passing
+// or publishes it as a SPARQL endpoint, behind validation gates. A write step
+// writes what a query found back into Neo4j, as names the LPG ontology declares
+// as inferred (writeback.js), behind the same gates. Data passing
 // is the exception: $step.column hands the result of a step to a later one, to
 // follow up on what reasoning found. Every statement sent is kept in a trace
 // that replays the run (REASONING-CONTRACT.md, sections 2 and 6).
@@ -34,13 +36,14 @@ import { remoteOf as defaultRemote, isEnvName, shownUrl } from './remote.js';
 import { resolve, isCompiled } from './resolve.js';
 import { expand, shorten, fillTemplate, matchTemplate, parseTemplate } from './iri.js';
 import { formatFromPath } from './targets.js';
+import { checkWrites, resolveWrite, runWrite } from './writeback.js';
 
 export const RECIPE_FORMAT = 'n20s-recipe/0.1';
-export const STEP_TYPES = ['scope', 'rows', 'triples', 'infer', 'query', 'construct', 'update', 'validate', 'explain', 'publish'];
+export const STEP_TYPES = ['scope', 'rows', 'triples', 'infer', 'query', 'construct', 'update', 'validate', 'explain', 'publish', 'write'];
 /** What a step does to its graph. A construct from another graph feeds its own. */
 export const STEP_ROLES = {
   scope: 'feed', rows: 'feed', triples: 'feed', infer: 'change', construct: 'change', update: 'change',
-  query: 'ask', validate: 'ask', explain: 'ask', publish: 'publish',
+  query: 'ask', validate: 'ask', explain: 'ask', publish: 'publish', write: 'write',
 };
 export const roleOf = (step) => (step?.type === 'construct' && step.from ? 'feed' : STEP_ROLES[step?.type] ?? null);
 export const LIFECYCLES = ['ephemeral', 'persistent', 'published', 'remote'];
@@ -49,14 +52,20 @@ const NAME = /^[A-Za-z][\w.-]*$/;
 
 const REQUIRED = {
   scope: ['cypher'], rows: ['cypher', 'template'], triples: [], infer: [], query: ['sparql'],
-  construct: ['sparql'], update: ['sparql'], validate: [], explain: ['s', 'p', 'o'], publish: ['as'],
+  construct: ['sparql'], update: ['sparql'], validate: [], explain: ['s', 'p', 'o'], publish: ['as'], write: ['from'],
 };
 const DEFAULT_GRAPHS = { work: { lifecycle: 'ephemeral' } };
 
 /** The graphs of a recipe: as declared, or one ephemeral graph named work. */
 export const graphsOf = (recipe) => (recipe?.graphs && Object.keys(recipe.graphs).length ? recipe.graphs : DEFAULT_GRAPHS);
-/** The graph a step works on: its own, or the only graph, or work. */
-export const graphOf = (recipe, step) => step?.graph ?? (Object.keys(graphsOf(recipe)).length === 1 ? Object.keys(graphsOf(recipe))[0] : 'work');
+/** The graph a step works on: its own, or the only graph, or work. A write step reads the graph of the step it writes from. */
+export const graphOf = (recipe, step) => {
+  if (step?.type === 'write' && !step.graph) {
+    const from = (recipe?.steps ?? []).find((s) => s.id === step.from && s.type !== 'write');
+    if (from) return graphOf(recipe, from);
+  }
+  return step?.graph ?? (Object.keys(graphsOf(recipe)).length === 1 ? Object.keys(graphsOf(recipe))[0] : 'work');
+};
 const lifecycleOf = (g) => g?.lifecycle ?? 'ephemeral';
 
 /**
@@ -79,8 +88,8 @@ export function recipeKind(recipe) {
   return 'lazy';
 }
 
-/** Structural findings on a recipe, before running it. */
-export function checkRecipe(recipe, { mapping = null } = {}) {
+/** Structural findings on a recipe, before running it. With the LPG ontology, the write steps are checked against it. */
+export function checkRecipe(recipe, { mapping = null, lpgDoc = null } = {}) {
   const findings = [];
   const err = (path, message) => findings.push({ severity: 'error', path, message });
   if (recipe?.format !== RECIPE_FORMAT) err('format', `Expected format ${RECIPE_FORMAT}.`);
@@ -133,8 +142,8 @@ export function checkRecipe(recipe, { mapping = null } = {}) {
     const role = roleOf(s);
     if (['feed', 'change'].includes(role) && lifecycleOf(graphs[key]) === 'published') err(path, `Graph ${key} is published: read it, or construct from it into another graph.`);
     if (lifecycleOf(graphs[key]) === 'remote') err(path, `Graph ${key} is a remote store: nothing runs on it; construct from it into a graph of the recipe.`);
-    if (s.from !== undefined) {
-      if (s.type !== 'construct') err(path, 'from is for construct steps: they copy from another graph.');
+    if (s.from !== undefined && s.type !== 'write') {
+      if (s.type !== 'construct') err(path, 'from is for construct and write steps: they copy from another graph, or write the rows of a step.');
       else if (!(s.from in graphs)) err(path, `Graph ${s.from} is not declared in graphs.`);
       else if (s.from === key) err(path, 'A construct from its own graph is a plain construct: leave from out.');
     }
@@ -152,8 +161,9 @@ export function checkRecipe(recipe, { mapping = null } = {}) {
       if (ref.step && !seen.has(ref.step)) err(path, `$${ref.step}.${ref.column} refers to a step that does not run before it.`);
       if (!ref.step && !(ref.name in (recipe.params ?? {}))) err(path, `$${ref.name} is not a parameter of the recipe.`);
     }
-    // In Cypher, $name is a recipe parameter or a parameter the step defines.
+    // In Cypher, $name is a recipe parameter or a parameter the step defines (a write's Cypher gets $rows, $owner and $run).
     for (const m of String(s.cypher ?? '').matchAll(/\$([A-Za-z_]\w*)/g)) {
+      if (s.type === 'write' && ['rows', 'owner', 'run'].includes(m[1])) continue;
       if (!(m[1] in (recipe.params ?? {})) && !(m[1] in (s.params ?? {}))) err(path, `$${m[1]} in the Cypher is neither a recipe parameter nor in params.`);
     }
     if (s?.id) seen.set(s.id, s.type);
@@ -164,8 +174,12 @@ export function checkRecipe(recipe, { mapping = null } = {}) {
     if (a?.result !== undefined && !['query', 'validate', 'explain'].includes(seen.get(a.result))) err('api', `api.result ${a.result} is not a query, validate or explain step.`);
     if (a?.result === undefined && ![...seen.values()].some((t) => ['query', 'validate', 'explain'].includes(t))) err('api', 'An api returns what an asking step found: the recipe has none.');
   }
+  findings.push(...checkWrites(recipe, { lpgDoc, mapping, kind: recipeKind(recipe) }));
   return findings;
 }
+
+/** Whether a recipe writes back into Neo4j. */
+export const writesBack = (recipe) => (recipe?.steps ?? []).some((s) => s?.type === 'write');
 
 /**
  * $param and $step.column references of a step: in params values, in s, p, o,
@@ -200,6 +214,7 @@ export function recipeOutline(recipe) {
     steps: (recipe.steps ?? []).map((s) => ({
       id: s.id, type: s.type, role: roleOf(s), graph: graphOf(recipe, s), from: s.from ?? null, title: s.title ?? null,
       uses: references(s).filter((r) => r.step), ...(s.type === 'publish' ? { as: s.as } : {}),
+      ...(s.type === 'write' ? { writes: ['label', 'relationship', 'property'].filter((f) => s[f]).map((f) => (f === 'label' ? s.label.add : f === 'relationship' ? s.relationship.type : s.property.set))[0] ?? 'cypher' } : {}),
     })),
   };
 }
@@ -401,8 +416,8 @@ async function inspectGraph(n20s, name, P) {
  * @param {string} [a.runId]
  * @param {(e: object) => void} [a.onStep]
  */
-export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, source, n20s, read = null, resolvePublished = null, remote = defaultRemote, keep = false, inspect = false, runId = null, onStep = () => {} }) {
-  const found = checkRecipe(recipe, { mapping });
+export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, source, n20s, read = null, resolvePublished = null, remote = defaultRemote, keep = false, inspect = false, runId = null, onStep = () => {}, writer = null, allowWrite = false, freshness = null }) {
+  const found = checkRecipe(recipe, { mapping, lpgDoc }).filter((f) => f.severity === 'error');
   if (found.length) throw new Error(`The recipe has errors: ${found.map((f) => `${f.path}: ${f.message}`).join('; ')}`);
   const values = {};
   for (const [k, def] of Object.entries(recipe.params ?? {})) values[k] = k in params ? params[k] : def?.default;
@@ -451,6 +466,8 @@ export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, so
   subj.prefixes = { ...subj.prefixes, ...(recipe.prefixes ?? {}) };
   const prefixBlock = Object.entries(subj.prefixes).map(([p, ns]) => `PREFIX ${p}: <${ns}>`).join('\n');
   const outputs = new Map();
+  // Keys of the nodes the scope steps projected, per label and property: what a write may retract.
+  const scoped = new Map();
   const value = evaluator(values, outputs);
   const triples = Object.fromEntries(Object.entries(graphs).map(([k, g]) => [k, g.triplesBefore]));
   const steps = [];
@@ -464,7 +481,7 @@ export async function runRecipe({ recipe, params = {}, mapping, lpgDoc, plan, so
       const record = { id: step.id, type: step.type, role: roleOf(step), graph: key, graphName: graph, statements };
       onStep({ type: 'start', step: step.id });
       try {
-        record.result = await runStep(step, { graph, graphs, statements, value, subj, prefixBlock, source, n20s, plan, values, read, outputs });
+        record.result = await runStep(step, { graph, graphs, statements, value, subj, prefixBlock, source, n20s, plan, values, read, outputs, recipe, mapping, lpgDoc, runId: id, scoped, writer, allowWrite, freshness });
         record.status = 'ok';
       } catch (err) {
         record.status = 'error';
@@ -534,6 +551,8 @@ async function runStep(step, c) {
             const key = `${label}|${k}`;
             if (!keys.has(key)) keys.set(key, new Set());
             keys.get(key).add(n[k]);
+            if (!c.scoped.has(key)) c.scoped.set(key, new Set());
+            c.scoped.get(key).add(n[k]);
           }
         }
       }
@@ -635,7 +654,9 @@ async function runStep(step, c) {
         statements.push({ kind: 'n20s', call: 'addTriples', triples: triples.length });
         added = res.added ?? 0;
       }
-      return { triples: triples.length, added, sample: triples.slice(0, 20) };
+      // A write step reads all the triples, as rows of subject, predicate, object.
+      const written = (c.recipe?.steps ?? []).some((s) => s.type === 'write' && s.from === step.id);
+      return { triples: triples.length, added, sample: triples.slice(0, 20), ...(written ? { rows: triples.map((t) => ({ subject: t.subject, predicate: t.predicate, object: t.object })) } : {}) };
     }
 
     case 'update': {
@@ -687,6 +708,36 @@ async function runStep(step, c) {
       const g = Object.values(c.graphs).find((x) => x.name === graph);
       statements.push({ kind: 'publish', endpoint: step.as, graph });
       return { as: step.as, graph, base: g?.base ?? graph, description: step.description ?? null, gate };
+    }
+
+    case 'write': {
+      if (!c.allowWrite) throw new Error('Not written: this run may not write back into Neo4j (the CLI needs --write, serve needs --write, the studio asks for confirmation; /query never writes).');
+      // Fail-closed: every validate step before it (or the gate it names) must have conformed.
+      const before = c.recipe.steps.slice(0, c.recipe.steps.indexOf(step));
+      const gates = step.gate ?? before.filter((s) => s.type === 'validate').map((s) => s.id);
+      const failed = gates.filter((g) => c.outputs.get(g)?.conforms !== true);
+      if (failed.length) throw new Error(`Not written: ${failed.map((g) => { const r = c.outputs.get(g); return r?.violations ? `${g} found ${r.violations.length} violation${r.violations.length === 1 ? '' : 's'}` : `${g} did not run`; }).join(', ')}.`);
+      // A published graph read here must be up to date: a stale result is never written back.
+      const from = c.recipe.steps.find((s) => s.id === step.from);
+      for (const key of [graphOf(c.recipe, from), from.from].filter(Boolean)) {
+        const g = c.graphs[key];
+        if (g?.lifecycle !== 'published') continue;
+        const status = c.freshness ? await c.freshness(g.endpoint) : 'unknown';
+        if (status !== 'stable') throw new Error(`Not written: ${step.from} reads /sparql/${g.endpoint}, whose graph is ${status}. Re-publish it first.`);
+      }
+      const { target, findings } = resolveWrite(c.recipe, step, { lpgDoc: c.lpgDoc, mapping: c.mapping });
+      const errors = findings.filter((f) => f.severity === 'error');
+      if (!target || errors.length) throw new Error(errors.map((f) => f.message).join(' ') || 'Not written: what this step writes is not declared in the LPG ontology.');
+      let rows = c.outputs.get(step.from)?.rows ?? [];
+      // Triples of a construct: node columns decoded here, with the step's decode.
+      if (from.type === 'construct') {
+        const decoders = Object.entries(step.decode ?? {}).map(([col, spec]) => [col, String(spec).replace(/^node:/, '')]);
+        rows = rows.map((r) => { const o = { ...r }; for (const [col, kind] of decoders) o[col] = r[col] == null ? r[col] : subj.decode(kind, r[col]) ?? `<undecodable ${r[col]}>`; return o; });
+      }
+      const keyed = target.kind === 'relationship' ? target.from : target.node;
+      const scope = keyed ? [...(c.scoped.get(`${keyed.label}|${keyed.key}`) ?? [])] : null;
+      statements.push({ kind: 'write', owner: target.owner, form: target.form, name: target.name, on: target.on, rows: rows.length, retract: target.retract ?? null });
+      return runWrite({ writer: c.writer, target, rows, run: c.runId, scope, cypher: step.cypher ?? null });
     }
 
     default:

@@ -60,7 +60,7 @@
       "description": "The logical asset, stable over time: a table, topic, file, model or dashboard. Identified by namespace and name, as in OpenLineage. Lineage attaches to its versions, not to it directly."
     },
     "n:4": {
-      "labels": { "identifier": "DatasetVersion", "implied": ["Entity"] },
+      "labels": { "identifier": "DatasetVersion", "implied": ["Entity"], "optional": ["Tainted"], "extensions": { "custom": { "inferredBy": { "Tainted": { "recipe": "taint-writeback", "step": "mark" } } } } },
       "properties": {
         "p:10": { "type": "STRING", "name": "id", "description": "Stable identifier, for example dsv:snowflake://acme/stg.orders@17. Existence and uniqueness are enforced by the id constraints on the base label (Entity, Activity or Agent), which every node of this kind must carry explicitly." },
         "p:11": { "type": "STRING", "name": "version", "description": "Version as reported by the source system: a number, snapshot id, commit id or hash. Opaque; do not order versions by this value." },
@@ -189,6 +189,26 @@
       },
       "extensions": { "display": { "x": 312.82239732042984, "y": -110.99689800034888 } },
       "description": "A team or organization on whose behalf agents act."
+    },
+    "n:13": {
+      "labels": { "identifier": "WriteLedger" },
+      "properties": {
+        "p:71": { "type": "STRING", "name": "owner" },
+        "p:72": { "type": "STRING", "name": "kind" },
+        "p:73": { "type": "STRING", "name": "name" },
+        "p:74": { "type": "STRING", "name": "on" },
+        "p:75": { "type": "STRING", "name": "firstRun" },
+        "p:76": { "type": "ZONED DATETIME", "name": "firstAt" },
+        "p:77": { "type": "STRING", "name": "lastRun" },
+        "p:78": { "type": "ZONED DATETIME", "name": "lastAt" },
+        "p:79": { "type": "STRING", "name": "lock" },
+        "p:80": { "type": "ZONED DATETIME", "name": "adoptedAt" }
+      },
+      "constraints": {
+        "c:13": { "type": "UNIQUE", "properties": ["p:71"], "name": "write_ledger_owner" }
+      },
+      "description": "Write-back bookkeeping: one node per write step (owner recipe/step), locked by each run. Technical, never mapped.",
+      "extensions": { "display": { "x": 562.8223973204299, "y": 327.8998460648639 }, "custom": { "technical": true } }
     }
   },
   "relationships": {
@@ -343,6 +363,16 @@
         "p:70": { "type": "STRING", "name": "reason", "description": "Why the version was invalidated, for example backfill or deletion request." }
       },
       "description": "A dataset version became invalid because of a run, for example a backfill or a deletion job. Set together with invalidatedAt; the version and its lineage are kept."
+    },
+    "r:17": {
+      "type": "READS_TAINTED_INPUT",
+      "from": { "node": "n:4" },
+      "to": { "node": "n:4" },
+      "properties": {
+        "p:81": { "type": "STRING", "name": "createdBy", "extensions": { "custom": { "provenance": true } } },
+        "p:82": { "type": "ZONED DATETIME", "name": "createdAt", "extensions": { "custom": { "provenance": true } } }
+      },
+      "extensions": { "custom": { "inferredBy": { "recipe": "taint-writeback", "step": "link" } } }
     }
   }
 }

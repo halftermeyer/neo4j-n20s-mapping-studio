@@ -1,0 +1,85 @@
+# 9. Write-back: what reasoning found goes back into Neo4j, where applications
+# read it. A Jena rule finds the versions written by a run that read an
+# invalidated input; the recipe marks them :Tainted and links each one to the
+# input with READS_TAINTED_INPUT. The LPG ontology declares both names as
+# inferred by this recipe (write-patch); nothing else is ever written, and no
+# node is created.
+#
+# Each write computes its delta in one transaction: an unchanged result writes
+# nothing. What is no longer tainted loses the label and the link (retract:
+# scope, on the versions this recipe scoped). Published as /sparql/taint, it can
+# follow the database: an invalidation committed by another application
+# rebuilds it, and its own writes, tagged taint-writeback/<step>, do not.
+#
+# Runs with a write connection only (N20S_WRITE_USER, N20S_WRITE_PASSWORD: a
+# user with the write-back privileges, demo/aura.mjs creates n20s_writer), and
+# only when asked: recipe --write, serve --run --write, or confirmed in the studio.
+format: n20s-recipe/0.1
+id: taint-writeback
+title: Mark in Neo4j the versions written from an invalidated input
+mapping: ../lineage-prov.mapping.yaml
+prefixes:
+  sh: "http://www.w3.org/ns/shacl#"
+  shapes: "https://example.org/lineage/shapes/"
+graphs:
+  kg: { name: lineage-taint, lifecycle: persistent, versioned: true }
+steps:
+  - id: lineage
+    type: scope
+    title: Every version and every run; the mapping projects them and the relationships between them
+    cypher: |
+      MATCH (n) WHERE n:DatasetVersion OR n:Run RETURN n
+
+  - id: shapes
+    type: triples
+    title: What the graph must satisfy before anything is written
+    turtle: |
+      shapes:NoSelfDerivation a sh:NodeShape ;
+        sh:targetSubjectsOf prov:wasDerivedFrom ;
+        sh:sparql shapes:NoSelfDerivationQuery .
+      shapes:NoSelfDerivationQuery
+        sh:message "A version derived from itself." ;
+        sh:select "PREFIX prov: <http://www.w3.org/ns/prov#> SELECT $this WHERE { $this prov:wasDerivedFrom $this }" .
+
+  - id: check
+    type: validate
+    title: Validate; a violation stops the writes and the publication
+
+  - id: unshape
+    type: update
+    title: Take the shapes out again, they are not data
+    sparql: |
+      DELETE { ?s ?p ?o } WHERE { ?s ?p ?o FILTER (STRSTARTS(STR(?s), STR(shapes:))) }
+
+  - id: taint
+    type: infer
+    title: The taint rule, materialized
+    rules: |
+      [tainted: (?v prov:wasGeneratedBy ?r) (?r prov:used ?i) (?i prov:invalidatedAtTime ?t)
+                -> (?v lin:taintedBy ?i)]
+
+  - id: tainted
+    type: query
+    title: Which version, which input
+    sparql: |
+      SELECT DISTINCT ?version ?input WHERE { ?version lin:taintedBy ?input }
+    decode: { version: "node:n:4", input: "node:n:4" }
+
+  - id: mark
+    type: write
+    title: Label the tainted versions
+    from: tainted
+    label: { node: version, add: Tainted }
+
+  - id: link
+    type: write
+    title: Link each one to the input it read
+    from: tainted
+    relationship: { from: version, type: READS_TAINTED_INPUT, to: input }
+
+  - id: publish
+    type: publish
+    title: Serve it as /sparql/taint
+    as: taint
+    gate: [check]
+    description: Data lineage in PROV-O, with lin:taintedBy materialized (the facts written back into Neo4j).

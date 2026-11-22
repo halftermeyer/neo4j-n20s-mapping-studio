@@ -15,6 +15,7 @@ import { resolve, isActive } from './resolve.js';
 import { shorten, parseTemplate, expand } from './iri.js';
 import { prepareSubjects, qualifiedSubject, valueTable, TOOL } from './prepare.js';
 import { elementNames } from './design.js';
+import { writtenPaths, withoutWriteBack, WRITE_BACK_TOOL } from './writeback.js';
 
 const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
 
@@ -66,7 +67,9 @@ Rules:
  * Rejected entries are proposed again: the rejected proposal and the
  * reviewer's comment (meta.reviewComment) go into the prompt.
  */
-export async function propose({ mapping, lpgDoc, targets, provider, prefix, descriptions = true, openTerms = false, repair = true, valuesOf = null, only = null, spec = null, onProgress = () => {} }) {
+export async function propose({ mapping, lpgDoc: fullDoc, targets, provider, prefix, descriptions = true, openTerms = false, repair = true, valuesOf = null, only = null, spec = null, onProgress = () => {} }) {
+  // What recipes write back is not data to map: left out below, and never shown to the model.
+  const lpgDoc = withoutWriteBack(fullDoc);
   const idx = indexLpg(lpgDoc);
   let m = structuredClone(mapping);
   m.prefixes = { ...m.prefixes };
@@ -79,6 +82,17 @@ export async function propose({ mapping, lpgDoc, targets, provider, prefix, desc
   for (const x of guide.excluded) {
     if (m[x.section][x.id]) continue;
     m[x.section][x.id] = { ignore: { reason: `Out of scope: ${x.reason}` }, meta: { status: 'accepted', proposedBy: { kind: 'tool', name: 'spec' }, rationale: `Spec item ${x.item} (${x.name}), accepted by ${x.reviewedBy ?? 'the reviewer'}.` } };
+  }
+
+  // Written back by recipes (inferred names, their provenance) and write-back bookkeeping: never ingested, never asked.
+  for (const [path, why] of writtenPaths(fullDoc)) {
+    const [section, id, , pid] = path.split('/');
+    const left = { ignore: { reason: why }, meta: { status: 'accepted', proposedBy: { kind: 'tool', name: WRITE_BACK_TOOL }, rationale: 'Declared in the LPG ontology as written back or technical.' } };
+    if (!pid) { if (!m[section][id]) m[section][id] = left; continue; }
+    const e = (m[section][id] ??= { meta: { status: 'proposed', proposedBy: TOOL, confidence: 1, rationale: 'Holds the properties written back.' } });
+    if (e.ignore || e.properties?.[pid]) continue;
+    e.properties ??= {};
+    e.properties[pid] = left;
   }
 
   const prep = prepareSubjects(m, lpgDoc, { prefix });
@@ -138,7 +152,7 @@ export async function propose({ mapping, lpgDoc, targets, provider, prefix, desc
   }
 
   // Check the result; repair once the elements with errors, then drop what still fails.
-  let result = await check({ mapping: m, lpgDoc, targets });
+  let result = await check({ mapping: m, lpgDoc: fullDoc, targets });
   const repaired = [...repairedInvalid];
   const dropped = [];
   const errorsOf = (r) => {
@@ -162,13 +176,13 @@ export async function propose({ mapping, lpgDoc, targets, provider, prefix, desc
       m = await merge(m, ctx, a.el, a.pending, answer.answer);
       repaired.push({ element: key, findings: findings.map((f) => f.code), before: a.answer, after: res.json });
     }
-    result = await check({ mapping: m, lpgDoc, targets });
+    result = await check({ mapping: m, lpgDoc: fullDoc, targets });
   }
   for (const [key, findings] of errorsOf(result)) {
     m = restore(m, asked.get(key).el, asked.get(key).before);
     dropped.push({ element: key, findings: findings.map((f) => `${f.code} ${f.path}: ${f.message}`) });
   }
-  if (dropped.length) result = await check({ mapping: m, lpgDoc, targets });
+  if (dropped.length) result = await check({ mapping: m, lpgDoc: fullDoc, targets });
 
   return { mapping: m, calls, repaired, dropped, notes, subjects: prep.added, completed, result };
 }

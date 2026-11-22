@@ -15,7 +15,7 @@ import { readTargetsSummary } from './workspace.js';
 import { endpoints } from './endpoints.js';
 import { readProject, projectStatus, introspectSource, fetchTarget, newMapping, addToProject, addTargetToMapping } from './workspace.js';
 import { BENCH_FORMAT, checkBench } from './bench.js';
-import { checkRecipe, recipeOutline, recipeKind, runRecipe, RECIPE_FORMAT, STEP_TYPES, LIFECYCLES } from './recipe.js';
+import { checkRecipe, recipeOutline, recipeKind, runRecipe, writesBack, RECIPE_FORMAT, STEP_TYPES, LIFECYCLES } from './recipe.js';
 import YAML from 'yaml';
 import { reviewItems, applyDecision, acceptSafe } from './review.js';
 import { proposePasses, EXTRA_TERMS, acceptAll } from './propose.js';
@@ -25,7 +25,8 @@ import { runOracle, oracleEvidence } from './oracle.js';
 import { shorten } from './iri.js';
 import { qualifiedSubject } from './prepare.js';
 import { openSource as openBolt } from './source.js';
-import { sourceValues, readRegistry } from './node.js';
+import { sourceValues, readRegistry, writerFromEnv, writePatchFiles, freshnessOf } from './node.js';
+import { resolveWrite } from './writeback.js';
 import { n20sClient } from './n20s.js';
 import { makeProvider, listModels } from './providers.js';
 import { envFileRisk, writeEnvFile } from './settings.js';
@@ -71,7 +72,8 @@ const structured = (v) => {
 };
 const STEP_FIELDS = {
   title: text, cypher: text, sparql: text, rules: text, turtle: text, profile: text, s: text, p: text, o: text, graph: text,
-  as: text, description: text, from: text,
+  as: text, description: text, from: text, retract: text,
+  label: structured, relationship: structured, property: structured,
   gate: (v) => { const l = (Array.isArray(v) ? v : String(v ?? '').split(/[\n,]/)).map((x) => String(x).trim()).filter(Boolean); return l.length ? l : undefined; },
   decode: structured, params: structured, template: structured,
   files: (v) => { const l = (Array.isArray(v) ? v : String(v ?? '').split('\n')).map((x) => String(x).trim()).filter(Boolean); return l.length ? l : undefined; },
@@ -116,6 +118,12 @@ function skeleton(type, f) {
       const gates = (f.recipe.steps ?? []).filter((x) => x.type === 'validate').map((x) => x.id);
       return { title: 'Serve it as a SPARQL endpoint', ...(g ? { graph: g[0] } : {}), as: g?.[1]?.name ?? 'endpoint', ...(gates.length ? { gate: gates } : {}) };
     }
+    case 'write': {
+      // The last query before it, and its first node column.
+      const q = [...(f.recipe.steps ?? [])].reverse().find((x) => x.type === 'query');
+      const col = Object.entries(q?.decode ?? {}).find(([, d]) => String(d).startsWith('node:'))?.[0] ?? 'node';
+      return { title: 'Write back what the query found', ...(q ? { from: q.id } : {}), label: { node: col, add: 'Inferred' } };
+    }
     default: return {};
   }
 }
@@ -157,7 +165,8 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
   function applySettings() {
     if (!settings) return;
     const neo = settings.neo4j;
-    const openOne = (u) => (u && u !== neo?.url ? openBolt(u) : openBolt(neo.url, { user: neo.user ?? undefined, password: neo.password ?? undefined, database: neo.database ?? undefined }));
+    // Read-only: recipes, the oracle and introspection only read. Write-back has its own connection (writerFromEnv).
+    const openOne = (u) => (u && u !== neo?.url ? openBolt(u, { readOnly: true }) : openBolt(neo.url, { user: neo.user ?? undefined, password: neo.password ?? undefined, database: neo.database ?? undefined, readOnly: true }));
     openSource = neo ? openOne : null;
     valuesOf = neo ? async (...a) => { const src = openOne(); try { return await sourceValues(src)(...a); } finally { await src.close(); } } : null;
     provider = settings.fixedProvider ? () => settings.fixedProvider
@@ -165,6 +174,9 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     n20s = n20sClient(settings.n20sUrl ?? undefined);
   }
   applySettings();
+  // Write-back goes through its own connection (N20S_WRITE_USER, N20S_WRITE_PASSWORD), when the environment has one:
+  // a followed or re-published publication whose recipe writes back rebuilds through it.
+  const writerOpener = () => (process.env.N20S_WRITE_USER ? () => writerFromEnv(settings?.neo4j?.url ?? null) : null);
   /** Saves the current settings of one kind to the env file, if git would not commit it. */
   async function saveSettings(which) {
     if (!settings.envFile) throw new UsageError('No env file to save to (--dotenv).');
@@ -394,7 +406,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
         try {
           const recipe = YAML.parse(await fs.readFile(path.join(recipeDir, file), 'utf8'));
           const graphs = Object.values(recipe.graphs ?? {});
-          out.push({ file, id: recipe.id, title: recipe.title ?? recipe.id, steps: recipe.steps?.length ?? 0, persistent: graphs.filter((g) => g?.lifecycle === 'persistent').map((g) => g.name), kind: recipeKind(recipe), api: recipe.api?.name ?? null });
+          out.push({ file, id: recipe.id, title: recipe.title ?? recipe.id, steps: recipe.steps?.length ?? 0, persistent: graphs.filter((g) => g?.lifecycle === 'persistent').map((g) => g.name), kind: recipeKind(recipe), api: recipe.api?.name ?? null, writes: writesBack(recipe) });
         } catch (err) {
           out.push({ file, error: err.message });
         }
@@ -404,7 +416,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
 
     'POST /api/recipe': async ({ file }) => {
       const f = await loadRecipe(recipePath(file));
-      return { file, recipe: f.recipe, outline: recipeOutline(f.recipe), findings: checkRecipe(f.recipe, { mapping: f.mapping }), problems: f.problems, mapping: path.relative(recipeDir, f.mappingFile) };
+      return { file, recipe: f.recipe, outline: recipeOutline(f.recipe), findings: checkRecipe(f.recipe, { mapping: f.mapping, lpgDoc: f.lpgDoc }), problems: f.problems, mapping: path.relative(recipeDir, f.mappingFile) };
     },
 
     'POST /api/recipe/new': async ({ id, title }) => {
@@ -504,17 +516,32 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
       doc.set('api', doc.createNode({ name, ...(result ? { result } : {}), ...(description ? { description } : {}) }));
     }),
 
-    'POST /api/recipe/run': async ({ file, params = {}, keep = false }) => {
+    'POST /api/recipe/run': async ({ file, params = {}, keep = false, confirmWrite = false }) => {
       if (!openSource || !n20s) throw new UsageError('Running a recipe needs a source (--source) and n20s-server (--n20s).');
       const f = await loadRecipe(recipePath(file));
+      // A recipe that writes back runs only once the person confirmed what it writes.
+      const writes = f.recipe.steps.filter((x) => x.type === 'write').map((x) => ({ step: x.id, ...(resolveWrite(f.recipe, x, { lpgDoc: f.lpgDoc, mapping: f.mapping }).target ?? {}) }))
+        .map((w) => ({ step: w.step, owner: w.owner, kind: w.kind, name: w.name, on: w.on, retract: w.retract ?? null }));
+      if (writes.length && !confirmWrite) return { confirm: { writes } };
+      let writer = null;
+      if (writes.length) {
+        try { writer = writerFromEnv(settings?.neo4j?.url ?? null); } catch (err) { throw new UsageError(`${err.message} Set them in the env file (--dotenv) and restart the studio.`); }
+      }
       const source = openSource();
       try {
-        const run = await runRecipe({ ...f, params, source, n20s, keep, inspect: true, resolvePublished: publishedResolver(recipeDir) });
+        const run = await runRecipe({ ...f, params, source, n20s, keep, inspect: true, resolvePublished: publishedResolver(recipeDir), writer, allowWrite: !!writer, freshness: freshnessOf(recipeDir, n20s) });
         const recorded = await recordRecipeRun(recipePath(file), run, f, { source: { url: source.url }, n20s });
         return { ...run, recorded };
       } finally {
         await source.close();
+        await writer?.close();
       }
+    },
+
+    // What the LPG ontology must declare for the recipes that write back: shown, applied to the export file, to re-apply in Aura.
+    'POST /api/ontology-patch': async ({ apply = false } = {}) => {
+      const patches = await writePatchFiles(recipeDir, { apply });
+      return { patches: patches.map((p) => ({ lpgFile: path.relative(path.dirname(mappingFile), p.lpgFile), recipes: p.recipes, changes: p.changes, applied: p.applied })) };
     },
 
     // The graphs of n20s-server and of the registry, with their status.
@@ -549,11 +576,15 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     'POST /api/graphs/republish': async ({ endpoint }) => {
       if (!openSource || !n20s) throw new UsageError('Re-publishing needs a source (--source) and n20s-server (--n20s).');
       const source = openSource();
+      // A publication whose recipe writes back was confirmed when it was published; it re-publishes through the write connection.
+      const open = writerOpener();
+      const writer = open ? open() : null;
       try {
-        const { run } = await republish(recipeDir, endpoint, { source, n20s });
+        const { run } = await republish(recipeDir, endpoint, { source, n20s, writer, allowWrite: !!writer });
         return { ...(await routes['GET /api/graphs']()), run: { ok: run.ok, ms: run.ms, error: run.steps.find((s) => s.status === 'error')?.error ?? null, graph: run.publications.find((p) => p.as === endpoint)?.graph ?? null } };
       } finally {
         await source.close();
+        await writer?.close();
       }
     },
 
@@ -879,7 +910,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     } catch { followDirs = [recipeDir]; }
   };
   await refreshFollowDirs();
-  const following = follower({ recipesDir: () => followDirs, openSource: () => openSource, n20s: () => n20s, intervalMs: followIntervalMs,
+  const following = follower({ recipesDir: () => followDirs, openSource: () => openSource, n20s: () => n20s, openWriter: writerOpener, intervalMs: followIntervalMs,
     onSync: (r) => console.error(`  ${r.endpoint}: ${r.transactions} transaction(s) → ${r.sync.ok ? `rebuilt as ${r.sync.graph} in ${r.sync.ms} ms` : `not rebuilt: ${r.sync.error}`}`),
     onError: (err) => console.error(`  following: ${err.message.split('\n')[0]}`) });
   return {

@@ -8,6 +8,7 @@ const ROLE = {
   change: { icon: '⟳', text: 'changes', color: '#6a1b9a' },
   ask: { icon: '?', text: 'asks', color: '#2e7d32' },
   publish: { icon: '⇪', text: 'publishes', color: '#00695c' },
+  write: { icon: '⤓', text: 'writes back from', color: '#b71c1c' },
 };
 const KIND = {
   build: { text: 'build', color: '#6a1b9a', help: 'writes a persistent graph, usually to publish it' },
@@ -20,14 +21,16 @@ const TYPE_TEXT = {
   scope: 'Cypher scope, projected through the mapping', rows: 'Cypher rows through a template', triples: 'static triples (ontology, shapes)',
   infer: 'forward inference, materialized', construct: 'SPARQL CONSTRUCT, added to the graph', update: 'SPARQL update',
   query: 'SPARQL', validate: 'SHACL validation', explain: 'explanation of a statement', publish: 'serve a persistent graph as a SPARQL endpoint',
+  write: 'write what a query found back into Neo4j: a label, a relationship or a property the LPG ontology declares as inferred',
 };
-const ROLE_OF = { scope: 'feed', rows: 'feed', triples: 'feed', infer: 'change', construct: 'change', update: 'change', query: 'ask', validate: 'ask', explain: 'ask', publish: 'publish' };
+const ROLE_OF = { scope: 'feed', rows: 'feed', triples: 'feed', infer: 'change', construct: 'change', update: 'change', query: 'ask', validate: 'ask', explain: 'ask', publish: 'publish', write: 'write' };
 const EDITABLE = {
   scope: ['cypher', 'params'], rows: ['cypher', 'params', 'template'], triples: ['files', 'turtle'], infer: ['profile', 'rules'],
   query: ['sparql', 'decode', 'profile', 'rules'], construct: ['from', 'sparql'], update: ['sparql'], validate: ['profile', 'rules'],
   explain: ['s', 'p', 'o', 'profile', 'rules'], publish: ['as', 'gate', 'description'],
+  write: ['from', 'label', 'relationship', 'property', 'retract', 'gate', 'decode'],
 };
-const MULTILINE = ['cypher', 'sparql', 'rules', 'turtle', 'params', 'decode', 'template', 'files', 'gate'];
+const MULTILINE = ['cypher', 'sparql', 'rules', 'turtle', 'params', 'decode', 'template', 'files', 'gate', 'label', 'relationship', 'property'];
 const PROFILES = ['', 'RDFS', 'OWL_MICRO', 'OWL_MINI', 'OWL'];
 const HELP = {
   cypher: 'Recipe parameters and the keys of params are $name. A scope returns nodes or paths; the mapping projects them.',
@@ -42,6 +45,10 @@ const HELP = {
   gate: 'Validate steps, one per line: if one found violations, nothing is published and the endpoint keeps its graph.',
   from: 'Graph the CONSTRUCT reads (a published one, for instance); what it builds goes into this step\'s graph.',
   description: 'Shown with the endpoint.',
+  label: 'node: <column decoded node:<id>>, add: <label declared as inferred by this step>',
+  relationship: 'from: <column>, type: <TYPE declared as inferred by this step>, to: <column>',
+  property: 'node: <column>, set: <property declared as inferred by this step>, value: <column>',
+  retract: 'scope (default): what is no longer found is removed on the scoped nodes only; all: everywhere (refused when the scope is partial)',
 };
 
 let root = null;
@@ -51,6 +58,7 @@ let run = null;
 let selected = null;
 let params = {};
 let running = false;
+let patch = null;        // POST /api/ontology-patch: what the LPG ontology must declare for the writes
 let creating = false;
 let addingParam = false;
 let editingGraph = null; // graph key being edited, or '' for a new one
@@ -392,6 +400,12 @@ function header() {
         running = true; render();
         try {
           run = await api('/api/recipe/run', { file: current.file, params, keep: keep.checked });
+          // A recipe that writes back into Neo4j: say what it writes, and run it only once confirmed.
+          if (run.confirm) {
+            const what = run.confirm.writes.map((w) => `• ${w.step}: ${w.kind} ${w.name ?? '(free Cypher)'}${w.on ? ` on ${w.on}` : ''}${w.retract ? `, retracted on ${w.retract === 'all' ? 'every node' : 'the scoped nodes'}` : ''}`).join('\n');
+            if (!confirm(`This recipe writes back into Neo4j, as ${run.confirm.writes[0]?.owner?.split('/')[0]}:\n${what}\n\nOnly what changed is written, in one transaction per step. Run it?`)) { run = null; running = false; render(); return; }
+            run = await api('/api/recipe/run', { file: current.file, params, keep: keep.checked, confirmWrite: true });
+          }
           await loadGraphs();
           const last = run.steps.at(-1);
           const published = (run.publications ?? []).map((p) => `/sparql/${p.as}`);
@@ -401,7 +415,27 @@ function header() {
       },
     }, running ? 'Running…' : 'Run'),
     current.findings.length ? h('div', { class: 'fail', style: 'flex-basis:100%' }, current.findings.map((x) => h('div', {}, `${x.path}: ${x.message}`))) : null,
+    f.steps.some((x) => x.type === 'write') ? h('button', { 'data-testid': 'ontology-patch', title: 'What the LPG ontology must declare for the write steps', onclick: () => showPatch(false) }, 'Ontology patch') : null,
+    patch ? patchView() : null,
   );
+}
+
+async function showPatch(apply) {
+  try { patch = await api('/api/ontology-patch', { apply }); } catch (err) { toast(err.message, true); return; }
+  if (apply) { toast('Applied to the LPG ontology file: re-apply it in the Aura ontology too'); await open(current.file); return; }
+  render();
+}
+
+/** The declarations to add to the LPG ontology, and the button that writes them to the export file. */
+function patchView() {
+  const changes = patch.patches.flatMap((p) => p.changes.map((c) => ({ ...c, file: p.lpgFile })));
+  return h('div', { class: 'follow', style: 'flex-basis:100%', 'data-testid': 'patch-view' },
+    h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, 'Ontology patch'), h('button', { class: 'mini', onclick: () => { patch = null; render(); } }, '×')),
+    changes.length
+      ? [h('div', { class: 'hint' }, 'The LPG ontology must declare what the recipes write back. Apply it to the export file, then make the same changes in the Aura ontology: an export without them fails check.'),
+        table(changes.map((c) => ({ file: c.file, change: c.op, at: c.path, what: c.what })), ['file', 'change', 'at', 'what']),
+        h('button', { class: 'primary', 'data-testid': 'patch-apply', onclick: () => confirm('Write these declarations into the LPG ontology file?') && showPatch(true) }, 'Apply to the export file')]
+      : h('div', { class: 'okline' }, 'The LPG ontology declares everything the recipes write.'));
 }
 
 /** The graphs of the recipe, their lifecycle, and their state after the run. */
@@ -520,6 +554,7 @@ function summary(type, r) {
   if (type === 'update') return `${r.inserted} inserted, ${r.deleted} deleted`;
   if (type === 'publish') return `→ /sparql/${r.as}`;
   if (type === 'construct') return `${r.added} added${r.triples !== r.added ? ` (${r.triples} pulled)` : ''}`;
+  if (type === 'write') return r.written ? `+${r.added ?? 0} −${r.removed ?? 0} written` : 'unchanged, nothing written';
   return '';
 }
 
@@ -649,6 +684,13 @@ function resultView(step, x) {
         h('span', { class: `chip ${t.kind === 'derived' ? 'review' : 'accepted'}` }, t.kind === 'derived' ? `derived by ${t.rule ?? 'the profile'}` : t.kind), ' ', h('span', { class: 'mono' }, t.fact))));
       break;
     case 'construct': body = [h('div', {}, `${r.triples} triples built, ${r.added} added`), table((r.sample ?? []).map((t) => ({ s: t.subject, p: t.predicate, o: t.object })))]; break;
+    case 'write':
+      body = [h('div', { class: r.written ? 'okline' : 'hint', 'data-testid': `write-${step.id}` }, r.written
+        ? `${r.kind} ${r.name ?? ''}${r.on ? ` on ${r.on}` : ''}: +${r.added ?? 0} −${r.removed ?? 0}, committed as ${r.owner} (ledger ${r.ledger})`
+        : `${r.kind} ${r.name ?? ''}${r.on ? ` on ${r.on}` : ''}: unchanged, nothing written (rolled back, no transaction reached the database)`),
+      (r.warnings ?? []).map((w) => h('div', { class: 'warnline' }, w)),
+      r.counters ? h('div', { class: 'mono', style: 'color:#666' }, Object.entries(r.counters).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || 'no change') : null];
+      break;
     default: body = h('div', { class: 'mono' }, JSON.stringify(r));
   }
   return [state, body, statements];

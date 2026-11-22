@@ -17,4 +17,5 @@ export { geminiProvider, recordingProvider, replayProvider, functionProvider, re
 export { rekeyMapping, rekeyOracle } from './rekey.js';
 export { reviewItems, applyDecision, acceptSafe, SAFE_CONFIDENCE } from './review.js';
 export { emptyRegistry, recordRun, retire, provenance, graphStatuses, publicationStatuses, unpublish, REGISTRY_FORMAT } from './graphs.js';
-export { runRecipe, checkRecipe, recipeOutline, recipeKind, coerceParams, graphsOf, graphOf, roleOf, RECIPE_FORMAT, STEP_TYPES, STEP_ROLES, LIFECYCLES, PARAM_TYPES } from './recipe.js';
+export { runRecipe, checkRecipe, recipeOutline, recipeKind, coerceParams, graphsOf, graphOf, roleOf, writesBack, RECIPE_FORMAT, STEP_TYPES, STEP_ROLES, LIFECYCLES, PARAM_TYPES } from './recipe.js';
+export { LEDGER, LEDGER_CONSTRAINT, WRITE_FORMS, ownerOf, txMetadata, ownTransaction, writeDeclarations, writtenPaths, withoutWriteBack, resolveWrite, checkWrites, exportPatch, runWrite, adopt, ledgerConstraint } from './writeback.js';

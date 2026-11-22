@@ -1,0 +1,9 @@
+# Requests against what the lineage recipes publish. Run recipe 9 first (it
+# writes back and publishes /sparql/taint): recipe --write, or serve --run --write.
+format: n20s-bench/0.1
+requests:
+  - id: taint-published
+    title: The taint that recipe 9 wrote back into Neo4j, as served by /sparql/taint
+    target: { sparql: taint }
+    sparql: SELECT DISTINCT ?version ?input WHERE { ?version <https://example.org/lineage/taintedBy> ?input }
+    expect: { status: 200, minRows: 1, maxMs: 2000 }

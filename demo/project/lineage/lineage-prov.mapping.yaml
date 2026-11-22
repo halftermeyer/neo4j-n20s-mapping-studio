@@ -146,6 +146,15 @@ nodes:
   n:12:
     classes:
       - prov:Organization
+  n:13:
+    ignore:
+      reason: WriteLedger is technical (write-back bookkeeping), not data.
+    meta:
+      status: accepted
+      proposedBy:
+        kind: tool
+        name: write-back
+      rationale: Declared in the LPG ontology as written back or technical.
 relationships:
   r:0:
     predicate: prov:used
@@ -286,6 +295,15 @@ relationships:
     properties:
       p:70:
         predicate: rdfs:comment
+  r:17:
+    ignore:
+      reason: "READS_TAINTED_INPUT is inferred by taint-writeback/link: written back by a recipe, not ingested."
+    meta:
+      status: accepted
+      proposedBy:
+        kind: tool
+        name: write-back
+      rationale: Declared in the LPG ontology as written back or technical.
   r:2:
     ignore:
       reason: The 'DEPENDS_ON' relationship represents a potential, over-approximated dependency computed from other relationships, not a proven derivation. Mapping it to 'prov:wasDerivedFrom' would imply a stronger, more direct provenance assertion than the source data intends.

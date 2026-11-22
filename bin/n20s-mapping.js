@@ -4,7 +4,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   checkFiles, lockFiles, compileFiles, proposeFiles, sourceValues, variantsPathFor, loadRecipe, recordRecipeRun, graphsReport, registryPathFor, publishedResolver, republish, unpublishEndpoint, readOracle, readQueryArg, UsageError,
-  openSource, splitStatements, defaultSource,
+  openSource, splitStatements, defaultSource, writerFromEnv, writePatchFiles, adoptStep, freshnessOf,
 } from '../src/node.js';
 import YAML from 'yaml';
 import { recordingProvider, replayProvider, makeProvider, aiSettingsFromEnv, PROVIDERS } from '../src/providers.js';
@@ -35,11 +35,13 @@ const USAGE = `Usage:
                        [--source <url>] [--n20s <url>] [--prefix <p>] [--provider <id>] [--model <id>] [--recipes <dir>]
                        [--record <f>] [--replay <f>] [--mask-hosts] [--title <text>]
   n20s-mapping recipe  <recipe.yaml> [--param name=value]... [--source <url>] [--n20s <url>]
-                       [--keep] [--proposals] [--json] [--check]
+                       [--keep] [--proposals] [--json] [--check] [--write]
+  n20s-mapping write-patch <recipe.yaml | recipes dir> [--apply] [--json]
+  n20s-mapping adopt   <recipe.yaml> <step> [--source <url>] [--yes]
   n20s-mapping graphs  [<recipes dir>] [--n20s <url>] [--json]
-  n20s-mapping serve   [<recipes dir>] [--port <n>] [--host <addr>] [--source <url>] [--n20s <url>] [--run]
+  n20s-mapping serve   [<recipes dir>] [--port <n>] [--host <addr>] [--source <url>] [--n20s <url>] [--run] [--write]
   n20s-mapping bench   <bench.yaml> [--url <base>] [--only <id>]... [--iterations <n>] [--concurrency <n>] [--json]
-  n20s-mapping republish <endpoint> [--recipes <dir>] [--source <url>] [--n20s <url>]
+  n20s-mapping republish <endpoint> [--recipes <dir>] [--source <url>] [--n20s <url>] [--write]
   n20s-mapping follow  <endpoint> [--recipes <dir>] [--source <url>] [--off]
   n20s-mapping unpublish <endpoint> [--recipes <dir>] [--n20s <url>]
   n20s-mapping project <mapping> [--source <url>] [--n20s <url>] [--graph <name>] [--force]
@@ -94,7 +96,18 @@ recipe   Runs a recipe: its steps in order on named n20s graphs (scopes
          projected through the mapping, static triples, inference, SPARQL,
          SHACL, explanations). Ephemeral graphs are dropped at the end (--keep
          keeps them); persistent ones stay. Prints each step's result; --json
-         gives the full trace. --check only checks it.
+         gives the full trace. --check only checks it. A recipe with write
+         steps writes back into Neo4j only with --write, through the write
+         connection (N20S_WRITE, else the source URL, with N20S_WRITE_USER and
+         N20S_WRITE_PASSWORD); the source it reads is opened read-only.
+write-patch What the LPG ontology must declare for the write steps of a
+         recipe (or of the recipes of a directory): inferred labels,
+         relationships and properties, provenance (createdBy, createdAt), the
+         WriteLedger node. --apply writes them into the LPG ontology file;
+         re-apply them in the Aura ontology too, an export would lose them.
+adopt    Takes over what a write step writes when its WriteLedger node is
+         gone (a first run refuses to write over facts no ledger owns).
+         Without --yes, says what would be adopted.
 graphs   Lists the graphs of n20s-server and the persistent graphs built by the
          recipes of a directory (default .), with their status: stable, stale
          (the mapping or LPG ontology changed since the build, or the size
@@ -104,7 +117,8 @@ serve    Serves the recipes of a directory (default .) over HTTP:
          recipe published under that name (SELECT, ASK, CONSTRUCT);
          /query/<api> runs a recipe that declares an api with the parameters of
          the query string or JSON body and returns its result; --run adds
-         /run/<recipe> for any recipe. Listens on 127.0.0.1:7480 unless --host
+         /run/<recipe> for any recipe (by POST), and --write lets /run and the
+         followed endpoints write back. Listens on 127.0.0.1:7480 unless --host
          and --port say otherwise. Endpoints that follow the database are
          rebuilt when a committed transaction touches their sources.
 follow   Makes an endpoint follow the database (--off stops it): Change Data
@@ -149,7 +163,7 @@ n20s-server: --n20s, default N20S_URL, else http://localhost:7474.
 
 Exit codes: 0 ok, 1 errors or failed checks (or warnings with --strict), 2 usage, I/O or connection error.`;
 
-const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'follow', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle'];
+const COMMANDS = ['check', 'lock', 'compile', 'propose', 'studio', 'status', 'introspect', 'fetch', 'recipe', 'write-patch', 'adopt', 'graphs', 'serve', 'bench', 'republish', 'unpublish', 'follow', 'project', 'compare', 'snapshot', 'load', 'query', 'oracle'];
 
 /** Explicit --source options first, then the default source when more are needed. */
 function sourceUrls(values, count) {
@@ -173,6 +187,14 @@ function printTable(rows, columns) {
   console.log(line(cols));
   console.log(width.map((w) => '-'.repeat(w)).join('  '));
   for (const r of rows) console.log(line(cols.map((c) => cell(r[c]))));
+}
+
+/** One line for what a write step did. */
+function writeLine(r) {
+  const what = `${r.kind} ${r.name ?? ''}${r.on ? ` on ${r.on}` : ''}`;
+  const warn = (r.warnings ?? []).length ? ` Warnings: ${r.warnings.join(' ')}` : '';
+  if (!r.written) return `${what}: unchanged, nothing written (${r.rows} rows).${warn}`;
+  return `${what}: +${r.added ?? 0} -${r.removed ?? 0}, committed as ${r.owner} (ledger ${r.ledger}).${warn}`;
 }
 
 function printProblems(problems) {
@@ -226,6 +248,9 @@ async function main() {
       port: { type: 'string' },
       host: { type: 'string' },
       run: { type: 'boolean', default: false },
+      write: { type: 'boolean', default: false },
+      yes: { type: 'boolean', default: false },
+      apply: { type: 'boolean', default: false },
       url: { type: 'string' },
       only: { type: 'string', multiple: true },
       iterations: { type: 'string' },
@@ -425,11 +450,12 @@ async function main() {
 
   if (command === 'recipe') {
     const f = await loadRecipe(first, { proposals: values.proposals });
-    const findings = checkRecipe(f.recipe, { mapping: f.mapping });
-    if (values.check || findings.length) {
-      for (const x of findings) console.log(`${x.severity.toUpperCase()}  ${x.path}: ${x.message}`);
+    const findings = checkRecipe(f.recipe, { mapping: f.mapping, lpgDoc: f.lpgDoc });
+    const errors = findings.filter((x) => x.severity === 'error');
+    if (values.check || findings.length) for (const x of findings) console.log(`${x.severity.toUpperCase()}  ${x.path}: ${x.message}`);
+    if (values.check || errors.length) {
       if (!findings.length) console.log(`${first}: ${f.recipe.steps.length} steps, no finding.`);
-      return findings.length ? 1 : 0;
+      return errors.length ? 1 : 0;
     }
     const params = {};
     for (const p of values.param ?? []) {
@@ -437,10 +463,15 @@ async function main() {
       if (i < 1) throw new UsageError(`--param ${p}: use name=value.`);
       params[p.slice(0, i)] = p.slice(i + 1);
     }
-    const source = openSource(sourceUrls(values, 1)[0]);
+    const sourceUrl = sourceUrls(values, 1)[0];
+    const writes = f.recipe.steps.some((s) => s.type === 'write');
+    if (writes && !values.write) throw new UsageError(`${f.recipe.id} writes back into Neo4j: run it with --write (and a write connection: N20S_WRITE_USER, N20S_WRITE_PASSWORD).`);
+    const writer = writes ? writerFromEnv(sourceUrl) : null;
+    const source = openSource(sourceUrl, { readOnly: true });
     try {
       const n20s = n20sClient(values.n20s);
       const run = await runRecipe({ ...f, params, source, n20s, keep: values.keep, resolvePublished: publishedResolver(path.dirname(first)),
+        writer, allowWrite: !!writer, freshness: freshnessOf(path.dirname(first), n20s),
         onStep: (e) => { if (!values.json && e.type === 'start') process.stderr.write(`  ${e.step} … `); if (!values.json && e.type === 'end') process.stderr.write(`${e.status}\n`); } });
       const recorded = await recordRecipeRun(first, run, f, { source: { url: source.url, agent: await source.agent().catch(() => null) }, n20s });
       if (values.json) { console.log(JSON.stringify(run, null, 2)); return run.ok ? 0 : 1; }
@@ -449,6 +480,7 @@ async function main() {
         const r = s.result ?? {};
         const columns = { explain: ['depth', 'kind', 'rule', 'fact'], validate: ['node', 'key', 'severity', 'message'] }[s.type];
         if (s.type === 'validate' && r.conforms) console.log('conforms');
+        else if (s.type === 'write') { if (s.status === 'ok') console.log(writeLine(r)); }
         else if (r.rows && s.type !== 'scope') printTable(r.rows, columns ?? (r.rows.length ? Object.keys(r.rows[0]) : undefined));
         else if (s.type === 'scope') console.log(`${r.nodes} nodes in scope, ${r.added} triples added (${(r.units ?? []).map((u) => `${u.id} ${u.rows}`).join(', ')})`);
         else if (s.status === 'ok') console.log(JSON.stringify(Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'sample'))));
@@ -463,20 +495,50 @@ async function main() {
       return run.ok ? 0 : 1;
     } finally {
       await source.close();
+      await writer?.close();
+    }
+  }
+
+  if (command === 'write-patch') {
+    const patches = await writePatchFiles(first, { apply: values.apply });
+    if (values.json) { console.log(JSON.stringify(patches.map(({ doc, ...p }) => p), null, 2)); return 0; }
+    if (!patches.length) { console.log(`${first}: no recipe writes back.`); return 0; }
+    for (const p of patches) {
+      console.log(`${p.lpgFile} (recipes ${p.recipes.join(', ')}):`);
+      if (!p.changes.length) { console.log('  declares everything they write.'); continue; }
+      for (const c of p.changes) console.log(`  ${c.op.padEnd(16)} ${c.path.padEnd(28)} ${c.what}`);
+      console.log(p.applied ? '  Applied. Re-apply these changes in the Aura ontology too: an export without them fails check.' : '  Not applied: --apply writes them into the file.');
+    }
+    return 0;
+  }
+
+  if (command === 'adopt') {
+    const step = args[1];
+    if (!step) throw new UsageError('adopt <recipe.yaml> <step> [--yes]');
+    const writer = writerFromEnv(sourceUrls(values, 1)[0]);
+    try {
+      const r = await adoptStep(first, step, { writer, yes: values.yes });
+      console.log(r.adopted ? `${r.owner} now owns ${r.name} on ${r.on} (${r.facts ?? '?'} existing). Its next run computes its delta against them.` : r.message);
+      return 0;
+    } finally {
+      await writer.close();
     }
   }
 
   if (command === 'serve') {
     const url = values.source?.[0] ?? defaultSource();
+    // --write: /run and the followed endpoints may write back, through the write connection only.
+    const openW = values.write ? (() => { writerFromEnv(url).close(); return () => writerFromEnv(url); })() : null;
     const server = await serveEndpoints({
-      recipesDir: first, n20s: n20sClient(values.n20s), openSource: url ? () => openSource(url) : null,
+      recipesDir: first, n20s: n20sClient(values.n20s), openSource: url ? () => openSource(url, { readOnly: true }) : null,
       port: values.port !== undefined ? Number(values.port) : 7480, host: values.host ?? '127.0.0.1', allowRun: values.run,
+      allowWrite: !!openW, openWriter: openW,
     });
-    console.log(`Serving ${first} on ${server.url}: GET ${server.url}sparql lists the endpoints, GET ${server.url}query the query APIs${values.run ? `, GET ${server.url}run the recipes` : ''}. Ctrl-C to stop.`);
+    console.log(`Serving ${first} on ${server.url}: GET ${server.url}sparql lists the endpoints, GET ${server.url}query the query APIs${values.run ? `, GET ${server.url}run the recipes` : ''}${openW ? ' (recipes may write back)' : ''}. Ctrl-C to stop.`);
     if (!url) console.log('No source: /query and /run are off (--source, N20S_SOURCE or NEO4J_URI).');
     // Endpoints that follow the database (studio, or `follow`) are rebuilt when a transaction touches their sources.
     const client = n20sClient(values.n20s);
-    const following = url ? follower({ recipesDir: () => first, openSource: () => () => openSource(url), n20s: () => client,
+    const following = url ? follower({ recipesDir: () => first, openSource: () => () => openSource(url, { readOnly: true }), n20s: () => client, openWriter: () => openW,
       onSync: (r) => console.log(`${new Date().toISOString()} /sparql/${r.endpoint}: ${r.transactions} transaction(s) → ${r.sync.ok ? `rebuilt as ${r.sync.graph} in ${r.sync.ms} ms` : `not rebuilt (${r.sync.error}), the endpoint keeps its graph`}`),
       onError: (err) => console.error(`following: ${err.message.split('\n')[0]}`) }) : null;
     await new Promise((resolve) => process.once('SIGINT', resolve));
@@ -541,9 +603,11 @@ async function main() {
 
   if (command === 'republish') {
     const dir = values.recipes ?? '.';
-    const source = openSource(sourceUrls(values, 1)[0]);
+    const url = sourceUrls(values, 1)[0];
+    const source = openSource(url, { readOnly: true });
+    const writer = values.write ? writerFromEnv(url) : null;
     try {
-      const { run, recorded } = await republish(dir, first, { source, n20s: n20sClient(values.n20s), onStep: (e) => { if (e.type === 'end') console.error(`  ${e.step} ${e.status}`); } });
+      const { run, recorded } = await republish(dir, first, { source, n20s: n20sClient(values.n20s), writer, allowWrite: !!writer, onStep: (e) => { if (e.type === 'end') console.error(`  ${e.step} ${e.status}`); } });
       if (!run.ok) {
         const failed = run.steps.find((s) => s.status === 'error');
         console.log(`Not re-published: ${failed?.id}: ${failed?.error} The endpoint still serves the previous version.`);
@@ -553,6 +617,7 @@ async function main() {
       return 0;
     } finally {
       await source.close();
+      await writer?.close();
     }
   }
 

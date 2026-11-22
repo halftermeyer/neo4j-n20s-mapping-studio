@@ -83,7 +83,7 @@ test('publish, published graphs, construct from, api: checked before running', (
   assert.ok(messages({ ...ask, api: { name: 'x', result: 'nope' } }).includes('api: api.result nope is not a query, validate or explain step.'));
   const hy = recipes['7-owners-hybrid'];
   assert.ok(messages({ ...hy, steps: hy.steps.map((x) => (x.id === 'attributions' ? { ...x, from: 'other' } : x)) }).includes('steps/attributions: Graph other is not declared in graphs.'));
-  assert.ok(messages({ ...hy, steps: hy.steps.map((x) => (x.id === 'downstream' ? { ...x, from: 'kg' } : x)) }).includes('steps/downstream: from is for construct steps: they copy from another graph.'));
+  assert.ok(messages({ ...hy, steps: hy.steps.map((x) => (x.id === 'downstream' ? { ...x, from: 'kg' } : x)) }).includes('steps/downstream: from is for construct and write steps: they copy from another graph, or write the rows of a step.'));
 });
 
 test('coerceParams: query-string values become what the recipe declares', () => {

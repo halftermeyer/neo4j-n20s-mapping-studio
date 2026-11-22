@@ -6,6 +6,7 @@ import specSchema from '../vendor/ontology-graph-spec-1.1.0.schema.json' with { 
 import { indexLpg, contentHash, defaultDatatype, datatypeCompatible, xsdDerivesFrom } from './lpg.js';
 import { expand, expandTemplate, parseTemplate, ambiguousSeparator, shorten, N20S_PLACEHOLDER_NAME } from './iri.js';
 import { diffLock } from './lock.js';
+import { writtenPaths, WRITE_BACK_TOOL } from './writeback.js';
 import { resolve, statusOf as status, isActive as active } from './resolve.js';
 
 const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
@@ -276,7 +277,8 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
   for (const [id, e] of entries(nodeEntries)) {
     const base = `nodes/${id}`;
     if (!idx.nodes.has(id)) {
-      error('ref.unknown-node', base, `No node "${id}" in ${lpgDoc.id} v${lpgDoc.version}.`);
+      // Left out as written back, and gone from the export: reported once, below (write.undeclared).
+      if (e?.meta?.proposedBy?.name !== WRITE_BACK_TOOL) error('ref.unknown-node', base, `No node "${id}" in ${lpgDoc.id} v${lpgDoc.version}.`);
       continue;
     }
     if (!active(e)) continue;
@@ -290,7 +292,7 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
     for (const [pid, pe] of entries(e.properties)) {
       const path = `${base}/properties/${pid}`;
       const found = idx.findNodeProperty(id, pid);
-      if (!found) { error('ref.unknown-property', path, `"${id}" has no property "${pid}", own or implied.`); continue; }
+      if (!found) { if (pe?.meta?.proposedBy?.name !== WRITE_BACK_TOOL) error('ref.unknown-property', path, `"${id}" has no property "${pid}", own or implied.`); continue; }
       if (active(pe)) checkPropertyMapping(pe, found.prop, path, classes, id);
     }
   }
@@ -300,7 +302,7 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
     const base = `relationships/${id}`;
     const rel = idx.rels.get(id);
     if (!rel) {
-      error('ref.unknown-relationship', base, `No relationship "${id}" in ${lpgDoc.id} v${lpgDoc.version}.`);
+      if (e?.meta?.proposedBy?.name !== WRITE_BACK_TOOL) error('ref.unknown-relationship', base, `No relationship "${id}" in ${lpgDoc.id} v${lpgDoc.version}.`);
       continue;
     }
     if (!active(e)) continue;
@@ -345,6 +347,30 @@ export async function check({ mapping, lpgDoc, targets = null, targetStatus = []
       }
       checkPropertyMapping(pe, prop, path, qualifiedClasses);
     }
+  }
+
+  // Write-back -------------------------------------------------------------------
+  // Names a recipe writes back (inferred), their provenance and the ledger are not data to ingest.
+  const written = writtenPaths(lpgDoc);
+  const entryAt = (p) => {
+    const [section, id, , pid] = p.split('/');
+    const e = (section === 'nodes' ? nodeEntries : relEntries)[id];
+    return pid ? e?.properties?.[pid] : e;
+  };
+  for (const [p, why] of written) {
+    const e = entryAt(p);
+    if (e && active(e)) error('mapping.inferred-mapped', p, `${why} Mapping it would project back what reasoning wrote: ignore it.`);
+  }
+  // Left out by propose because the ontology declared them written back, and the ontology no longer does: an export that lost its declarations.
+  const lost = [];
+  for (const [section, list] of [['nodes', nodeEntries], ['relationships', relEntries]]) {
+    for (const [id, e] of Object.entries(list)) {
+      if (e?.meta?.proposedBy?.name === WRITE_BACK_TOOL && !written.has(`${section}/${id}`)) lost.push(`${section}/${id}`);
+      for (const [pid, pe] of Object.entries(e?.properties ?? {})) if (pe?.meta?.proposedBy?.name === WRITE_BACK_TOOL && !written.has(`${section}/${id}/properties/${pid}`)) lost.push(`${section}/${id}/properties/${pid}`);
+    }
+  }
+  if (lost.length) {
+    error('write.undeclared', 'lpgOntology', `The LPG ontology no longer declares ${lost.length} written-back element${lost.length === 1 ? '' : 's'} the mapping leaves out (${lost.join(', ')}): the export lost its write-back declarations. Run \`n20s-mapping write-patch\` (or Ontology patch in the studio), apply it, and re-apply it in the Aura ontology.`, { paths: lost });
   }
 
   // Rule and shape files -------------------------------------------------------

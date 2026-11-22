@@ -385,6 +385,7 @@ A recipe is an ordered list of steps on **named n20s graphs**. Each step **feeds
 | `validate` | asks | SHACL, over the profile and rules; violations come with the LPG node and key. |
 | `explain` | asks | The derivation of a statement, each fact as LPG nodes: `DatasetVersion(…) prov:wasGeneratedBy Run(…)`. A statement materialized by an earlier `infer` explains as asserted: explain on a graph that reasons on the fly. |
 | `publish` | publishes | Serves a persistent graph as `/sparql/<as>`, once the run has gone through, and only if the `validate` steps of its `gate` found no violation (fail-closed): otherwise nothing changes for the endpoint's consumers. |
+| `write` | writes back | Writes the rows of a `query` (or `construct`) step back into Neo4j, as a label, a relationship or a property that the LPG ontology declares as inferred by this step. See [Write-back](#write-back). |
 
 **Graphs and their lifecycle.** A recipe declares its graphs; without a declaration it has one, `work`, ephemeral.
 
@@ -476,6 +477,70 @@ The endpoint asks n20s-server for terms (`terms: true`): literals keep their dat
 
 **In the studio**, the **Recipes** tab lists the recipes (with their kind and API), the SPARQL endpoints, the query APIs, and the graphs of n20s-server with their status. A recipe shows as its sequence of steps (role, graph, state of the graph after the step, result); a step's panel edits it and, after a run, shows what its graph holds (classes and predicates with counts). Recipes are built from scratch there: **New recipe**, graphs (ephemeral, persistent and versioned, or published), parameters, **publish as API**, steps added from a skeleton for their type (`publish` included), moved, deleted, every field edited; each change is written to the file at once, comments kept, and checked as you go. An endpoint's panel shows what it serves and how it was published, **Re-publish** (the same recipe and parameters: a new version, through its gates, swapped in), **Unpublish**, and a SPARQL console on the endpoint; an API's panel has a form for its parameters and **Call**; a graph's panel shows where it comes from and a console on it.
 
+## Write-back
+
+A `write` step puts what reasoning found back into Neo4j, where applications read it with plain Cypher. It never creates nodes and only ever touches names that the LPG ontology declares as **inferred by this step**:
+
+```yaml
+  - id: mark
+    type: write
+    from: tainted                       # a query step (node columns decoded node:<id>) or a construct step (decode on the write step)
+    label: { node: version, add: Tainted }
+    # relationship: { from: version, type: READS_TAINTED_INPUT, to: input }
+    # property: { node: version, set: taintScore, value: score }
+    # cypher: UNWIND $rows AS row …     # free Cypher, with $rows, $owner, $run: unchecked, flagged in the review
+    retract: scope                      # default: what is no longer found is removed on the nodes the recipe scoped; all: everywhere
+    # gate: [check]                     # default: every validate step before it; one that found violations stops the write
+```
+
+**In the LPG ontology.** An inferred label is an optional label of its node kind, with `labels.extensions.custom.inferredBy: { Tainted: { recipe, step } }`; an inferred relationship or property has `extensions.custom.inferredBy: { recipe, step }` (a relationship shared by several steps: `{ shared: true }`, and each step names the `owner:` it writes on its relationships). Inferred relationships carry `createdBy` (`recipe/step@run`) and `createdAt`, declared with `extensions.custom.provenance: true`, set only when a relationship is created. One technical node, `WriteLedger` (`extensions.custom.technical: true`), records which step owns which name. `n20s-mapping write-patch <recipes>` (or **Ontology patch** in the Recipes tab) lists what the ontology lacks, and `--apply` adds it to the export file; re-apply it in the Aura ontology too: a new export without it gives one error (`write.undeclared`) that says so. `propose` leaves inferred names, provenance and the ledger out of the mapping on its own, and never shows them to the model; `check` refuses a mapping that maps them (`mapping.inferred-mapped`).
+
+**One transaction per step, as a delta.** The step reads the ledger of its owner (`recipe/step`), locks it (`MERGE` on the unique `owner`, then a lock property: a second run of the same step waits for the first, or, on servers that refuse rather than wait, runs again), reads the current extension of its name (on the scoped nodes with `retract: scope`), compares it with the rows in JavaScript and sends only what changes. An unchanged result rolls back, lock included: no transaction reaches the database or change data capture, and the ledger keeps the run that last wrote. The counters must match the delta, or everything rolls back. The transaction carries the metadata `{app: 'n20s', owner: 'recipe/step', run}`: a published endpoint that follows the database ignores the transactions of its own recipe (exact recipe id), so its writes do not rebuild it again, while another recipe's writes are changes like any other.
+
+**Refused**, before anything is written:
+
+| Case | What to do |
+|---|---|
+| No uniqueness constraint on `WriteLedger.owner` | The tool never changes the schema: an administrator runs `CREATE CONSTRAINT write_ledger_owner IF NOT EXISTS FOR (l:WriteLedger) REQUIRE l.owner IS UNIQUE` (given in the error). |
+| First run, facts already carry the name, no ledger | A collision: if they are this step's (the ledger was deleted), `n20s-mapping adopt <recipe> <step> --yes` takes them over; otherwise rename. |
+| `retract: all` on a scope that does not cover every node of the kind | Scope them all, or `retract: scope`. |
+| A published graph read by the step is stale, incomplete or missing | Re-publish it. |
+| A gate found violations | Nothing is written, nothing is published. |
+| Not a `build` recipe, or a recipe with an `api` | A query never writes. |
+| `GET`, `/query/…`, `serve` without `--write`, the studio without confirmation, the CLI without `--write` | Run it on purpose. |
+
+A row whose node is no longer in the database is a warning, not a write.
+
+**Two connections.** Recipes read their source read-only (read transactions: Neo4j refuses a write in them). Write-back has its own user: `N20S_WRITE` (else the source URL), `N20S_WRITE_USER`, `N20S_WRITE_PASSWORD`, in the environment or `.env`, never the read credentials. Give it fine-grained privileges only, for example for recipe 9 (`demo/aura.mjs reset` creates them, `teardown` removes them):
+
+```cypher
+GRANT ACCESS ON DATABASE neo4j TO n20s_writer;
+GRANT SHOW CONSTRAINT ON DATABASE neo4j TO n20s_writer;
+GRANT MATCH {*} ON GRAPH neo4j NODES WriteLedger TO n20s_writer;
+GRANT CREATE ON GRAPH neo4j NODES WriteLedger TO n20s_writer;
+GRANT SET PROPERTY {*} ON GRAPH neo4j NODES WriteLedger TO n20s_writer;
+GRANT TRAVERSE ON GRAPH neo4j NODES DatasetVersion TO n20s_writer;
+GRANT READ {id} ON GRAPH neo4j NODES DatasetVersion TO n20s_writer;
+GRANT TRAVERSE ON GRAPH neo4j NODES Tainted TO n20s_writer;
+GRANT SET LABEL Tainted ON GRAPH neo4j TO n20s_writer;
+GRANT REMOVE LABEL Tainted ON GRAPH neo4j TO n20s_writer;
+GRANT MATCH {createdBy, createdAt} ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
+GRANT CREATE ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
+GRANT DELETE ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
+GRANT SET PROPERTY {createdBy, createdAt} ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
+```
+
+No right on the schema, and none to create names: a name the database has never seen (a new label, type or property key) is registered once by an administrator (`aura.mjs reset` creates and deletes a node carrying them); the error says so.
+
+[`demo/project/lineage/recipes/9-taint-writeback.recipe.yaml`](demo/project/lineage/recipes/9-taint-writeback.recipe.yaml) marks the versions written by a run that read an invalidated input (`:Tainted`, and `READS_TAINTED_INPUT` to the input), and publishes `/sparql/taint`. Following the database, an invalidation committed by another application is tainted downstream in Neo4j a few seconds later; the recipe's own writes do not rebuild it again (tested on Aura with change data capture, `test/aura.test.js`).
+
+```bash
+n20s-mapping write-patch demo/project/lineage/recipes --apply
+n20s-mapping recipe demo/project/lineage/recipes/9-taint-writeback.recipe.yaml --write --dotenv .env
+n20s-mapping adopt demo/project/lineage/recipes/9-taint-writeback.recipe.yaml mark --yes --dotenv .env
+n20s-mapping serve demo/project/lineage/recipes --run --write --dotenv .env
+```
+
 ## Bench
 
 A Postman-like bench for what the recipes publish, and for recipes before they are published. A collection, `bench.yaml` next to the recipes (versioned with them), holds requests:
@@ -560,3 +625,5 @@ RELATE_BIN=/path/to/relate N20S_JAR=/path/to/n20s-server-1.1.0-SNAPSHOT.jar npm 
 ```
 
 With `FUSEKI_JAR` (the standalone `org.apache.jena:jena-fuseki-server` jar) as well, the mixed-sources test starts a Fuseki serving `demo/client-kg/client.ttl` and runs the act 3 recipe against it.
+
+Write-back is tested on Relate in the end-to-end test (delta, unchanged run, retraction, collision and adopt, two runs at once). On the Aura instance of `.env` (after `node demo/aura.mjs reset`), `N20S_AURA_TEST=1 N20S_JAR=… node --test test/aura.test.js` runs the change-data-capture loop with the `n20s_writer` user, and checks that the read source refuses to write.

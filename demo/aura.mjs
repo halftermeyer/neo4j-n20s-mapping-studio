@@ -2,14 +2,18 @@
 // The database side of the demo, on the Neo4j (Aura Enterprise) instance of .env:
 //
 //   node demo/aura.mjs reset      the starting state: member directory loaded,
-//                                 role rdf_partner and user partner, demo changes undone
+//                                 role rdf_partner and user partner, demo changes undone;
+//                                 for write-back (recipe 9): the WriteLedger constraint,
+//                                 role and user n20s_writer, nothing written back yet
 //   node demo/aura.mjs status     what is there
 //   node demo/aura.mjs tx <name>  one of the transactions the demo commits (TX below),
 //                                 printed as JSON: what it ran and what the database said
-//   node demo/aura.mjs teardown   removes the directory, the role and the user
+//   node demo/aura.mjs teardown   removes the directory, what was written back, the
+//                                 roles and the users
 //
 // Credentials come from .env (NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD). The
-// partner's password is generated once and kept in .env as DEMO_PARTNER_PASSWORD.
+// partner's password is generated once and kept in .env as DEMO_PARTNER_PASSWORD;
+// the writer's as N20S_WRITE_USER and N20S_WRITE_PASSWORD, which write-back reads.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -17,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import neo4j from 'neo4j-driver';
 import { splitStatements } from '../src/source.js';
 import { writeEnvFile, envFileRisk } from '../src/settings.js';
+import { LEDGER_CONSTRAINT } from '../src/writeback.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ENV = path.resolve(HERE, '../.env');
@@ -58,6 +63,35 @@ const UNDO = [
   "MATCH (m:Member) WHERE m.id IN ['leo', 'ana-silva-2'] DETACH DELETE m",
   "MATCH (m:Member {id: 'ben'}) SET m.nick = 'benno'",
   `MATCH (v:DatasetVersion {id: '${LINEAGE}'}) REMOVE v.invalidatedAt`,
+  // Nothing written back yet: recipe 9 starts from an empty extension and no ledger.
+  'MATCH (n:Tainted) REMOVE n:Tainted',
+  'MATCH ()-[r:READS_TAINTED_INPUT]->() DELETE r',
+  'MATCH (l:WriteLedger) DELETE l',
+];
+
+// The write-back user of recipe 9: what it writes, and nothing else. No right on the schema.
+const WRITER = 'n20s_writer';
+const WRITER_ROLE = [
+  `CREATE ROLE ${WRITER} IF NOT EXISTS`,
+  `GRANT ACCESS ON DATABASE \`${DB}\` TO ${WRITER}`,
+  // The constraint is checked, never created.
+  `GRANT SHOW CONSTRAINT ON DATABASE \`${DB}\` TO ${WRITER}`,
+  // Its ledger: one node per write step, locked by each run.
+  `GRANT MATCH {*} ON GRAPH \`${DB}\` NODES WriteLedger TO ${WRITER}`,
+  `GRANT CREATE ON GRAPH \`${DB}\` NODES WriteLedger TO ${WRITER}`,
+  `GRANT SET PROPERTY {*} ON GRAPH \`${DB}\` NODES WriteLedger TO ${WRITER}`,
+  // The versions, found by their id: nothing else of them is read.
+  `GRANT TRAVERSE ON GRAPH \`${DB}\` NODES DatasetVersion TO ${WRITER}`,
+  `GRANT READ {id} ON GRAPH \`${DB}\` NODES DatasetVersion TO ${WRITER}`,
+  // The label it infers.
+  `GRANT TRAVERSE ON GRAPH \`${DB}\` NODES Tainted TO ${WRITER}`,
+  `GRANT SET LABEL Tainted ON GRAPH \`${DB}\` TO ${WRITER}`,
+  `GRANT REMOVE LABEL Tainted ON GRAPH \`${DB}\` TO ${WRITER}`,
+  // The relationship it infers, and its provenance.
+  `GRANT MATCH {createdBy, createdAt} ON GRAPH \`${DB}\` RELATIONSHIPS READS_TAINTED_INPUT TO ${WRITER}`,
+  `GRANT CREATE ON GRAPH \`${DB}\` RELATIONSHIPS READS_TAINTED_INPUT TO ${WRITER}`,
+  `GRANT DELETE ON GRAPH \`${DB}\` RELATIONSHIPS READS_TAINTED_INPUT TO ${WRITER}`,
+  `GRANT SET PROPERTY {createdBy, createdAt} ON GRAPH \`${DB}\` RELATIONSHIPS READS_TAINTED_INPUT TO ${WRITER}`,
 ];
 
 const ROLE = [
@@ -82,6 +116,16 @@ async function partnerPassword() {
   return pw;
 }
 
+/** The writer's password, generated once, kept in .env with its user name: write-back reads them there. */
+async function writerPassword() {
+  if (process.env.N20S_WRITE_PASSWORD && process.env.N20S_WRITE_USER === WRITER) return process.env.N20S_WRITE_PASSWORD;
+  const risk = await envFileRisk(ENV);
+  if (risk) throw new Error(`Cannot keep the writer password: ${risk}`);
+  const pw = crypto.randomBytes(18).toString('base64url');
+  await writeEnvFile(ENV, { N20S_WRITE_USER: WRITER, N20S_WRITE_PASSWORD: pw });
+  return pw;
+}
+
 async function reset() {
   // The lineage graph of act 2, once: the example's seed (MERGE, so loading it again changes nothing).
   const [{ n }] = await run('MATCH (e:Entity) RETURN count(e) AS n');
@@ -93,6 +137,16 @@ async function reset() {
   const users = await run('SHOW USERS YIELD user RETURN collect(user) AS u', {}, 'system');
   if (!users[0].u.includes('partner')) await run('CREATE USER partner SET PASSWORD $pw CHANGE NOT REQUIRED', { pw }, 'system');
   await run('GRANT ROLE rdf_partner TO partner', {}, 'system');
+  // Write-back: the schema is the administrator's (this script), never the tool's. The names the writer
+  // writes are registered once here (a node created and deleted), so it needs no name-management right.
+  await run(LEDGER_CONSTRAINT);
+  await run(`CREATE (l:WriteLedger:Tainted {owner: '__names__', kind: '', name: '', on: '', firstRun: '', firstAt: datetime(), lastRun: '', lastAt: datetime(), lock: '', adoptedAt: datetime()})
+    -[:READS_TAINTED_INPUT {createdBy: '', createdAt: datetime()}]->(l) WITH l DETACH DELETE l`);
+  for (const q of WRITER_ROLE) await run(q, {}, 'system');
+  const wpw = await writerPassword();
+  // Created once with the password of .env (Neo4j refuses to set a password to the same value again).
+  if (!users[0].u.includes(WRITER)) await run(`CREATE USER ${WRITER} SET PASSWORD $pw CHANGE NOT REQUIRED`, { pw: wpw }, 'system');
+  await run(`GRANT ROLE ${WRITER} TO ${WRITER}`, {}, 'system');
   await status();
 }
 
@@ -104,9 +158,12 @@ async function status() {
   const [i] = await run(`MATCH (v:DatasetVersion {id: '${LINEAGE}'}) RETURN v.invalidatedAt IS NOT NULL AS customersIncident`);
   const roles = await run("SHOW ROLES YIELD role WHERE role = 'rdf_partner' RETURN count(*) AS n", {}, 'system');
   const users = await run("SHOW USERS YIELD user, roles WHERE user = 'partner' RETURN roles", {}, 'system');
+  const writer = await run(`SHOW USERS YIELD user, roles WHERE user = '${WRITER}' RETURN roles`, {}, 'system');
+  const [wb] = await run('RETURN COUNT { (:Tainted) } AS tainted, COUNT { ()-[:READS_TAINTED_INPUT]->() } AS links, COUNT { (:WriteLedger) } AS ledgers');
+  const [lc] = await run("SHOW CONSTRAINTS YIELD name WHERE name = 'write_ledger_owner' RETURN count(*) AS n");
   let cdc;
   try { await run('CALL db.cdc.current()'); cdc = (await run('SHOW DATABASES YIELD name, options WHERE name = $db RETURN options.txLogEnrichment AS m LIMIT 1', { db: DB }, 'system'))[0]?.m ?? 'on'; } catch (e) { cdc = /not currently enabled/.test(e.message) ? 'OFF' : 'unsupported'; }
-  console.log(JSON.stringify({ ...m, ...g, ...k, ...d, ...(i ?? { customersIncident: null }), role: roles[0].n === 1, partner: users[0]?.roles ?? null, cdc }));
+  console.log(JSON.stringify({ ...m, ...g, ...k, ...d, ...(i ?? { customersIncident: null }), role: roles[0].n === 1, partner: users[0]?.roles ?? null, writer: writer[0]?.roles ?? null, writeBack: { ...wb, constraint: lc.n === 1 }, cdc }));
 }
 
 async function tx(name) {
@@ -131,6 +188,9 @@ async function teardown() {
   for (const c of ['member_id', 'member_email', 'group_id', 'member_id_exists', 'group_id_exists']) await run(`DROP CONSTRAINT ${c} IF EXISTS`);
   await run('DROP USER partner IF EXISTS', {}, 'system');
   await run('DROP ROLE rdf_partner IF EXISTS', {}, 'system');
+  await run(`DROP USER ${WRITER} IF EXISTS`, {}, 'system');
+  await run(`DROP ROLE ${WRITER} IF EXISTS`, {}, 'system');
+  await run('DROP CONSTRAINT write_ledger_owner IF EXISTS');
   await status();
 }
 

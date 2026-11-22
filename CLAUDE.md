@@ -52,6 +52,8 @@ README.md is the reference for the format, the checks and the commands; read it 
     and their status), endpoints.js + serve.js (SPARQL endpoint, /query, /run),
     bench.js (requests, checks, benchmark; also loaded by the page),
     workspace.js (projects: sources, targets, mappings, lock, status),
+    writeback.js (write steps: declarations in the LPG ontology, check rules,
+    delta under the WriteLedger lock, adopt, ontology patch),
     catalog.js (target vocabularies), introspect.js (LPG ontology from a
     database), design.js (spec, design conversation, spec checks, recipe drafts),
     follow.js (publications following the database through CDC FULL),
@@ -62,8 +64,8 @@ README.md is the reference for the format, the checks and the commands; read it 
   project-tab.js, design-tab.js, recipes.js, bench-tab.js, connections-tab.js
   (tabs), dom.js (shared helpers).
 - `bin/n20s-mapping.js` CLI: status, introspect, fetch, check, lock, compile,
-  propose, studio, recipe, graphs, serve, bench, republish, unpublish, project,
-  compare, snapshot, load, query, oracle.
+  propose, studio, recipe, write-patch, adopt, graphs, serve, bench, republish,
+  unpublish, project, compare, snapshot, load, query, oracle.
 - `eval/` propose evaluation on lineage (propose-lineage.js, rekey-gold.js),
   recordings and reports per model and prompt version.
 - `examples/lineage/` the reference case: data-lineage LPG v3 -> PROV-O, fully
@@ -105,6 +107,12 @@ node bin/n20s-mapping.js compare examples/lineage/lineage-prov.mapping.yaml --do
   `--env-file` even after the script name.
 
 ## Known pitfalls
+
+- Write-back: Relate refuses a concurrent write ("write-write conflict")
+  where Neo4j waits; openWriter retries transient conflicts. Relate does not
+  enforce read access mode (Aura does: test/aura.test.js). On Aura the writer
+  cannot create new names (labels, types, property keys): aura.mjs reset
+  registers them as admin.
 
 - Fixed in n20s (2026-11-20, needs the rebuilt jar): temporal values in XSD
   form (was Java toString: no zero seconds, [Zone]); a whole-placeholder
