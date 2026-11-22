@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { check, checkRecipe, checkWrites, exportPatch, withoutWriteBack, writtenPaths, ownTransaction, txMetadata, runRecipe, recipeKind } from '../src/index.js';
-import { withoutWriteBack as stripped } from '../src/writeback.js';
+import { withoutWriteBack as stripped, adminScript } from '../src/writeback.js';
 import { loadRecipe, loadFiles, compactSpecJson } from '../src/node.js';
 import { endpoints } from '../src/endpoints.js';
 import { syncOnce } from '../src/follow.js';
@@ -189,4 +189,46 @@ test('serve: a recipe that writes back runs by POST /run only, with --write and 
 
 test('checkWrites: nothing to say about a recipe without write steps', () => {
   assert.deepEqual(checkWrites({ id: 'x', steps: [{ id: 'q', type: 'query', sparql: 'ASK {}' }] }, { lpgDoc }), []);
+});
+
+test('write-patch: one admin script, the constraint and every name the writer writes', async () => {
+  const script = adminScript(lpgDoc, [{ recipe, mapping }]);
+  const { splitStatements } = await import('../src/node.js');
+  const st = splitStatements(script);
+  assert.equal(st.length, 2);
+  assert.match(st[0], /CREATE CONSTRAINT write_ledger_owner IF NOT EXISTS FOR \(l:WriteLedger\) REQUIRE l\.owner IS UNIQUE$/);
+  assert.match(st[1], /CREATE \(l:`WriteLedger`:`Tainted` \{`owner`: '__names__', `kind`: ''/);
+  assert.match(st[1], /\[:`READS_TAINTED_INPUT` \{`createdBy`: '', `createdAt`: ''\}\]/);
+  assert.match(st[1], /DETACH DELETE l$/);
+});
+
+/** Recipe 9 with an inferred property on DatasetVersion, of the given type, written by a step since. */
+function withProperty(type = 'ZONED DATETIME', datatype = undefined) {
+  const doc = structuredClone(lpgDoc);
+  doc.nodes['n:4'].properties['p:90'] = { type, name: 'taintedSince', extensions: { custom: { inferredBy: { recipe: 'taint-writeback', step: 'since' } } } };
+  const r = structuredClone(recipe);
+  const at = r.steps.findIndex((x) => x.id === 'publish');
+  r.steps.splice(at, 0,
+    { id: 'since-q', type: 'query', sparql: 'SELECT ?version (MIN(?at) AS ?since) WHERE { ?version lin:taintedBy ?i . ?i prov:invalidatedAtTime ?at } GROUP BY ?version', decode: { version: 'node:n:4' } },
+    { id: 'since', type: 'write', from: 'since-q', property: { node: 'version', set: 'taintedSince', value: 'since', ...(datatype ? { datatype } : {}) } });
+  return { doc, recipe: r };
+}
+
+test('write.datatype: a declared datatype must fit the property type; a type without conversion is refused', () => {
+  let p = withProperty('ZONED DATETIME', 'xsd:dateTime');
+  assert.deepEqual(codes(checkRecipe(p.recipe, { mapping, lpgDoc: p.doc })), []);
+  p = withProperty('ZONED DATETIME', 'xsd:boolean');
+  assert.deepEqual(codes(checkRecipe(p.recipe, { mapping, lpgDoc: p.doc })), ['write.datatype']);
+  p = withProperty('POINT');
+  assert.deepEqual(codes(checkRecipe(p.recipe, { mapping, lpgDoc: p.doc })), ['write.datatype']);
+});
+
+test('a scope or rows step that would write is refused before it runs (EXPLAIN)', async () => {
+  const ran = [];
+  const source = { queryType: async (c) => (/SET/.test(c) ? 'rw' : 'r'), run: async (c) => { ran.push(c); return []; } };
+  const n20s = { list: async () => [], drop: async () => ({}), addTurtle: async () => ({ added: 0 }) };
+  const r = { format: 'n20s-recipe/0.1', id: 'sneaky', steps: [{ id: 's', type: 'scope', cypher: 'MATCH (n:DatasetVersion) SET n.x = 1 RETURN n' }] };
+  const run = await runRecipe({ recipe: r, mapping, lpgDoc, plan: f.plan, source, n20s });
+  assert.match(run.steps[0].error, /^Not run: a scope step only reads, and this Cypher writes \(EXPLAIN gives query type rw\)/);
+  assert.deepEqual(ran, [], 'nothing was run');
 });

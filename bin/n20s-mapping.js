@@ -36,7 +36,7 @@ const USAGE = `Usage:
                        [--record <f>] [--replay <f>] [--mask-hosts] [--title <text>]
   n20s-mapping recipe  <recipe.yaml> [--param name=value]... [--source <url>] [--n20s <url>]
                        [--keep] [--proposals] [--json] [--check] [--write]
-  n20s-mapping write-patch <recipe.yaml | recipes dir> [--apply] [--json]
+  n20s-mapping write-patch <recipe.yaml | recipes dir> [--apply] [--out <admin.cypher>] [--json]
   n20s-mapping adopt   <recipe.yaml> <step> [--source <url>] [--yes]
   n20s-mapping graphs  [<recipes dir>] [--n20s <url>] [--json]
   n20s-mapping serve   [<recipes dir>] [--port <n>] [--host <addr>] [--source <url>] [--n20s <url>] [--run] [--write]
@@ -105,6 +105,8 @@ write-patch What the LPG ontology must declare for the write steps of a
          relationships and properties, provenance (createdBy, createdAt), the
          WriteLedger node. --apply writes them into the LPG ontology file;
          re-apply them in the Aura ontology too, an export would lose them.
+         Also prints the script an administrator reviews and runs once (the
+         WriteLedger constraint, the names the writer writes); --out saves it.
 adopt    Takes over what a write step writes when its WriteLedger node is
          gone (a first run refuses to write over facts no ledger owns).
          Without --yes, says what would be adopted.
@@ -501,14 +503,17 @@ async function main() {
 
   if (command === 'write-patch') {
     const patches = await writePatchFiles(first, { apply: values.apply });
+    if (values.out) await fs.writeFile(values.out, patches.map((p) => p.script).join('\n'));
     if (values.json) { console.log(JSON.stringify(patches.map(({ doc, ...p }) => p), null, 2)); return 0; }
     if (!patches.length) { console.log(`${first}: no recipe writes back.`); return 0; }
     for (const p of patches) {
       console.log(`${p.lpgFile} (recipes ${p.recipes.join(', ')}):`);
-      if (!p.changes.length) { console.log('  declares everything they write.'); continue; }
+      if (!p.changes.length) console.log('  declares everything they write.');
       for (const c of p.changes) console.log(`  ${c.op.padEnd(16)} ${c.path.padEnd(28)} ${c.what}`);
-      console.log(p.applied ? '  Applied. Re-apply these changes in the Aura ontology too: an export without them fails check.' : '  Not applied: --apply writes them into the file.');
+      if (p.changes.length) console.log(p.applied ? '  Applied. Re-apply these changes in the Aura ontology too: an export without them fails check.' : '  Not applied: --apply writes them into the file.');
+      if (!values.out) console.log(`\nAdmin script (review it, run it once as an administrator; --out saves it):\n\n${p.script}`);
     }
+    if (values.out) console.log(`Admin script written to ${values.out}: review it, run it once as an administrator (n20s-mapping load ${values.out}).`);
     return 0;
   }
 

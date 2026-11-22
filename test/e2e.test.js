@@ -600,3 +600,55 @@ test('write-back: written as a delta, nothing when unchanged, retracted, collisi
     await writer.close();
   }
 });
+
+test('write-back: a scope with SET is refused by EXPLAIN; an xsd:dateTime written to a ZONED DATETIME property is unchanged on the second run (Relate)', { skip, timeout: 180000 }, async () => {
+  const { loadRecipe, openWriter } = await import('../src/node.js');
+  const { runRecipe } = await import('../src/recipe.js');
+  const { LEDGER_CONSTRAINT } = await import('../src/writeback.js');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'n20s-writeback-prop-'));
+  fs.cpSync(path.join(ROOT, 'demo/project'), dir, { recursive: true, filter: (f) => !f.endsWith('graphs.json') });
+  // An inferred ZONED DATETIME property on DatasetVersion, written by a step since.
+  const exportFile = path.join(dir, 'lineage/aura-export.json');
+  const doc = JSON.parse(fs.readFileSync(exportFile, 'utf8'));
+  doc.nodes['n:4'].properties['p:90'] = { type: 'ZONED DATETIME', name: 'taintedSince', extensions: { custom: { inferredBy: { recipe: 'taint-writeback', step: 'since' } } } };
+  fs.writeFileSync(exportFile, JSON.stringify(doc, null, 2));
+  const file = path.join(dir, 'lineage/recipes/9-taint-writeback.recipe.yaml');
+  const recipe = YAML.parse(fs.readFileSync(file, 'utf8'));
+  recipe.steps.splice(recipe.steps.findIndex((x) => x.id === 'publish'), 0,
+    { id: 'since-q', type: 'query', sparql: 'SELECT ?version (MIN(?at) AS ?since) WHERE { ?version lin:taintedBy ?i . ?i prov:invalidatedAtTime ?at } GROUP BY ?version', decode: { version: 'node:n:4' } },
+    { id: 'since', type: 'write', from: 'since-q', property: { node: 'version', set: 'taintedSince', value: 'since', datatype: 'xsd:dateTime' } });
+  fs.writeFileSync(file, YAML.stringify(recipe));
+  const f = await loadRecipe(file);
+  const writer = openWriter(boltUrl, { env: { N20S_WRITE_USER: 'neo4j', N20S_WRITE_PASSWORD: neo4jPassword } });
+  const step = (r, id) => r.steps.find((s) => s.id === id);
+  const run = (r = f.recipe) => runRecipe({ ...f, recipe: r, source, n20s, writer, allowWrite: true });
+  try {
+    await source.run(LEDGER_CONSTRAINT);
+    // Relate does not enforce read transactions: EXPLAIN does it for the scope.
+    const sneaky = structuredClone(f.recipe);
+    sneaky.steps[0].cypher = 'MATCH (n:DatasetVersion) SET n.sneaky = true RETURN n';
+    let r = await run(sneaky);
+    assert.match(step(r, 'lineage').error, /^Not run: a scope step only reads, and this Cypher writes \(EXPLAIN gives query type rw\)/);
+    assert.equal((await source.run('MATCH (n:DatasetVersion) WHERE n.sneaky IS NOT NULL RETURN count(n) AS n'))[0].n, 0);
+
+    r = await run();
+    assert.ok(r.ok, JSON.stringify(r.steps.filter((s) => s.status === 'error')));
+    const since = step(r, 'since').result;
+    assert.ok(since.written && since.added > 0, JSON.stringify(since));
+    const [v] = await source.run('MATCH (v:DatasetVersion) WHERE v.taintedSince IS NOT NULL RETURN v.taintedSince.year AS year, v.taintedSince = datetime(\'2026-11-06T08:10:00Z\') AS same LIMIT 1');
+    assert.deepEqual(v, { year: 2026, same: true }, 'stored as a ZONED DATETIME, not a string');
+
+    r = await run();
+    assert.equal(step(r, 'since').result.written, false, JSON.stringify(step(r, 'since').result));
+    assert.ok(Object.values(step(r, 'since').result.counters).every((x) => x === 0));
+  } finally {
+    await source.run('MATCH (n:DatasetVersion) REMOVE n.taintedSince, n.sneaky');
+    await source.run('MATCH (n:Tainted) REMOVE n:Tainted');
+    await source.run('MATCH ()-[r:READS_TAINTED_INPUT]->() DELETE r');
+    await source.run('MATCH (l:WriteLedger) DELETE l');
+    await source.run('DROP CONSTRAINT write_ledger_owner IF EXISTS');
+    for (const g of await n20s.list()) if (g.graphName.startsWith('lineage-taint')) await n20s.drop(g.graphName);
+    await writer.close();
+  }
+});

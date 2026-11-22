@@ -112,3 +112,18 @@ test('Aura: CDC loop — an invalidation rebuilds the publication, which writes 
     for (const g of await n20s.list()) if (g.graphName.startsWith('lineage-taint')) await n20s.drop(g.graphName);
   }
 });
+
+test('Aura: a node the writer cannot see but the source can is an error (missing visibility); one neither sees is a warning', { skip, timeout: 60000 }, async () => {
+  const { runWrite } = await import('../src/writeback.js');
+  for (const q of CLEAN) await admin.run(q);
+  // Members are invisible to n20s_writer (it has no right on them); the read source sees them.
+  const target = { form: 'label', owner: 'visibility-test/mark', kind: 'label', name: 'Tainted', on: 'Member', retract: 'scope',
+    node: { id: 'n:x', label: 'Member', keyLabel: 'Member', key: 'id', column: 'm' } };
+  await assert.rejects(runWrite({ writer, source, target, rows: [{ m: 'ben' }], run: 'vis1', scope: [] }),
+    /Missing visibility for the writer: the source sees 1 Member node\(s\) the write user cannot \(ben\)/);
+  const gone = await runWrite({ writer, source, target, rows: [{ m: 'nobody-at-all' }], run: 'vis2', scope: [] });
+  assert.equal(gone.written, false);
+  assert.match(gone.warnings.join(' '), /1 node\(s\) no longer in the database/);
+  assert.equal((await admin.run("MATCH (l:WriteLedger {owner: 'visibility-test/mark'}) RETURN count(l) AS n"))[0].n, 0, 'rolled back, ledger included');
+  assert.equal((await admin.run('MATCH (m:Member:Tainted) RETURN count(m) AS n'))[0].n, 0);
+});

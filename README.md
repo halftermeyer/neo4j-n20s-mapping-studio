@@ -487,7 +487,7 @@ A `write` step puts what reasoning found back into Neo4j, where applications rea
     from: tainted                       # a query step (node columns decoded node:<id>) or a construct step (decode on the write step)
     label: { node: version, add: Tainted }
     # relationship: { from: version, type: READS_TAINTED_INPUT, to: input }
-    # property: { node: version, set: taintScore, value: score }
+    # property: { node: version, set: taintedSince, value: since, datatype: xsd:dateTime }
     # cypher: UNWIND $rows AS row …     # free Cypher, with $rows, $owner, $run: unchecked, flagged in the review
     retract: scope                      # default: what is no longer found is removed on the nodes the recipe scoped; all: everywhere
     # gate: [check]                     # default: every validate step before it; one that found violations stops the write
@@ -509,9 +509,11 @@ A `write` step puts what reasoning found back into Neo4j, where applications rea
 | Not a `build` recipe, or a recipe with an `api` | A query never writes. |
 | `GET`, `/query/…`, `serve` without `--write`, the studio without confirmation, the CLI without `--write` | Run it on purpose. |
 
-A row whose node is no longer in the database is a warning, not a write.
+A row whose node the writer does not find is asked to the read source: if the source sees it, the writer lacks visibility on it (an error, nothing written: grant it `TRAVERSE` and `READ {key}`); if neither sees it, the node is gone (a warning, no write).
 
-**Two connections.** Recipes read their source read-only (read transactions: Neo4j refuses a write in them). Write-back has its own user: `N20S_WRITE` (else the source URL), `N20S_WRITE_USER`, `N20S_WRITE_PASSWORD`, in the environment or `.env`, never the read credentials. Give it fine-grained privileges only, for example for recipe 9 (`demo/aura.mjs reset` creates them, `teardown` removes them):
+**Property values.** For `property:`, the query that the step reads is asked with typed terms (its rows look the same). A value whose datatype does not fit the type the LPG ontology declares is refused; the others are converted by the database to that type (`datetime()`, `date()`, `toInteger()`…) and compared with the stored values as such: an `xsd:dateTime` written to a `ZONED DATETIME` property is a `ZONED DATETIME`, and an unchanged one is not written again. `datatype:` on the step is checked against the declared type (`write.datatype`), as is a type with no conversion (`POINT`, lists).
+
+**Two connections.** Recipes read their source read-only: read transactions (Neo4j refuses a write in them), and every `scope` and `rows` Cypher is explained first (`EXPLAIN`) and refused unless its query type is `r` (Relate, which does not enforce read transactions, returns the query type too). Write-back has its own user: `N20S_WRITE` (else the source URL), `N20S_WRITE_USER`, `N20S_WRITE_PASSWORD`, in the environment or `.env`, never the read credentials. Give it fine-grained privileges only, for example for recipe 9 (`demo/aura.mjs reset` creates them, `teardown` removes them):
 
 ```cypher
 GRANT ACCESS ON DATABASE neo4j TO n20s_writer;
@@ -530,12 +532,12 @@ GRANT DELETE ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
 GRANT SET PROPERTY {createdBy, createdAt} ON GRAPH neo4j RELATIONSHIPS READS_TAINTED_INPUT TO n20s_writer;
 ```
 
-No right on the schema, and none to create names: a name the database has never seen (a new label, type or property key) is registered once by an administrator (`aura.mjs reset` creates and deletes a node carrying them); the error says so.
+No right on the schema, and none to create names. `n20s-mapping write-patch` prints one **admin script** (`--out` saves it) to review and run once as an administrator: the `WriteLedger` constraint, and the registration of every name the writers write (labels, relationship types, property keys: one node carrying them, created and deleted at once). `demo/aura.mjs reset` runs it. A write that meets an unregistered name says so.
 
 [`demo/project/lineage/recipes/9-taint-writeback.recipe.yaml`](demo/project/lineage/recipes/9-taint-writeback.recipe.yaml) marks the versions written by a run that read an invalidated input (`:Tainted`, and `READS_TAINTED_INPUT` to the input), and publishes `/sparql/taint`. Following the database, an invalidation committed by another application is tainted downstream in Neo4j a few seconds later; the recipe's own writes do not rebuild it again (tested on Aura with change data capture, `test/aura.test.js`).
 
 ```bash
-n20s-mapping write-patch demo/project/lineage/recipes --apply
+n20s-mapping write-patch demo/project/lineage/recipes --apply --out admin.cypher   # then an administrator: n20s-mapping load admin.cypher
 n20s-mapping recipe demo/project/lineage/recipes/9-taint-writeback.recipe.yaml --write --dotenv .env
 n20s-mapping adopt demo/project/lineage/recipes/9-taint-writeback.recipe.yaml mark --yes --dotenv .env
 n20s-mapping serve demo/project/lineage/recipes --run --write --dotenv .env

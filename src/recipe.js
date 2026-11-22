@@ -536,9 +536,17 @@ async function runStep(step, c) {
     return expandRules(parts.join('\n'), subj.prefixes);
   };
 
+  // A scope or rows step only reads: its Cypher is explained first, and refused if it would write.
+  const readsOnly = async (cypher, params) => {
+    if (typeof source?.queryType !== 'function') return; // a snapshot replays rows: it cannot write
+    const type = await source.queryType(cypher, params);
+    if (type !== 'r') throw new Error(`Not run: a ${step.type} step only reads, and this Cypher ${type === 's' ? 'changes the schema' : 'writes'} (EXPLAIN gives query type ${type}). Write back with a write step.`);
+  };
+
   switch (step.type) {
     case 'scope': {
       const params = cypherParams();
+      await readsOnly(step.cypher, params);
       statements.push({ kind: 'cypher', text: step.cypher, params });
       const rows = await source.run(step.cypher, params);
       const nodes = collectNodes(rows);
@@ -587,6 +595,7 @@ async function runStep(step, c) {
 
     case 'rows': {
       const params = cypherParams();
+      await readsOnly(step.cypher, params);
       statements.push({ kind: 'cypher', text: step.cypher, params });
       const rows = await source.run(step.cypher, params);
       const template = expandTemplateTerms(step.template, subj.prefixes);
@@ -619,7 +628,12 @@ async function runStep(step, c) {
       const sparql = sparqlOf(step.sparql);
       const rules = await rulesOf();
       statements.push({ kind: 'sparql', text: sparql, profile: step.profile ?? '', rules: rules || undefined });
-      const raw = rules ? await n20s.queryWithRules(graph, sparql, rules, step.profile ?? '') : await n20s.query(graph, sparql, step.profile ?? '');
+      // A property written back from these rows needs the datatype of each value: asked as terms, shown as plain values.
+      const typed = (c.recipe?.steps ?? []).some((s) => s.type === 'write' && s.from === step.id && s.property);
+      const o = typed ? { terms: true } : {};
+      const answer = rules ? await n20s.queryWithRules(graph, sparql, rules, step.profile ?? '', o) : await n20s.query(graph, sparql, step.profile ?? '', o);
+      const datatypes = typed ? answer.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, termValue(v).datatype]))) : undefined;
+      const raw = typed ? answer.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, termValue(v).value]))) : answer;
       // node:<id> gives the key of that kind; any gives the key and, in <column>_kind, the label of whatever kind matches.
       const decoders = Object.entries(step.decode ?? {}).map(([col, spec]) => {
         if (spec === 'any') return [col, (v, out) => { const d = v == null ? null : subj.decodeAny(v); out[`${col}_kind`] = d?.label ?? null; return d ? d.key : v; }];
@@ -632,7 +646,7 @@ async function runStep(step, c) {
         for (const [col, d] of decoders) out[col] = d(r[col], out);
         return out;
       });
-      return { rows, columns: rows.length ? Object.keys(rows[0]) : [], raw: decoders.length ? raw : undefined };
+      return { rows, columns: rows.length ? Object.keys(rows[0]) : [], raw: decoders.length ? raw : undefined, ...(datatypes ? { datatypes } : {}) };
     }
 
     case 'construct': {
@@ -737,12 +751,28 @@ async function runStep(step, c) {
       const keyed = target.kind === 'relationship' ? target.from : target.node;
       const scope = keyed ? [...(c.scoped.get(`${keyed.label}|${keyed.key}`) ?? [])] : null;
       statements.push({ kind: 'write', owner: target.owner, form: target.form, name: target.name, on: target.on, rows: rows.length, retract: target.retract ?? null });
-      return runWrite({ writer: c.writer, target, rows, run: c.runId, scope, cypher: step.cypher ?? null });
+      return runWrite({ writer: c.writer, target, rows, run: c.runId, scope, cypher: step.cypher ?? null, datatypes: c.outputs.get(step.from)?.datatypes ?? null, source: c.source });
     }
 
     default:
       throw new Error(`Unknown step type ${step.type}.`);
   }
+}
+
+const XSD_NUMBERS = /#(integer|long|int|short|byte|decimal|double|float|(non)?(Negative|Positive)Integer|nonNegativeInteger|unsigned(Long|Int|Short|Byte))$/;
+/**
+ * A term of an n20s row asked with terms (IRIs bare, _:label, "lex", "lex"@lang, "lex"^^<dt>)
+ * as the plain value a row without terms has, and its datatype.
+ */
+function termValue(v) {
+  if (typeof v !== 'string' || !v.startsWith('"')) return { value: v, datatype: null };
+  const m = /^"((?:[^"\\]|\\.)*)"(?:@[\w-]+|\^\^<([^>]+)>)?$/s.exec(v);
+  if (!m) return { value: v, datatype: null };
+  const lex = m[1].replace(/\\(.)/g, (x, ch) => ({ n: '\n', r: '\r', t: '\t' })[ch] ?? ch);
+  const dt = m[2] ?? null;
+  if (dt && XSD_NUMBERS.test(dt) && lex.trim() !== '' && Number.isFinite(Number(lex))) return { value: Number(lex), datatype: dt };
+  if (dt?.endsWith('#boolean')) return { value: lex === 'true' || lex === '1', datatype: dt };
+  return { value: lex, datatype: dt };
 }
 
 /** Prefixed names in an inline n20s template (subject, predicates, IRI objects, datatypes) become full IRIs. */

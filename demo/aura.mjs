@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import neo4j from 'neo4j-driver';
 import { splitStatements } from '../src/source.js';
 import { writeEnvFile, envFileRisk } from '../src/settings.js';
-import { LEDGER_CONSTRAINT } from '../src/writeback.js';
+import { writePatchFiles } from '../src/node.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ENV = path.resolve(HERE, '../.env');
@@ -137,11 +137,10 @@ async function reset() {
   const users = await run('SHOW USERS YIELD user RETURN collect(user) AS u', {}, 'system');
   if (!users[0].u.includes('partner')) await run('CREATE USER partner SET PASSWORD $pw CHANGE NOT REQUIRED', { pw }, 'system');
   await run('GRANT ROLE rdf_partner TO partner', {}, 'system');
-  // Write-back: the schema is the administrator's (this script), never the tool's. The names the writer
-  // writes are registered once here (a node created and deleted), so it needs no name-management right.
-  await run(LEDGER_CONSTRAINT);
-  await run(`CREATE (l:WriteLedger:Tainted {owner: '__names__', kind: '', name: '', on: '', firstRun: '', firstAt: datetime(), lastRun: '', lastAt: datetime(), lock: '', adoptedAt: datetime()})
-    -[:READS_TAINTED_INPUT {createdBy: '', createdAt: datetime()}]->(l) WITH l DETACH DELETE l`);
+  // Write-back: the schema and the names are the administrator's, never the tool's nor the writer's.
+  // This script is what `n20s-mapping write-patch` gives an administrator to review and run once.
+  const [patch] = await writePatchFiles(path.join(HERE, 'project/lineage/recipes'));
+  for (const st of splitStatements(patch.script)) await run(st);
   for (const q of WRITER_ROLE) await run(q, {}, 'system');
   const wpw = await writerPassword();
   // Created once with the password of .env (Neo4j refuses to set a password to the same value again).

@@ -11,7 +11,7 @@ import { compile } from './compile.js';
 import { proposePasses, acceptAll } from './propose.js';
 import { emptyRegistry, recordRun, retire, provenance, graphStatuses, publicationStatuses, unpublish } from './graphs.js';
 import { runRecipe, writesBack } from './recipe.js';
-import { exportPatch, resolveWrite, adopt as adoptLedger } from './writeback.js';
+import { exportPatch, adminScript, resolveWrite, adopt as adoptLedger } from './writeback.js';
 import { openWriter } from './source.js';
 import { emptySpec } from './design.js';
 
@@ -326,7 +326,8 @@ async function recipeFiles(target) {
 
 /**
  * What the LPG ontology must declare for the recipes that write back, per LPG
- * file: the changes, and the patched document (written with apply).
+ * file: the changes, the patched document (written with apply), and the
+ * script an administrator runs once (constraint, names).
  */
 export async function writePatchFiles(target, { apply = false } = {}) {
   const byLpg = new Map();
@@ -346,7 +347,7 @@ export async function writePatchFiles(target, { apply = false } = {}) {
       const compact = /"labels": \{ "/.test(await fs.readFile(g.lpgFile, 'utf8'));
       await fs.writeFile(g.lpgFile, (compact ? compactSpecJson(doc) : JSON.stringify(doc, null, 2)) + '\n');
     }
-    out.push({ lpgFile: g.lpgFile, recipes: g.recipes.map((r) => r.recipe.id), changes, applied: apply && changes.length > 0, doc });
+    out.push({ lpgFile: g.lpgFile, recipes: g.recipes.map((r) => r.recipe.id), changes, applied: apply && changes.length > 0, doc, script: adminScript(doc, g.recipes) });
   }
   return out;
 }

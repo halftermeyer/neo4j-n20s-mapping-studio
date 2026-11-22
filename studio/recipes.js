@@ -435,7 +435,10 @@ function patchView() {
       ? [h('div', { class: 'hint' }, 'The LPG ontology must declare what the recipes write back. Apply it to the export file, then make the same changes in the Aura ontology: an export without them fails check.'),
         table(changes.map((c) => ({ file: c.file, change: c.op, at: c.path, what: c.what })), ['file', 'change', 'at', 'what']),
         h('button', { class: 'primary', 'data-testid': 'patch-apply', onclick: () => confirm('Write these declarations into the LPG ontology file?') && showPatch(true) }, 'Apply to the export file')]
-      : h('div', { class: 'okline' }, 'The LPG ontology declares everything the recipes write.'));
+      : h('div', { class: 'okline' }, 'The LPG ontology declares everything the recipes write.'),
+    patch.patches.map((p) => h('details', { style: 'margin-top:8px', 'data-testid': 'patch-script' },
+      h('summary', { style: 'cursor:pointer' }, 'Admin script: review it, run it once as an administrator (the constraint, and the names the writer writes)'),
+      h('pre', { class: 'stmt' }, p.script))));
 }
 
 /** The graphs of the recipe, their lifecycle, and their state after the run. */

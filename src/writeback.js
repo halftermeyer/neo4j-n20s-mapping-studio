@@ -23,9 +23,9 @@
 // data capture can tell the writes of a recipe from those of the application.
 //
 // Browser-safe: the connection is passed in.
-import { indexLpg } from './lpg.js';
+import { indexLpg, scalarType, datatypeCompatible } from './lpg.js';
 import { resolve, isCompiled } from './resolve.js';
-import { parseTemplate } from './iri.js';
+import { parseTemplate, expand, shorten } from './iri.js';
 
 export const LEDGER = 'WriteLedger';
 export const LEDGER_PROPERTIES = ['owner', 'kind', 'name', 'on', 'firstRun', 'firstAt', 'lastRun', 'lastAt', 'lock', 'adoptedAt'];
@@ -33,6 +33,15 @@ export const LEDGER_PROPERTIES = ['owner', 'kind', 'name', 'on', 'firstRun', 'fi
 export const LEDGER_CONSTRAINT = `CREATE CONSTRAINT write_ledger_owner IF NOT EXISTS FOR (l:${LEDGER}) REQUIRE l.owner IS UNIQUE`;
 export const WRITE_FORMS = ['label', 'relationship', 'property', 'cypher'];
 export const PROVENANCE = ['createdBy', 'createdAt'];
+/** The Cypher function that turns a SPARQL value into a property of this Neo4j type. */
+export const CONVERT = {
+  STRING: 'toString', INTEGER: 'toInteger', FLOAT: 'toFloat', BOOLEAN: 'toBoolean',
+  DATE: 'date', 'LOCAL DATETIME': 'localdatetime', 'ZONED DATETIME': 'datetime',
+  'LOCAL TIME': 'localtime', 'ZONED TIME': 'time', DURATION: 'duration',
+};
+CONVERT.INTEGER32 = CONVERT.INTEGER16 = CONVERT.INTEGER8 = CONVERT.INTEGER;
+CONVERT.FLOAT32 = CONVERT.FLOAT;
+const XSD_NS = 'http://www.w3.org/2001/XMLSchema#';
 const APP = 'n20s';
 /** proposedBy.name of the mapping entries left out because they are written back. */
 export const WRITE_BACK_TOOL = 'write-back';
@@ -231,9 +240,18 @@ export function resolveWrite(recipe, step, { lpgDoc = null, mapping = null } = {
   }
   if (decl.inferredBy.shared) err('write.shared', `${set}: no shared property in this version; one step owns it.`);
   else if (!sameOwner(decl.inferredBy, recipe, step)) err('write.owner', `${set} is inferred by ${decl.inferredBy.recipe}/${decl.inferredBy.step}, not ${owner}.`);
+  // The value is converted to the declared type before the diff: a type with no conversion cannot be written,
+  // and a declared datatype must fit it.
+  const type = lpgDoc.nodes[decl.node].properties[decl.property].type ?? 'STRING';
+  const convert = scalarType(type) === type ? CONVERT[type] : null;
+  if (!convert) err('write.datatype', `${set} is ${type}: a write step writes STRING, numbers, BOOLEAN and temporal types.`);
+  if (step.property.datatype) {
+    const dt = expand(step.property.datatype, { xsd: XSD_NS, ...(mapping?.prefixes ?? {}), ...(recipe.prefixes ?? {}) }).iri ?? step.property.datatype;
+    if (datatypeCompatible(type, dt) !== true) err('write.datatype', `${shorten(dt, { xsd: XSD_NS })} does not fit ${set}, declared ${type}.`);
+  }
   const node = keyOf(decoded ?? decl.node, col);
   ledger();
-  return { target: node && { form, owner, kind: 'property', name: set, on: node.label, node, value, retract: step.retract ?? 'scope' }, findings, missing };
+  return { target: node && { form, owner, kind: 'property', name: set, on: node.label, node, value, type, convert, retract: step.retract ?? 'scope' }, findings, missing };
 }
 
 /** The ontology lacks what the recipe writes: one actionable error for all of it. */
@@ -393,6 +411,42 @@ export function exportPatch(lpgDoc, recipes, { mapping = null } = {}) {
   return { changes, doc };
 }
 
+/**
+ * What an administrator reviews and runs once before the first write: the ledger
+ * constraint, and the registration of every name the writers write (labels,
+ * relationship types, property keys), so that a writer needs no right on the
+ * schema nor on names. Registering is creating and deleting one node that
+ * carries them all. Statements end with ; at the end of a line.
+ * @param {object} lpgDoc   the LPG ontology that declares the writes (patched)
+ */
+export function adminScript(lpgDoc, recipes, { mapping = null } = {}) {
+  const labels = new Set([LEDGER]);
+  const types = new Map();
+  const props = new Set(LEDGER_PROPERTIES);
+  for (const { recipe, mapping: m = mapping } of recipes) {
+    for (const s of recipe.steps ?? []) {
+      if (s.type !== 'write') continue;
+      const { target: t } = resolveWrite(recipe, s, { lpgDoc, mapping: m });
+      if (!t?.name) continue;
+      if (t.kind === 'label') labels.add(t.name);
+      if (t.kind === 'property') props.add(t.name);
+      if (t.kind === 'relationship') types.set(t.name, [...t.provenance, ...(t.shared ? ['owner'] : [])]);
+    }
+  }
+  const q = quote;
+  const map = (names) => `{${[...names].map((n) => `${q(n)}: ''`).join(', ')}}`;
+  const rels = [...types].map(([type, p]) => `(l)-[:${q(type)} ${map(p)}]->(l)`);
+  return [
+    '// Write-back: run once as an administrator, before the first write. The tool never changes the schema,',
+    '// and the write user needs no right to create names: they are registered here.',
+    `${LEDGER_CONSTRAINT};`,
+    `// Registers ${[...labels].join(', ')}${types.size ? `, ${[...types.keys()].join(', ')}` : ''} and their properties: one node, created and deleted at once.`,
+    `CREATE (l:${[...labels].map(q).join(':')} ${map(['owner', ...[...props].filter((x) => x !== 'owner')]).replace("`owner`: ''", "`owner`: '__names__'")})${rels.length ? `\nCREATE ${rels.join(',\n       ')}` : ''}`,
+    'WITH l DETACH DELETE l;',
+    '',
+  ].join('\n');
+}
+
 // Running a write ----------------------------------------------------------------------------
 
 const deltaKeys = ['labelsAdded', 'labelsRemoved', 'relationshipsCreated', 'relationshipsDeleted', 'propertiesSet', 'nodesCreated', 'nodesDeleted'];
@@ -447,7 +501,9 @@ function cypherOf(t) {
   return {
     existing: `UNWIND $keys AS k ${match('n', n, 'k')} RETURN DISTINCT n.${q(n.key)} AS k`,
     current: `MATCH (n:${q(n.label)}) WHERE n.${q(t.name)} IS NOT NULL ${t.scoped ? `AND n.${q(n.key)} IN $scope ` : ''}RETURN n.${q(n.key)} AS k, n.${q(t.name)} AS v`,
-    add: `UNWIND $add AS e ${match('n', n, 'e[0]')} SET n.${q(t.name)} = e[1]`,
+    // The SPARQL value, converted to the declared type by the database: what the diff compares and what is set.
+    convert: `UNWIND $values AS e RETURN e[0] AS k, ${t.convert}(e[1]) AS v`,
+    add: `UNWIND $add AS e ${match('n', n, 'e[0]')} SET n.${q(t.name)} = ${t.convert}(e[1])`,
     remove: `UNWIND $remove AS k ${match('n', n, 'k')} REMOVE n.${q(t.name)}`,
     facts: `MATCH (n) WHERE n.${q(t.name)} IS NOT NULL RETURN count(n) AS n`,
     total: `MATCH (n:${q(n.label)}) RETURN count(n) AS n`,
@@ -455,7 +511,7 @@ function cypherOf(t) {
 }
 
 /** What the rows ask for: keys, pairs or key -> value, with rows that cannot be written set aside. */
-function wantedOf(t, rows) {
+function wantedOf(t, rows, datatypes = null) {
   const skipped = [];
   const ok = (v) => v !== null && v !== undefined && !(typeof v === 'string' && v.startsWith('<undecodable '));
   if (t.kind === 'label') {
@@ -473,9 +529,14 @@ function wantedOf(t, rows) {
   }
   const values = new Map();
   const conflicts = [];
-  for (const r of rows) {
+  for (const [i, r] of rows.entries()) {
     const [k, v] = [r[t.node.column], r[t.value]];
     if (!ok(k) || v === null || v === undefined) { skipped.push(r); continue; }
+    // A typed SPARQL value whose datatype does not fit the declared type is refused, not converted.
+    const dt = datatypes?.[i]?.[t.value];
+    if (dt && dt.startsWith(XSD_NS) && datatypeCompatible(t.type, dt) === false) {
+      throw new Error(`${t.name} is ${t.type}; the value of ${t.value} for ${k} is ${shorten(dt, { xsd: XSD_NS })} ("${v}"), which does not fit.`);
+    }
     const key = plainKey(k);
     if (values.has(key) && JSON.stringify(values.get(key)[1]) !== JSON.stringify(v)) conflicts.push(k);
     values.set(key, [k, v]);
@@ -495,7 +556,7 @@ function wantedOf(t, rows) {
  * @param {string|null} [a.cypher] free Cypher (form cypher)
  * @returns {Promise<object>} what changed, or that nothing did
  */
-export async function runWrite({ writer, target: t, rows, run, scope = null, cypher = null }) {
+export async function runWrite({ writer, target: t, rows, run, scope = null, cypher = null, datatypes = null, source = null }) {
   if (!writer?.transaction) throw new Error('No write connection: set N20S_WRITE (and N20S_WRITE_USER, N20S_WRITE_PASSWORD), a user with the fine-grained write privileges of this step.');
   const hasConstraint = await ledgerConstraint(writer);
   if (hasConstraint !== true) throw new Error(hasConstraint === null ? `${NEEDS_CONSTRAINT}\n(The write user could not list constraints: grant it SHOW CONSTRAINT.)` : NEEDS_CONSTRAINT);
@@ -507,7 +568,7 @@ export async function runWrite({ writer, target: t, rows, run, scope = null, cyp
   } catch (err) {
     // A name the database has never seen: creating it is name management, which the writer does not have.
     if (/Creating new (property name|label|relationship type|node label)/i.test(err.message)) {
-      throw new Error(`${err.message.split('\n')[0]} The writer has no right to create names: an administrator registers them once (create and delete a node that carries them: label ${t.name ?? ''}, ${LEDGER} and its properties${t.kind === 'relationship' ? `, ${PROVENANCE.join(', ')}` : ''}), or grants CREATE NEW NAME on the database.`);
+      throw new Error(`${err.message.split('\n')[0]} The writer has no right to create names: an administrator runs once the script that \`n20s-mapping write-patch\` prints (the constraint and the names the writers write).`);
     }
     throw err;
   }
@@ -545,16 +606,29 @@ export async function runWrite({ writer, target: t, rows, run, scope = null, cyp
       const scoped = scope?.length ?? 0;
       if (scoped < Number(total)) throw new Error(`retract: all needs a scope that covers every ${t.kind === 'relationship' ? t.from.label : t.node.label} (${Number(total)} in the database, ${scoped} scoped): retract only on the scope (retract: scope), or scope them all.`);
     }
-    const { wanted, skipped } = wantedOf(t, rows);
+    const { wanted, skipped } = wantedOf(t, rows, datatypes);
     const scopeKeys = (scope ?? []).map((k) => k);
     const warnings = [];
     if (skipped.length) warnings.push(`${skipped.length} row(s) without a decodable node or a value: not written.`);
 
+    // A node the writer does not find: if the read source sees it, the writer lacks visibility (an error, nothing
+    // written); if neither does, the node is gone (a warning).
+    const visible = async (cy, keys, n) => {
+      const found = new Set((await exec(cy, { keys })).map((r) => plainKey(r.k)));
+      const missing = keys.filter((k) => !found.has(plainKey(k)));
+      if (missing.length && source) {
+        const seen = (await source.run(cy, { keys: missing })).map((r) => r.k);
+        if (seen.length) {
+          throw new Error(`Missing visibility for the writer: the source sees ${seen.length} ${n.label} node(s) the write user cannot (${seen.slice(0, 3).join(', ')}${seen.length > 3 ? ', …' : ''}). Grant it TRAVERSE on ${n.label} and READ {${n.key}}${n.keyLabel !== n.label ? ` (found through ${n.keyLabel})` : ''}, or check what is denied to it.`);
+        }
+      }
+      return found;
+    };
+
     if (t.kind === 'relationship') {
       const pairs = [...wanted.values()];
-      const ends = async (cy, keys) => new Set((await exec(cy, { keys })).map((r) => plainKey(r.k)));
-      const aKeys = await ends(q.existingFrom, [...new Set(pairs.map((p) => p[0]))]);
-      const bKeys = await ends(q.existingTo, [...new Set(pairs.map((p) => p[1]))]);
+      const aKeys = await visible(q.existingFrom, [...new Set(pairs.map((p) => p[0]))], t.from);
+      const bKeys = await visible(q.existingTo, [...new Set(pairs.map((p) => p[1]))], t.to);
       const live = pairs.filter(([a, b]) => aKeys.has(plainKey(a)) && bKeys.has(plainKey(b)));
       const vanished = pairs.length - live.length;
       if (vanished) warnings.push(`${vanished} pair(s) whose nodes are no longer in the database: not written.`);
@@ -569,7 +643,7 @@ export async function runWrite({ writer, target: t, rows, run, scope = null, cyp
     }
 
     const keys = t.kind === 'label' ? [...wanted.values()] : [...wanted.values()].map(([k]) => k);
-    const existing = new Set((await exec(q.existing, { keys })).map((r) => plainKey(r.k)));
+    const existing = await visible(q.existing, keys, t.node);
     const vanished = keys.filter((k) => !existing.has(plainKey(k))).length;
     if (vanished) warnings.push(`${vanished} node(s) no longer in the database: not written.`);
     const current = await exec(q.current, { scope: scopeKeys });
@@ -580,7 +654,9 @@ export async function runWrite({ writer, target: t, rows, run, scope = null, cyp
       return finish({ add, remove, warnings, vanished });
     }
     const have = new Map(current.map((r) => [plainKey(r.k), r.v]));
-    const add = [...wanted.values()].filter(([k, v]) => existing.has(plainKey(k)) && JSON.stringify(have.get(plainKey(k))) !== JSON.stringify(v));
+    // Compared as the database holds them: the wanted values converted by the database, read back the same way.
+    const converted = new Map((await exec(q.convert, { values: [...wanted.values()] })).map((r) => [plainKey(r.k), r.v]));
+    const add = [...wanted.values()].filter(([k]) => existing.has(plainKey(k)) && JSON.stringify(have.get(plainKey(k))) !== JSON.stringify(converted.get(plainKey(k))));
     const remove = current.map((r) => r.k).filter((k) => !wanted.has(plainKey(k)));
     return finish({ add, remove, warnings, vanished });
 

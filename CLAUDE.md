@@ -110,9 +110,10 @@ node bin/n20s-mapping.js compare examples/lineage/lineage-prov.mapping.yaml --do
 
 - Write-back: Relate refuses a concurrent write ("write-write conflict")
   where Neo4j waits; openWriter retries transient conflicts. Relate does not
-  enforce read access mode (Aura does: test/aura.test.js). On Aura the writer
-  cannot create new names (labels, types, property keys): aura.mjs reset
-  registers them as admin.
+  enforce read access mode (Aura does: test/aura.test.js), but it returns the
+  query type on EXPLAIN: scope and rows steps are refused unless it is 'r'. The
+  writer cannot create names on Aura: the admin script of write-patch
+  registers them (aura.mjs reset runs it).
 
 - Fixed in n20s (2026-11-20, needs the rebuilt jar): temporal values in XSD
   form (was Java toString: no zero seconds, [Zone]); a whole-placeholder

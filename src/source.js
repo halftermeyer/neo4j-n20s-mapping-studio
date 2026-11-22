@@ -121,6 +121,14 @@ export function openSource(url, { database, user: givenUser, password: givenPass
       const res = await driver.executeQuery(cypher, params, { ...(db ? { database: db } : {}), ...(readOnly ? { routing: neo4j.routing.READ } : {}) });
       return res.records.map((rec) => (rec.keys.length === 1 && rec.keys[0] === 'row' ? toPlain(rec.get('row')) : toPlain(rec.toObject())));
     },
+    /**
+     * What a statement would do, without running it (EXPLAIN): r reads, rw and w write, s changes the schema.
+     * Read transactions guard a source on Neo4j; servers that do not enforce them (Relate) need this.
+     */
+    async queryType(cypher, params = {}) {
+      const res = await driver.executeQuery(explain(cypher), params, { ...(db ? { database: db } : {}), ...(readOnly ? { routing: neo4j.routing.READ } : {}) });
+      return res.summary.queryType;
+    },
     async agent() {
       const info = await driver.getServerInfo();
       return info.agent;
@@ -135,6 +143,9 @@ export function openSource(url, { database, user: givenUser, password: givenPass
     close: () => driver.close(),
   };
 }
+
+/** EXPLAIN before a statement, after its CYPHER version and options if it has them. */
+export const explain = (cypher) => String(cypher).replace(/^(\s*(?:CYPHER(?:\s+(?:\d+|[\w.]+=\S+))*\s+)?)/i, '$1EXPLAIN ');
 
 /** A conflict with a concurrent transaction, worth running the transaction again. */
 const transient = (err) => neo4j.isRetryableError?.(err) || /write-write conflict|deadlock|TransientError/i.test(`${err?.code ?? ''} ${err?.message ?? ''}`);

@@ -541,7 +541,7 @@ export async function startStudio({ mappingFile = null, projectFile = null, mapp
     // What the LPG ontology must declare for the recipes that write back: shown, applied to the export file, to re-apply in Aura.
     'POST /api/ontology-patch': async ({ apply = false } = {}) => {
       const patches = await writePatchFiles(recipeDir, { apply });
-      return { patches: patches.map((p) => ({ lpgFile: path.relative(path.dirname(mappingFile), p.lpgFile), recipes: p.recipes, changes: p.changes, applied: p.applied })) };
+      return { patches: patches.map((p) => ({ lpgFile: path.relative(path.dirname(mappingFile), p.lpgFile), recipes: p.recipes, changes: p.changes, applied: p.applied, script: p.script })) };
     },
 
     // The graphs of n20s-server and of the registry, with their status.
